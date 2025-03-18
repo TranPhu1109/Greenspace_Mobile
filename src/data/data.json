@@ -1,0 +1,29 @@
+{
+    "products": [
+      { "id": "1", "name": "Modern Sofa", "price": "$599", "image": "/images/furniture.jpg", "numberOfPurchased": 245, "categoryId": "1" },
+      { "id": "2", "name": "Dining Table", "price": "$399", "image": "/images/furniture.jpg", "numberOfPurchased": 189, "categoryId": "1" },
+      { "id": "3", "name": "Bookshelf", "price": "$199", "image": "/images/furniture.jpg", "numberOfPurchased": 156, "categoryId": "1" },
+      { "id": "4", "name": "Product 4", "price": "$1969", "image": "/images/furniture.jpg", "numberOfPurchased": 89, "categoryId": "1" },
+      { "id": "5", "name": "Product 5", "price": "$4199", "image": "/images/furniture.jpg", "numberOfPurchased": 67, "categoryId": "1" },
+      { "id": "6", "name": "Product 6", "price": "$1949", "image": "/images/furniture.jpg", "numberOfPurchased": 123, "categoryId": "1" },
+      { "id": "7", "name": "Product 7", "price": "$4199", "image": "/images/furniture.jpg", "numberOfPurchased": 45, "categoryId": "1" },
+      { "id": "8", "name": "Product 8", "price": "$3199", "image": "/images/furniture.jpg", "numberOfPurchased": 78, "categoryId": "1" },
+      { "id": "9", "name": "Pendant Light", "price": "$129", "image": "/images/furniture.jpg", "numberOfPurchased": 312, "categoryId": "2" },
+      { "id": "10", "name": "Floor Lamp", "price": "$89", "image": "/images/furniture.jpg", "numberOfPurchased": 278, "categoryId": "2" },
+      { "id": "11", "name": "Wall Art", "price": "$79", "image": "/images/furniture.jpg", "numberOfPurchased": 423, "categoryId": "3" },
+      { "id": "12", "name": "Vase", "price": "$49", "image": "/images/furniture.jpg", "numberOfPurchased": 367, "categoryId": "3" },
+      { "id": "13", "name": "Cookware Set", "price": "$299", "image": "/images/furniture.jpg", "numberOfPurchased": 534, "categoryId": "4" },
+      { "id": "14", "name": "Knife Set", "price": "$149", "image": "/images/furniture.jpg", "numberOfPurchased": 445, "categoryId": "4" }
+    ],
+    "categories": [
+      { "id": "1", "name": "Furniture", "image": "/images/furniture.jpg" },
+      { "id": "2", "name": "Lighting", "image": "/images/furniture.jpg" },
+      { "id": "3", "name": "Decor", "image": "/images/furniture.jpg" },
+      { "id": "4", "name": "Kitchen", "image": "/images/furniture.jpg" },
+      { "id": "5", "name": "Category 5", "image": "/images/furniture.jpg" },
+      { "id": "6", "name": "Category 6", "image": "/images/furniture.jpg" },
+      { "id": "7", "name": "Category 7", "image": "/images/furniture.jpg" },
+      { "id": "8", "name": "Category 8", "image": "/images/furniture.jpg" }
+    ]
+  }
+  
