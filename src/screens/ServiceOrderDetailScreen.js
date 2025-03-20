@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, SafeAreaView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import StatusTracking from '../components/StatusTracking';
 
 const ServiceOrderDetailScreen = ({ navigation, route }) => {
-  
+
   const orderDetails = {
-    
+
     userInfo: {
       name: 'John Doe',
       address: '123 Main Street, New York, NY 10001',
@@ -13,45 +14,45 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
       orderTime: '10:00 AM',
       orderDate: '2024-03-15',
     },
-    
+
     serviceInfo: {
       serviceName: 'Customize ban công',
       orderNumber: 'SO-2024001',
       designArea: '15 m²',
       status: 'Completed',
     },
-    
+
     materials: [
-      { 
-        id: '1', 
-        name: 'Wooden Flooring', 
-        quantity: '15 m²', 
-        price: '$450', 
-        image: require('../assets/images/furniture.jpg') 
+      {
+        id: '1',
+        name: 'Wooden Flooring',
+        quantity: '15 m²',
+        price: '$450',
+        image: require('../assets/images/furniture.jpg')
       },
-      { 
-        id: '2', 
-        name: 'LED Lights', 
-        quantity: '5 pieces', 
+      {
+        id: '2',
+        name: 'LED Lights',
+        quantity: '5 pieces',
         price: '$100',
         image: require('../assets/images/furniture.jpg')
       },
-      { 
-        id: '3', 
-        name: 'Paint', 
-        quantity: '2 gallons', 
+      {
+        id: '3',
+        name: 'Paint',
+        quantity: '2 gallons',
         price: '$80',
         image: require('../assets/images/furniture.jpg')
       },
-      { 
-        id: '4', 
-        name: 'Plant Pots', 
-        quantity: '3 pieces', 
+      {
+        id: '4',
+        name: 'Plant Pots',
+        quantity: '3 pieces',
         price: '$90',
         image: require('../assets/images/furniture.jpg')
       },
     ],
-    
+
     payment: {
       designPrice: 150,
       materialPrice: 720,
@@ -72,92 +73,89 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
   };
 
   return (
-    <View style={styles.container}>
-      
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Icon name="chevron-left" size={28} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order Details</Text>
-        <View style={{ width: 28 }} />
-      </View>
-
-      <ScrollView style={styles.content} removeClippedSubviews={false}>
-       
-        <View style={styles.statusContainer}>
-          <Text style={[styles.statusText, { color: getStatusColor(orderDetails.serviceInfo.status) }]}>
-            {orderDetails.serviceInfo.status}
-          </Text>
-          <Text style={styles.orderNumber}>Order #{orderDetails.serviceInfo.orderNumber}</Text>
+    
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Icon name="chevron-left" size={28} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Order Details</Text>
+          <View style={{ width: 28 }} />
         </View>
 
-       
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Customer Information</Text>
-          <View style={styles.infoContainer}>
-            <InfoRow icon="account" text={orderDetails.userInfo.name} />
-            <InfoRow icon="phone" text={orderDetails.userInfo.phone} />
-            <InfoRow icon="map-marker" text={orderDetails.userInfo.address} />
-            <InfoRow icon="clock" text={`${orderDetails.userInfo.orderTime}, ${orderDetails.userInfo.orderDate}`} />
+        <ScrollView style={styles.content} removeClippedSubviews={false}>
+
+          <View style={styles.statusContainer}>
+            <Text style={[styles.statusText, { color: getStatusColor(orderDetails.serviceInfo.status) }]}>
+              {orderDetails.serviceInfo.status}
+            </Text>
+            <Text style={styles.orderNumber}>Order #{orderDetails.serviceInfo.orderNumber}</Text>
           </View>
-        </View>
 
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Service Information</Text>
-          <View style={styles.infoContainer}>
-            <InfoRow icon="brush" text={orderDetails.serviceInfo.serviceName} />
-            <InfoRow icon="ruler-square" text={`Design Area: ${orderDetails.serviceInfo.designArea}`} />
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Customer Information</Text>
+            <View style={styles.infoContainer}>
+              <InfoRow icon="account" text={orderDetails.userInfo.name} />
+              <InfoRow icon="phone" text={orderDetails.userInfo.phone} />
+              <InfoRow icon="map-marker" text={orderDetails.userInfo.address} />
+              <InfoRow icon="clock" text={`${orderDetails.userInfo.orderTime}, ${orderDetails.userInfo.orderDate}`} />
+            </View>
           </View>
-        </View>
 
-       
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Materials</Text>
-          <View style={styles.materialsContainer}>
-            {orderDetails.materials.map((material) => ( 
-              <View key={material.id} style={styles.materialRow}>
-                {/* <Image 
-                  source={material.image || require('../assets/images/default-material.png')}
-                  style={styles.materialImage}
-                  defaultSource={require('../assets/images/default-material.png')}
-                /> */}
-                <Image 
-                  source={material.image}
-                  style={styles.materialImage}
-                  
-                />
-                <View style={styles.materialInfo}>
-                  <Text style={styles.materialName}>{material.name}</Text>
-                  <Text style={styles.materialQuantity}>{material.quantity}</Text>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Service Information</Text>
+            <View style={styles.infoContainer}>
+              <InfoRow icon="brush" text={orderDetails.serviceInfo.serviceName} />
+              <InfoRow icon="ruler-square" text={`Design Area: ${orderDetails.serviceInfo.designArea}`} />
+            </View>
+          </View>
+
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Materials</Text>
+            <View style={styles.materialsContainer}>
+              {orderDetails.materials.map((material) => (
+                <View key={material.id} style={styles.materialRow}>
+                  <Image
+                    source={material.image}
+                    style={styles.materialImage}
+                  />
+                  <View style={styles.materialInfo}>
+                    <Text style={styles.materialName}>{material.name}</Text>
+                    <Text style={styles.materialQuantity}>{material.quantity}</Text>
+                  </View>
+                  <Text style={styles.materialPrice}>{material.price}</Text>
                 </View>
-                <Text style={styles.materialPrice}>{material.price}</Text>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
-        </View>
 
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Details</Text>
-          <View style={styles.paymentContainer}>
-            <PaymentRow label="Design Price" amount={`$${orderDetails.payment.designPrice}`} />
-            <PaymentRow label="Materials Price" amount={`$${orderDetails.payment.materialPrice}`} />
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total Amount</Text>
-              <Text style={styles.totalAmount}>${orderDetails.payment.totalPrice}</Text>
-            </View>
-            <View style={styles.paidRow}>
-              <Text style={styles.paidLabel}>Paid Amount</Text>
-              <Text style={styles.paidAmount}>${orderDetails.payment.paid}</Text>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Payment Details</Text>
+            <View style={styles.paymentContainer}>
+              <PaymentRow label="Design Price" amount={`$${orderDetails.payment.designPrice}`} />
+              <PaymentRow label="Materials Price" amount={`$${orderDetails.payment.materialPrice}`} />
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total Amount</Text>
+                <Text style={styles.totalAmount}>${orderDetails.payment.totalPrice}</Text>
+              </View>
+              <View style={styles.paidRow}>
+                <Text style={styles.paidLabel}>Paid Amount</Text>
+                <Text style={styles.paidAmount}>${orderDetails.payment.paid}</Text>
+              </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
-    </View>
+          <StatusTracking />
+        </ScrollView>
+        
+      </View>
+    
   );
 };
 
@@ -334,4 +332,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ServiceOrderDetailScreen; 
+export default ServiceOrderDetailScreen;

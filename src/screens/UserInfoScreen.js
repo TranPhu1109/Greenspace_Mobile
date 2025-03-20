@@ -34,8 +34,13 @@ const UserInfoScreen = ({ navigation }) => {
           <Icon name="chevron-right" size={24} color="#8E8E93" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.option}>
-          <Icon name="credit-card-outline" size={24} color="#007AFF" />
+        <TouchableOpacity 
+          style={styles.option}
+          onPress={() => {
+            navigation.navigate('Wallet');
+          }}
+        >
+          <Icon name="wallet-outline" size={24} color="#007AFF" />
           <Text style={styles.optionText}>Wallet</Text>
           <Icon name="chevron-right" size={24} color="#8E8E93" />
         </TouchableOpacity>

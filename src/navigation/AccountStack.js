@@ -10,16 +10,31 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import ShippingAddressScreen from '../screens/ShippingAddressScreen';
 import ServiceOrderDetailScreen from '../screens/ServiceOrderDetailScreen';
 import MaterialOrderDetailScreen from '../screens/MaterialOrderDetailScreen';
+import WalletScreen from '../screens/WalletScreen';
+import TransactionDetailScreen from '../screens/TransactionDetailScreen';
+import TopUpScreen from '../screens/TopUpScreen';
 
 const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
 const screenWidth = Dimensions.get('window').width;
 
 const ProfileStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="UserInfo" component={UserInfoScreen} />
+  <Stack.Navigator 
+    screenOptions={{ headerShown: false }}
+    initialRouteName="UserInfo"
+  >
+    <Stack.Screen 
+      name="UserInfo" 
+      component={UserInfoScreen}
+      options={{
+        unmountOnBlur: true // This will unmount the screen when navigating away
+      }}
+    />
     <Stack.Screen name="EditProfile" component={EditProfileScreen} />
     <Stack.Screen name="ShippingAddress" component={ShippingAddressScreen} />
+    <Stack.Screen name="Wallet" component={WalletScreen} />
+    <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
+    <Stack.Screen name="TopUp" component={TopUpScreen} />
   </Stack.Navigator>
 );
 

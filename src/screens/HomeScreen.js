@@ -1,12 +1,13 @@
 // src/screens/HomeScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Dimensions, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Dimensions, Animated, TouchableOpacity } from 'react-native';
 import SearchHeader from '../components/SearchHeader';
+import { useNavigation } from '@react-navigation/native';
 
 const HomeScreen = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const slideAnimation = new Animated.Value(0);
-
+  const navigation = useNavigation();
   const images = [
     require('../assets/images/image1.jpg'),
     require('../assets/images/image2.jpg'),
@@ -51,6 +52,20 @@ const HomeScreen = () => {
           />
         </View>
         <Text style={styles.text}>Welcome to the Home Screen!</Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => {
+            navigation.navigate('Account', {
+              screen: 'Profile',
+              params: {
+                screen: 'Wallet',
+                initial: false
+              }
+            });
+          }}
+        >
+          <Text style={styles.buttonText}>Go to wallet</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );

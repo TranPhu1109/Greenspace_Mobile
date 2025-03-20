@@ -2,11 +2,17 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Platform, PermissionsAndroid, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
+import { PaymentConfirmationModal, InsufficientBalanceModal } from '../components/PaymentModals';
+import { useWallet } from '../context/WalletContext';
 
 const OrderScreen = ({ navigation, route }) => {
   const { designId, isCustomize } = route.params;
   const [customImages, setCustomImages] = useState([]);
   const [description, setDescription] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showInsufficientModal, setShowInsufficientModal] = useState(false);
+
+  const { balance, updateBalance, addTransaction } = useWallet();
 
   // In a real app, you would get this data from an API
   const orderDetails = {
@@ -75,7 +81,7 @@ const OrderScreen = ({ navigation, route }) => {
             message: "App needs access to your storage to upload photos.",
             buttonNeutral: "Ask Me Later",
             buttonNegative: "Cancel",
-            buttonPositive: "OK"
+            buttonPositive: "OK"  
           }
         );
         return granted === PermissionsAndroid.RESULTS.GRANTED;
@@ -133,11 +139,48 @@ const OrderScreen = ({ navigation, route }) => {
   };
 
   const handleSubmit = () => {
-    if (isCustomize) {
-      console.log('Submitting customized order');
+    // Check if wallet has enough balance
+    if (balance >= orderDetails.pricing.total) {
+      setShowPaymentModal(true);
     } else {
-      console.log('Submitting direct purchase order');
+      setShowInsufficientModal(true);
     }
+  };
+
+  const handlePaymentConfirm = () => {
+    // Process the payment
+    updateBalance(-orderDetails.pricing.total);
+    
+    // Add transaction to history
+    addTransaction({
+      type: 'payment',
+      amount: -orderDetails.pricing.total,
+      description: `Thanh toán đơn hàng ${orderDetails.designInfo.code}`,
+    });
+
+    setShowPaymentModal(false);
+    Alert.alert(
+      'Thanh toán thành công',
+      'Đơn hàng của bạn đã được xác nhận',
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            navigation.goBack();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleTopUp = () => {
+    setShowInsufficientModal(false);
+    navigation.navigate('Account', {
+      screen: 'Profile',
+      params: {
+        screen: 'TopUp'
+      }
+    });
   };
 
   return (
@@ -256,6 +299,21 @@ const OrderScreen = ({ navigation, route }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <PaymentConfirmationModal
+        visible={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        amount={orderDetails.pricing.total}
+        onConfirm={handlePaymentConfirm}
+      />
+
+      <InsufficientBalanceModal
+        visible={showInsufficientModal}
+        onClose={() => setShowInsufficientModal(false)}
+        required={orderDetails.pricing.total}
+        balance={balance}
+        onTopUp={handleTopUp}
+      />
     </View>
   );
 };

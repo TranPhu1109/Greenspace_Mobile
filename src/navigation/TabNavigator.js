@@ -83,6 +83,17 @@ const TabNavigator = () => {
           title: 'Account',
           headerShown: false,
         }}
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            // Reset the Account stack to its initial state when pressing the tab
+            navigation.navigate('Account', {
+              screen: 'Profile',
+              params: {
+                screen: 'UserInfo'
+              }
+            });
+          },
+        })}
       />
     </Tab.Navigator>
   );
