@@ -1,9 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useAuth } from '../context/AuthContext';
 
 const SettingsScreen = ({ navigation }) => {
+  const { logout } = useAuth();
   const appVersion = '1.0.0'; 
+
+  const handleLogout = () => {
+    logout();
+    // No need to navigate, the RootStack will automatically show Login screen
+  };
 
   return (
     <View style={styles.mainContainer}>
@@ -43,7 +50,7 @@ const SettingsScreen = ({ navigation }) => {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>

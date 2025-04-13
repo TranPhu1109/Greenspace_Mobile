@@ -1,61 +1,49 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, FlatList } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import axios from 'axios';
 
 const { width } = Dimensions.get('window');
 
 const DesignDetailScreen = ({ navigation, route }) => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [error, setError] = useState(null);
+  const [materials, setMaterials] = useState([]);
+  const [loadingMaterials, setLoadingMaterials] = useState(true);
   const scrollViewRef = useRef(null);
+  
+  const { designData } = route.params;
 
-  const designDetails = {
-    id: '1',
-    name: 'Modern Living Room',
-    description: 'A contemporary living room design featuring clean lines, neutral colors, and comfortable seating arrangements. Perfect for modern homes seeking a balance between style and functionality.',
-    area: {
-      length: '5.5m',
-      width: '4.2m',
-      total: '23.1m²'
-    },
-    images: [
-      require('../assets/images/default_image.jpg'),
-      require('../assets/images/furniture.jpg'),
-      require('../assets/images/default_image.jpg'),
-    ],
-    materials: [
-      {
-        id: '1',
-        name: 'Modern Sofa',
-        quantity: '1 piece',
-        price: 1299.99,
-        image: require('../assets/images/furniture.jpg')
-      },
-      {
-        id: '2',
-        name: 'Coffee Table',
-        quantity: '1 piece',
-        price: 399.99,
-        image: require('../assets/images/furniture.jpg')
-      },
-      {
-        id: '3',
-        name: 'Floor Lamp',
-        quantity: '2 pieces',
-        price: 199.99,
-        image: require('../assets/images/furniture.jpg')
-      },
-      {
-        id: '4',
-        name: 'Wall Art',
-        quantity: '3 pieces',
-        price: 149.99,
-        image: require('../assets/images/furniture.jpg')
-      }
-    ],
-    pricing: {
-      materials: 2449.95,
-      design: 500.00,
-      total: 2949.95
+  useEffect(() => {
+    if (designData.productDetails && designData.productDetails.length > 0) {
+      fetchMaterials(designData.productDetails);
+    } else {
+      setLoadingMaterials(false);
+    }
+  }, [designData]);
+
+  const fetchMaterials = async (productDetails) => {
+    try {
+      const materialsPromises = productDetails.map(async (detail) => {
+        const response = await axios.get(`http://10.0.2.2:8080/api/product/${detail.productId}`, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          }
+        });
+        return {
+          ...response.data,
+          quantity: detail.quantity
+        };
+      });
+
+      const materialsData = await Promise.all(materialsPromises);
+      setMaterials(materialsData);
+    } catch (err) {
+      console.log('Error fetching materials:', err);
+      setError('Failed to load materials');
+    } finally {
+      setLoadingMaterials(false);
     }
   };
 
@@ -65,32 +53,25 @@ const DesignDetailScreen = ({ navigation, route }) => {
     setActiveImageIndex(currentIndex);
   };
 
-  const feedbacks = [
-    {
-      id: 1,
-      userName: 'User 1',
-      rating: 5,
-      comment: 'Sản phẩm ok lắm',
-    },
-    {
-      id: 2,
-      userName: 'User 2',
-      rating: 5,
-      comment: 'Chất lượng sản phẩm tốt nhưng giá mắc quá',
-    },
-  ];
+  if (error) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton} 
+          onPress={() => fetchMaterials(designData.productDetails)}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
-  const renderStars = (rating) => {
-    return [...Array(5)].map((_, index) => (
-      <Icon
-        key={index}
-        name="star"
-        size={16}
-        color={index < rating ? '#FFD700' : '#E5E5EA'}
-        style={{ marginRight: 2 }}
-      />
-    ));
-  };
+  const images = [
+    designData.image.imageUrl,
+    designData.image.image2,
+    designData.image.image3
+  ];
 
   return (
     <View style={styles.container}>
@@ -116,16 +97,16 @@ const DesignDetailScreen = ({ navigation, route }) => {
             scrollEventThrottle={16}
             removeClippedSubviews={false}
           >
-            {designDetails.images.map((image, index) => (
+            {images.map((imageUrl, index) => (
               <Image
                 key={index}
-                source={image}
+                source={{ uri: imageUrl }}
                 style={styles.mainImage}
               />
             ))}
           </ScrollView>
           <View style={styles.imageIndicators}>
-            {designDetails.images.map((_, index) => (
+            {images.map((_, index) => (
               <View
                 key={index}
                 style={[
@@ -138,82 +119,51 @@ const DesignDetailScreen = ({ navigation, route }) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{designDetails.name}</Text>
-          <Text style={styles.description}>{designDetails.description}</Text>
-          <View style={styles.areaContainer}>
-            <View style={styles.areaItem}>
-              <Icon name="ruler-square" size={20} color="#666" />
-              <Text style={styles.areaText}>Length: {designDetails.area.length}</Text>
-            </View>
-            <View style={styles.areaItem}>
-              <Icon name="ruler-square" size={20} color="#666" />
-              <Text style={styles.areaText}>Width: {designDetails.area.width}</Text>
-            </View>
-            <View style={styles.areaItem}>
-              <Icon name="ruler-square" size={20} color="#666" />
-              <Text style={styles.areaText}>Total Area: {designDetails.area.total}</Text>
-            </View>
-          </View>
+          <Text style={styles.sectionTitle}>{designData.name}</Text>
+          <Text style={styles.description}>{designData.description}</Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Materials</Text>
-          <View style={styles.materialsContainer}>
-            {designDetails.materials.map((material) => (
-              <View key={material.id} style={styles.materialRow}>
-                <Image 
-                  source={material.image}
-                  style={styles.materialImage}
-                />
-                <View style={styles.materialInfo}>
-                  <Text style={styles.materialName}>{material.name}</Text>
-                  <Text style={styles.materialQuantity}>{material.quantity}</Text>
+          {loadingMaterials ? (
+            <ActivityIndicator size="small" color="#007AFF" style={styles.materialsLoading} />
+          ) : materials.length > 0 ? (
+            <View style={styles.materialsContainer}>
+              {materials.map((material) => (
+                <View key={material.id} style={styles.materialRow}>
+                  <Image 
+                    source={{ uri: material.image?.imageUrl }} 
+                    style={styles.materialImage}
+                  />
+                  <View style={styles.materialInfo}>
+                    <Text style={styles.materialName}>{material.name}</Text>
+                    <Text style={styles.materialQuantity}>Quantity: {material.quantity}</Text>  
+                  </View>
                 </View>
-                <Text style={styles.materialPrice}>${material.price.toFixed(2)}</Text>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.noMaterialsText}>No materials available</Text>
+          )}
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Pricing</Text>
           <View style={styles.pricingContainer}>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Materials Cost</Text>
-              <Text style={styles.pricingAmount}>${designDetails.pricing.materials.toFixed(2)}</Text>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Design Price</Text>
+              <Text style={styles.priceAmount}>{designData.designPrice.toLocaleString('vi-VN')} VND</Text>
             </View>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Design Cost</Text>
-              <Text style={styles.pricingAmount}>${designDetails.pricing.design.toFixed(2)}</Text>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Materials Price</Text>
+              <Text style={styles.priceAmount}>{designData.materialPrice.toLocaleString('vi-VN')} VND</Text>
             </View>
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total Cost</Text>
-              <Text style={styles.totalAmount}>${designDetails.pricing.total.toFixed(2)}</Text>
+            <View style={[styles.priceRow, styles.totalRow]}>
+              <Text style={[styles.priceLabel, styles.totalLabel]}>Total Price</Text>
+              <Text style={[styles.priceAmount, styles.totalAmount]}>
+                {designData.totalPrice.toLocaleString('vi-VN')} VND
+              </Text>
             </View>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.feedbackContainer}>
-            <View style={styles.feedbackHeader}>
-              <Text style={styles.sectionTitle}>Feedback</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('AllFeedback')}>
-                <Text style={styles.viewAllText}>Xem tất cả</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {feedbacks.map((feedback) => (
-              <View key={feedback.id} style={styles.feedbackItem}>
-                <View style={styles.userInfo}>
-                  <Icon name="account-circle" size={24} color="#666" />
-                  <Text style={styles.userName}>{feedback.userName}</Text>
-                </View>
-                <View style={styles.ratingContainer}>
-                  {renderStars(feedback.rating)}
-                </View>
-                <Text style={styles.feedbackComment}>{feedback.comment}</Text>
-              </View>
-            ))}
           </View>
         </View>
 
@@ -225,7 +175,7 @@ const DesignDetailScreen = ({ navigation, route }) => {
             </Text>
             <TouchableOpacity 
               style={styles.buyButton}
-              onPress={() => navigation.navigate('Order', { designId: designDetails.id, isCustomize: false })}
+              onPress={() => navigation.navigate('Order', { designData, isCustomize: false })}
             >
               <Text style={styles.buttonText}>Buy Design</Text>
             </TouchableOpacity>
@@ -237,7 +187,7 @@ const DesignDetailScreen = ({ navigation, route }) => {
             </Text>
             <TouchableOpacity 
               style={styles.customizeButton}
-              onPress={() => navigation.navigate('Order', { designId: designDetails.id, isCustomize: true })}
+              onPress={() => navigation.navigate('Order', { designData, isCustomize: true })}
             >
               <Text style={styles.buttonText}>Customize Design</Text>
             </TouchableOpacity>
@@ -251,6 +201,12 @@ const DesignDetailScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#fff',
   },
   header: {
@@ -319,86 +275,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
-    marginBottom: 16,
-  },
-  areaContainer: {
-    backgroundColor: '#F9F9F9',
-    borderRadius: 8,
-    padding: 12,
-  },
-  areaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: 8,
   },
-  areaText: {
-    marginLeft: 8,
+  category: {
     fontSize: 14,
-    color: '#333',
-  },
-  materialsContainer: {
-    backgroundColor: '#F9F9F9',
-    borderRadius: 8,
-    padding: 12,
-  },
-  materialRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  materialImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  materialInfo: {
-    flex: 1,
-  },
-  materialName: {
-    fontSize: 14,
+    color: '#007AFF',
     fontWeight: '500',
-    color: '#333',
-    marginBottom: 4,
-  },
-  materialQuantity: {
-    fontSize: 12,
-    color: '#666',
-  },
-  materialPrice: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 8,
   },
   pricingContainer: {
     backgroundColor: '#F9F9F9',
     borderRadius: 8,
     padding: 12,
   },
-  pricingRow: {
+  priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
   },
-  pricingLabel: {
+  totalRow: {
+    borderBottomWidth: 0,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+  },
+  priceLabel: {
     fontSize: 14,
     color: '#666',
   },
-  pricingAmount: {
+  priceAmount: {
     fontSize: 14,
     color: '#333',
-    fontWeight: '500',
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
   },
   totalLabel: {
     fontSize: 16,
@@ -444,44 +353,70 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  feedbackContainer: {
-    marginTop: 8,
+  errorText: {
+    fontSize: 16,
+    color: '#ff3b30',
+    marginBottom: 16,
   },
-  feedbackHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
-  viewAllText: {
-    fontSize: 14,
-    color: '#007AFF',
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
   },
-  feedbackItem: {
+  materialsContainer: {
     backgroundColor: '#F9F9F9',
     borderRadius: 8,
     padding: 12,
-    marginBottom: 10,
+    
   },
-  userInfo: {
+  materialRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
   },
-  userName: {
-    marginLeft: 8,
-    fontSize: 14,
+  materialImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#E5E5EA',
+  },
+  materialInfo: {
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: 'center',
+  },
+  materialName: {
+    fontSize: 16,
     fontWeight: '500',
-    color: '#333',
+    color: '#000',
+    marginBottom: 4,
   },
-  ratingContainer: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  feedbackComment: {
+  materialQuantity: {
     fontSize: 14,
     color: '#666',
-    lineHeight: 20,
+    marginBottom: 4,
+  },
+  materialPrice: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  materialsLoading: {
+    padding: 20,
+  },
+  noMaterialsText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    padding: 20,
   },
 });
 

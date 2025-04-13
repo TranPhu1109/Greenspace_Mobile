@@ -7,60 +7,95 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { CartContext } from '../context/CartContext';
+import { WalletContext } from '../context/WalletContext';
 import Modal from '../components/Modal';
 import { CommonActions } from '@react-navigation/native';
 
 const CheckOutScreen = ({ navigation }) => {
   const { cartItems, totalPrice, clearCart } = useContext(CartContext);
+  const { balance, updateBalance, addTransaction } = useContext(WalletContext);
   const [isPaymentMethodChecked, setIsPaymentMethodChecked] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
   
-  const shippingFee = 10.00;
-  const discount = 5.00;
-  const finalTotal = (parseFloat(totalPrice) + shippingFee - discount).toFixed(2);
+  const shippingFee = 30000; // 30,000 VND shipping fee
+  const discount = 20000; // 20,000 VND discount
+  const finalTotal = totalPrice + shippingFee - discount;
 
   const handleOrder = () => {
     if (!isPaymentMethodChecked) {
-      alert('Please select a payment method');
+      Alert.alert('Error', 'Please select a payment method');
       return;
     }
+
+    // Check if user has enough balance
+    if (balance < finalTotal) {
+      Alert.alert(
+        'Insufficient Balance',
+        'Your wallet balance is not enough to complete this purchase. Please top up your wallet.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Top Up Wallet',
+            onPress: () => navigation.navigate('TopUp')
+          }
+        ]
+      );
+      return;
+    }
+
     setIsModalVisible(true);
   };
 
   const handleConfirmOrder = () => {
-    setIsModalVisible(false);
-    setIsSuccessModalVisible(true);
-    
-    clearCart();
-    
-    setTimeout(() => {
-      setIsSuccessModalVisible(false);
+    try {
+      // Deduct money from wallet
+      updateBalance(-finalTotal);
       
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Shop' }],
+      // Add transaction record
+      addTransaction({
+        type: 'payment',
+        amount: -finalTotal,
+        description: 'Thanh toán đơn hàng',
       });
 
+      setIsModalVisible(false);
+      setIsSuccessModalVisible(true);
+      
+      clearCart();
+      
       setTimeout(() => {
-        navigation.getParent()?.navigate('Home');
-      }, 100);
-    }, 2000);
+        setIsSuccessModalVisible(false);
+        
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Shop' }],
+        });
+
+        setTimeout(() => {
+          navigation.getParent()?.navigate('Home');
+        }, 100);
+      }, 2000);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to process payment. Please try again.');
+      setIsModalVisible(false);
+    }
   };
 
   const renderCartItem = ({ item }) => (
     <View style={styles.cartItem}>
       <Image
-        source={require('../assets/images/furniture.jpg')}
+        source={{ uri: item.image.imageUrl }}
         style={styles.cartItemImage}
         resizeMode="cover"
       />
       <View style={styles.cartItemDetails}>
         <Text style={styles.cartItemName}>{item.name}</Text>
-        <Text style={styles.cartItemPrice}>{item.price}</Text>
+        <Text style={styles.cartItemPrice}>{item.price.toLocaleString('vi-VN')} VND</Text>
         <Text style={styles.quantityText}>Quantity: {item.quantity}</Text>
       </View>
     </View>
@@ -96,17 +131,36 @@ const CheckOutScreen = ({ navigation }) => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
-          <TouchableOpacity 
-            style={styles.checkboxContainer}
-            onPress={() => setIsPaymentMethodChecked(!isPaymentMethodChecked)}
-          >
-            <Icon
-              name={isPaymentMethodChecked ? "checkbox-marked" : "checkbox-blank-outline"}
-              size={24}
-              color="#007AFF"
-            />
-            <Text style={styles.checkboxText}>Ví cá nhân</Text>
-          </TouchableOpacity>
+          <View>
+            <TouchableOpacity 
+              style={styles.checkboxContainer}
+              onPress={() => setIsPaymentMethodChecked(!isPaymentMethodChecked)}
+            >
+              <Icon
+                name={isPaymentMethodChecked ? "checkbox-marked" : "checkbox-blank-outline"}
+                size={24}
+                color="#007AFF"
+              />
+              <Text style={styles.checkboxText}>Ví cá nhân</Text>
+            </TouchableOpacity>
+            <View style={styles.walletContainer}>
+              <Text style={styles.walletBalance}>
+                Số dư hiện tại: {balance.toLocaleString('vi-VN')} VND
+              </Text>
+              <TouchableOpacity 
+                style={styles.topUpButton}
+                onPress={() => navigation.navigate('Account', {
+                  screen: 'Profile',
+                  params: {
+                    screen: 'TopUp'
+                  }
+                })}
+              >
+                <Icon name="wallet-plus" size={20} color="#fff" />
+                <Text style={styles.topUpButtonText}>Top Up</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -114,25 +168,34 @@ const CheckOutScreen = ({ navigation }) => {
           <View style={styles.paymentDetails}>
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Subtotal</Text>
-              <Text style={styles.paymentValue}>${totalPrice}</Text>
+              <Text style={styles.paymentValue}>{totalPrice.toLocaleString('vi-VN')} VND</Text>
             </View>
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Shipping Fee</Text>
-              <Text style={styles.paymentValue}>${shippingFee.toFixed(2)}</Text>
+              <Text style={styles.paymentValue}>{shippingFee.toLocaleString('vi-VN')} VND</Text>
             </View>
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Discount</Text>
-              <Text style={styles.paymentValue}>-${discount.toFixed(2)}</Text>
+              <Text style={styles.paymentValue}>-{discount.toLocaleString('vi-VN')} VND</Text>
             </View>
             <View style={[styles.paymentRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>${finalTotal}</Text>
+              <Text style={styles.totalValue}>{finalTotal.toLocaleString('vi-VN')} VND</Text>
             </View>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.orderButton} onPress={handleOrder}>
-          <Text style={styles.orderButtonText}>Order</Text>
+        <TouchableOpacity 
+          style={[
+            styles.orderButton,
+            balance < finalTotal && styles.disabledButton
+          ]} 
+          onPress={handleOrder}
+          disabled={balance < finalTotal}
+        >
+          <Text style={styles.orderButtonText}>
+            {balance < finalTotal ? 'Insufficient Balance' : 'Order'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -145,10 +208,10 @@ const CheckOutScreen = ({ navigation }) => {
           <Icon name="check-circle-outline" size={60} color="#007AFF" />
           <Text style={styles.modalTitle}>Confirm Order</Text>
           <Text style={styles.modalText}>
-            Xác nhận thanh toán đơn hàng với số tiền ${finalTotal}?
+            Xác nhận thanh toán đơn hàng với số tiền {finalTotal.toLocaleString('vi-VN')} VND?
           </Text>
           <Text style={styles.modalBalance}>
-            Số dư sau thanh toán: $$$$$
+            Số dư sau thanh toán: {(balance - finalTotal).toLocaleString('vi-VN')} VND
           </Text>
           <View style={styles.modalButtons}>
             <TouchableOpacity
@@ -401,6 +464,35 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#666',
     marginLeft: 4,
+  },
+  walletContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    marginLeft: 34,
+    marginRight: 10,
+  },
+  walletBalance: {
+    fontSize: 14,
+    color: '#666',
+  },
+  topUpButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  topUpButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  disabledButton: {
+    backgroundColor: '#cccccc',
   },
 });
 

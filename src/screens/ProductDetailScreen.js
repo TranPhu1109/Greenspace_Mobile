@@ -1,13 +1,44 @@
-import React, { useContext } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useContext, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { CartContext } from '../context/CartContext';
+import axios from 'axios';
+
+
+const API_URL = 'http://10.0.2.2:8080/api';
 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { addToCartItem } = useContext(CartContext);
-  const { product } = route.params;
+  const { productId } = route.params;
+  const [product, setProduct] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  // fake  data 
+  useEffect(() => {
+    const fetchProductDetails = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await axios.get(`${API_URL}/product/${productId}`);
+        setProduct(response.data);
+      } catch (error) {
+        console.error('Error fetching product details:', error);
+        setError('Failed to load product details. Please try again.');
+        Alert.alert(
+          'Error',
+          'Failed to load product details. Please try again.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProductDetails();
+  }, [productId]);
+
+  // fake feedback data (you can replace this with an API call if you have feedback endpoints)
   const feedbacks = [
     {
       id: 1,
@@ -37,66 +68,126 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
   const handleAddToCart = async () => {
     try {
+      setIsSyncing(true);
       await addToCartItem(product);
-      navigation.navigate('Cart');
+      Alert.alert(
+        'Thành công',
+        'Đã thêm sản phẩm vào giỏ hàng',
+        [
+          {
+            text: 'Tiếp tục mua sắm',
+            style: 'cancel',
+          },
+          {
+            text: 'Đi đến giỏ hàng',
+            onPress: () => navigation.navigate('Cart'),
+          },
+        ]
+      );
     } catch (error) {
       console.error('Error adding to cart:', error);
+      Alert.alert(
+        'Lỗi',
+        'Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.',
+        [{ text: 'Đồng ý' }]
+      );
+    } finally {
+      setIsSyncing(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Đang tải thông tin sản phẩm...</Text>
+      </View>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <View style={styles.errorContainer}>
+        <Icon name="alert-circle" size={50} color="#FF3B30" />
+        <Text style={styles.errorText}>{error || 'Không tìm thấy sản phẩm'}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.retryButtonText}>Quay lại</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content} removeClippedSubviews={false}>
-        <Image 
-          source={require('../assets/images/furniture.jpg')}
-          style={styles.productImage}
-          resizeMode="cover"
-        />
+        {/* Image Gallery */}
+        <ScrollView
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          style={styles.imageGallery}
+        >
+          {product.image.imageUrl && (
+            <Image 
+              source={{ uri: product.image.imageUrl }}
+              style={styles.productImage}
+              resizeMode="cover"
+            />
+          )}
+          {product.image.image2 && product.image.image2.trim() !== '' && (
+            <Image 
+              source={{ uri: product.image.image2 }}
+              style={styles.productImage}
+              resizeMode="cover"
+            />
+          )}
+          {product.image.image3 && product.image.image3.trim() !== '' && (
+            <Image 
+              source={{ uri: product.image.image3 }}
+              style={styles.productImage}
+              resizeMode="cover"
+            />
+          )}
+        </ScrollView>
         
         <View style={styles.detailsContainer}>
           <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productPrice}>{product.price}</Text>
+          <Text style={styles.productPrice}>{product.price.toLocaleString('vi-VN')} VNĐ</Text>
           
           <View style={styles.descriptionContainer}>
-            <Text style={styles.descriptionTitle}>Description</Text>
-            <Text style={styles.description}>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-            </Text>
+            <Text style={styles.descriptionTitle}>Mô tả sản phẩm</Text>
+            <Text style={styles.description}>{product.description}</Text>
           </View>
 
           <View style={styles.specsContainer}>
-            <Text style={styles.specsTitle}>Specifications</Text>
+            <Text style={styles.specsTitle}>Thông số kỹ thuật</Text>
             <View style={styles.specItem}>
               <Text style={styles.specLabel}>Tên sản phẩm</Text>
-              <Text style={styles.specValue}>Product name</Text>
+              <Text style={styles.specValue}>{product.name}</Text>
             </View>
             <View style={styles.specItem}>
-              <Text style={styles.specLabel}>Giá</Text>
-              <Text style={styles.specValue}>price</Text>
+              <Text style={styles.specLabel}>Giá bán</Text>
+              <Text style={styles.specValue}>{product.price.toLocaleString('vi-VN')} VNĐ</Text>
             </View>
             <View style={styles.specItem}>
-              <Text style={styles.specLabel}>Category</Text>
-              <Text style={styles.specValue}>Category</Text>
+              <Text style={styles.specLabel}>Danh mục</Text>
+              <Text style={styles.specValue}>{product.categoryName}</Text>
             </View>
             <View style={styles.specItem}>
-              <Text style={styles.specLabel}>Chất liệu</Text>
-              <Text style={styles.specValue}>Chất liệu</Text>
+              <Text style={styles.specLabel}>Số lượng kho</Text>
+              <Text style={styles.specValue}>{product.stock} sản phẩm</Text>
             </View>
-            <View style={styles.specItem}>
-              <Text style={styles.specLabel}>Kích thước</Text>
-              <Text style={styles.specValue}>Kích thước</Text>
-            </View>
-            <View style={styles.specItem}>
-              <Text style={styles.specLabel}>Trọng lượng</Text>
-              <Text style={styles.specValue}>Trọng lượng</Text>
-            </View>
+            
           </View>
 
           {/* Feedback Section */}
           <View style={styles.feedbackContainer}>
             <View style={styles.feedbackHeader}>
-              <Text style={styles.feedbackTitle}>Feedback</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('AllFeedback')}>
+              <Text style={styles.feedbackTitle}>Đánh giá sản phẩm</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('AllFeedback', { productId: product.id })}>
                 <Text style={styles.viewAllText}>Xem tất cả</Text>
               </TouchableOpacity>
             </View>
@@ -118,9 +209,20 @@ const ProductDetailScreen = ({ route, navigation }) => {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.cartButton} onPress={handleAddToCart}>
+        <TouchableOpacity 
+          style={[
+            styles.cartButton,
+            product.stock === 0 && styles.disabledButton,
+            isSyncing && styles.syncingButton
+          ]} 
+          onPress={handleAddToCart}
+          disabled={product.stock === 0 || isSyncing}
+        >
           <Icon name="cart-outline" size={24} color="#fff" />
-          <Text style={styles.cartButtonText}>Add to Cart</Text>
+          <Text style={styles.cartButtonText}>
+            {product.stock === 0 ? 'Hết hàng' : 
+             isSyncing ? 'Đang xử lý...' : 'Thêm vào giỏ hàng'}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -130,80 +232,114 @@ const ProductDetailScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f6fa',
   },
   content: {
     flex: 1,
   },
+  imageGallery: {
+    height: 350,
+    backgroundColor: '#fff',
+  },
   productImage: {
     width: Dimensions.get('window').width,
-    height: 300,
+    height: 350,
   },
   detailsContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    marginTop: -25,
     padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   productName: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#333',
+    color: '#2c3e50',
+    lineHeight: 32,
   },
   productPrice: {
-    fontSize: 20,
-    color: '#007AFF',
+    fontSize: 28,
+    color: '#e74c3c',
     fontWeight: 'bold',
     marginBottom: 20,
   },
   descriptionContainer: {
-    marginBottom: 20,
+    marginBottom: 25,
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 12,
   },
   descriptionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#333',
+    color: '#2c3e50',
   },
   description: {
-    fontSize: 16,
-    color: '#666',
-    lineHeight: 24,
+    fontSize: 15,
+    color: '#34495e',
+    lineHeight: 22,
   },
   specsContainer: {
-    marginBottom: 20,
+    marginBottom: 25,
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 12,
   },
   specsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 15,
-    color: '#333',
+    color: '#2c3e50',
   },
   specItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#e1e8ed',
   },
   specLabel: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 15,
+    color: '#7f8c8d',
+    flex: 1,
   },
   specValue: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
+    fontSize: 15,
+    color: '#2c3e50',
+    fontWeight: '600',
+    flex: 2,
+    textAlign: 'right',
   },
   bottomBar: {
-    padding: 20,
+    padding: 16,
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#e1e8ed',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -3,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 5,
   },
   cartButton: {
     flexDirection: 'row',
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: '#e74c3c',
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -214,8 +350,11 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   feedbackContainer: {
-    marginTop: 20,
+    marginTop: 5,
     marginBottom: 20,
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 12,
   },
   feedbackHeader: {
     flexDirection: 'row',
@@ -226,17 +365,26 @@ const styles = StyleSheet.create({
   feedbackTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#2c3e50',
   },
   viewAllText: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#e74c3c',
+    fontWeight: '600',
   },
   feedbackItem: {
-    backgroundColor: '#F9F9F9',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   userInfo: {
     flexDirection: 'row',
@@ -246,8 +394,8 @@ const styles = StyleSheet.create({
   userName: {
     marginLeft: 8,
     fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: '600',
+    color: '#2c3e50',
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -255,8 +403,52 @@ const styles = StyleSheet.create({
   },
   feedbackComment: {
     fontSize: 14,
-    color: '#666',
+    color: '#34495e',
     lineHeight: 20,
+  },
+  disabledButton: {
+    backgroundColor: '#bdc3c7',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f6fa',
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 20,
+    color: '#2c3e50',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f6fa',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 20,
+    color: '#e74c3c',
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#e74c3c',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    marginTop: 20,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  syncingButton: {
+    backgroundColor: '#95a5a6',
   },
 });
 

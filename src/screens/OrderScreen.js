@@ -1,75 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Platform, PermissionsAndroid, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import { PaymentConfirmationModal, InsufficientBalanceModal } from '../components/PaymentModals';
+import SuccessModal from '../components/SuccessModal';
 import { useWallet } from '../context/WalletContext';
+import axios from 'axios';
 
 const OrderScreen = ({ navigation, route }) => {
-  const { designId, isCustomize } = route.params;
+  const { designData, isCustomize } = route.params;
+  //console.log(isCustomize);
+
   const [customImages, setCustomImages] = useState([]);
   const [description, setDescription] = useState('');
+  const [length, setLength] = useState('');
+  const [width, setWidth] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const { balance, updateBalance, addTransaction } = useWallet();
 
-  // In a real app, you would get this data from an API
-  const orderDetails = {
-    // User Info
-    userInfo: {
-      name: 'John Doe',
-      phone: '+1 234 567 890',
-      address: '123 Main Street, New York, NY 10001',
-    },
-    // Design Info
-    designInfo: {
-      name: 'Modern Living Room',
-      code: 'DL-2024001',
-      area: {
-        length: '5.5m',
-        width: '4.2m',
-        total: '23.1m²'
-      }
-    },
-    // Materials List
-    materials: [
-      {
-        id: '1',
-        name: 'Modern Sofa',
-        quantity: '1 piece',
-        price: 1299.99,
-        image: require('../assets/images/furniture.jpg')
-      },
-      {
-        id: '2',
-        name: 'Coffee Table',
-        quantity: '1 piece',
-        price: 399.99,
-        image: require('../assets/images/furniture.jpg')
-      },
-      {
-        id: '3',
-        name: 'Floor Lamp',
-        quantity: '2 pieces',
-        price: 199.99,
-        image: require('../assets/images/furniture.jpg')
-      },
-      {
-        id: '4',
-        name: 'Wall Art',
-        quantity: '3 pieces',
-        price: 149.99,
-        image: require('../assets/images/furniture.jpg')
-      }
-    ],
-    // Pricing
-    pricing: {
-      materials: 2449.95,
-      design: 500.00,
-      total: 2949.95
+  useEffect(() => {
+    if (!designData) {
+      Alert.alert(
+        'Error',
+        'Design data is missing. Please try again.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
     }
-  };
+  }, [designData]);
+
+  if (!designData) {
+    return null;
+  }
 
   const requestCameraPermission = async () => {
     if (Platform.OS === 'android') {
@@ -140,37 +104,85 @@ const OrderScreen = ({ navigation, route }) => {
 
   const handleSubmit = () => {
     // Check if wallet has enough balance
-    if (balance >= orderDetails.pricing.total) {
+    if (balance >= designData.totalPrice) {
       setShowPaymentModal(true);
     } else {
       setShowInsufficientModal(true);
     }
   };
 
-  const handlePaymentConfirm = () => {
-    // Process the payment
-    updateBalance(-orderDetails.pricing.total);
-    
-    // Add transaction to history
-    addTransaction({
-      type: 'payment',
-      amount: -orderDetails.pricing.total,
-      description: `Thanh toán đơn hàng ${orderDetails.designInfo.code}`,
-    });
+  const handlePaymentConfirm = async () => {
+    try {
+      console.log('Starting payment confirmation process...');
+      
+      // First, process the payment
+      updateBalance(-designData.totalPrice);
+      console.log('Payment processed, balance updated');
+      
+      // Add transaction to history
+      addTransaction({
+        type: 'payment',
+        amount: -designData.totalPrice,
+        description: `Thanh toán thiết kế ${designData.name}${isCustomize ? ' (Tùy chỉnh)' : ''}`,
+      });
+      console.log('Transaction added to history');
 
-    setShowPaymentModal(false);
-    Alert.alert(
-      'Thanh toán thành công',
-      'Đơn hàng của bạn đã được xác nhận',
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            navigation.goBack();
-          },
-        },
-      ]
-    );
+      // Prepare request body based on isCustomize
+      const requestBody = {
+        userId: "0d3b359a-8d3c-40dd-9c5a-52b27142c9b2",
+        designIdeaId: designData.id,
+        address: "HCM",
+        cusPhone: "0365552663",
+        isCustom: isCustomize,
+        designPrice: designData.designPrice,
+        materialPrice: designData.materialPrice,
+        totalCost: designData.totalPrice
+      };
+
+      // Add custom fields only if isCustomize is true
+      if (isCustomize) {
+        requestBody.length = Number(length) || 0;
+        requestBody.width = Number(width) || 0;
+        requestBody.description = description || "Custom design request";
+        requestBody.image = {
+          imageUrl: designData.image?.imageUrl || "string",
+          image2: designData.image?.image2 || "string",
+          image3: designData.image?.image3 || "string"
+        };
+      }
+
+      console.log('Creating order with data:', JSON.stringify(requestBody, null, 2));
+
+      const response = await axios.post('http://10.0.2.2:8080/api/serviceorder', requestBody, {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      console.log('Order creation response:', response);
+
+      if (response.status === 200 || response.status === 201) {
+        console.log('Order created successfully');
+        setShowPaymentModal(false);
+        setShowSuccessModal(true);
+      }
+    } catch (error) {
+      console.error('Error in payment/order process:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack
+      });
+
+      // If order creation fails, refund the payment
+      updateBalance(designData.totalPrice);
+      
+      Alert.alert(
+        'Lỗi',
+        `Không thể tạo đơn hàng: ${error.response?.data?.message || error.message}. Số tiền đã được hoàn lại.`,
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const handleTopUp = () => {
@@ -183,6 +195,29 @@ const OrderScreen = ({ navigation, route }) => {
     });
   };
 
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    navigation.navigate('Home');
+  };
+
+  const handleViewOrders = () => {
+    setShowSuccessModal(false);
+    navigation.navigate('Account', {
+      screen: 'ServiceOrdersTab',
+      params: {
+        screen: 'ServiceOrders',
+        initial: false
+      }
+    });
+  };
+
+  const InfoRow = ({ icon, text }) => (
+    <View style={styles.infoRow}>
+      <Icon name={icon} size={20} color="#666" />
+      <Text style={styles.infoText}>{text}</Text>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -192,110 +227,118 @@ const OrderScreen = ({ navigation, route }) => {
         >
           <Icon name="chevron-left" size={28} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order Details</Text>
+        <Text style={styles.headerTitle}>Thanh toán</Text>
         <View style={{ width: 28 }} />
       </View>
 
       <ScrollView style={styles.content}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Customer Information</Text>
+          <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
           <View style={styles.infoContainer}>
-            <InfoRow icon="account" text={orderDetails.userInfo.name} />
-            <InfoRow icon="phone" text={orderDetails.userInfo.phone} />
-            <InfoRow icon="map-marker" text={orderDetails.userInfo.address} />
+            <InfoRow icon="account" text="W20" />
+            <InfoRow icon="phone" text="0365552663" />
+            <InfoRow icon="map-marker" text="HCM" />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Design Information</Text>
+          <Text style={styles.sectionTitle}>Thông tin thiết kế</Text>
           <View style={styles.infoContainer}>
-            <InfoRow icon="brush" text={orderDetails.designInfo.name} />
-            <InfoRow icon="barcode" text={`Design Code: ${orderDetails.designInfo.code}`} />
-            <InfoRow icon="ruler-square" text={`Length: ${orderDetails.designInfo.area.length}`} />
-            <InfoRow icon="ruler-square" text={`Width: ${orderDetails.designInfo.area.width}`} />
-            <InfoRow icon="ruler-square" text={`Total Area: ${orderDetails.designInfo.area.total}`} />
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Tên thiết kế</Text>
+              <Text style={styles.priceAmount}>{designData.name}</Text>
+            </View>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Loại đơn hàng</Text>
+              <Text style={styles.priceAmount}>{isCustomize ? 'Tùy chỉnh' : 'Mua trực tiếp'}</Text>
+            </View>
           </View>
         </View>
 
         {isCustomize && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Customization Details</Text>
-            <View style={styles.customizationContainer}>
-              <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-                <Icon name="camera-plus" size={24} color="#007AFF" />
-                <Text style={styles.uploadButtonText}>Upload Photos</Text>
-              </TouchableOpacity>
-              
-              <View style={styles.imagePreviewContainer}>
-                {customImages.map((image, index) => (
-                  <View key={index} style={styles.imagePreviewWrapper}>
-                    <Image 
-                      source={{ uri: image.uri }}
-                      style={styles.previewImage}
-                      resizeMode="cover"
-                    />
-                    <TouchableOpacity 
-                      style={styles.removeImageButton}
-                      onPress={() => removeImage(index)}
-                    >
-                      <Icon name="close-circle" size={24} color="#FF3B30" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+            <Text style={styles.sectionTitle}>Thông tin tùy chỉnh</Text>
+            <View style={styles.infoContainer}>
+              <View style={styles.inputRow}>
+                <Text style={styles.inputLabel}>Chiều dài (cm)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={length}
+                  onChangeText={setLength}
+                  keyboardType="numeric"
+                  placeholder="Nhập chiều dài"
+                />
               </View>
-
-              <TextInput
-                style={styles.descriptionInput}
-                placeholder="Enter your customization requirements..."
-                value={description}
-                onChangeText={setDescription}
-                multiline
-                numberOfLines={4}
-              />
+              <View style={styles.inputRow}>
+                <Text style={styles.inputLabel}>Chiều rộng (cm)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={width}
+                  onChangeText={setWidth}
+                  keyboardType="numeric"
+                  placeholder="Nhập chiều rộng"
+                />
+              </View>
+              <View style={styles.inputRow}>
+                <Text style={styles.inputLabel}>Mô tả</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                  numberOfLines={4}
+                  placeholder="Nhập mô tả chi tiết"
+                />
+              </View>
+              <View style={styles.imageUploadSection}>
+                <Text style={styles.inputLabel}>Hình ảnh tùy chỉnh</Text>
+                <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+                  <Icon name="camera-plus" size={24} color="#007AFF" />
+                  <Text style={styles.uploadButtonText}>Thêm hình ảnh</Text>
+                </TouchableOpacity>
+                {customImages.length > 0 && (
+                  <View style={styles.imagePreviewContainer}>
+                    {customImages.map((image, index) => (
+                      <View key={index} style={styles.imagePreviewWrapper}>
+                        <Image source={{ uri: image.uri }} style={styles.imagePreview} />
+                        <TouchableOpacity
+                          style={styles.removeImageButton}
+                          onPress={() => removeImage(index)}
+                        >
+                          <Icon name="close-circle" size={24} color="#ff3b30" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
             </View>
           </View>
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Materials</Text>
-          <View style={styles.materialsContainer}>
-            {orderDetails.materials.map((material) => (
-              <View key={material.id} style={styles.materialRow}>
-                <Image 
-                  source={material.image}
-                  style={styles.materialImage}
-                />
-                <View style={styles.materialInfo}>
-                  <Text style={styles.materialName}>{material.name}</Text>
-                  <Text style={styles.materialQuantity}>{material.quantity}</Text>
-                </View>
-                <Text style={styles.materialPrice}>${material.price.toFixed(2)}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pricing</Text>
-          <View style={styles.pricingContainer}>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Materials Cost</Text>
-              <Text style={styles.pricingAmount}>${orderDetails.pricing.materials.toFixed(2)}</Text>
+          <Text style={styles.sectionTitle}>Thông tin thanh toán</Text>
+          <View style={styles.infoContainer}>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Giá thiết kế</Text>
+              <Text style={styles.priceAmount}>{designData.designPrice.toLocaleString('vi-VN')} VND</Text>
             </View>
-            <View style={styles.pricingRow}>
-              <Text style={styles.pricingLabel}>Design Cost</Text>
-              <Text style={styles.pricingAmount}>${orderDetails.pricing.design.toFixed(2)}</Text>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceLabel}>Giá vật liệu</Text>
+              <Text style={styles.priceAmount}>{designData.materialPrice.toLocaleString('vi-VN')} VND</Text>
             </View>
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total Cost</Text>
-              <Text style={styles.totalAmount}>${orderDetails.pricing.total.toFixed(2)}</Text>
+            <View style={[styles.priceRow, styles.totalRow]}>
+              <Text style={[styles.priceLabel, styles.totalLabel]}>Tổng cộng</Text>
+              <Text style={[styles.priceAmount, styles.totalAmount]}>
+                {designData.totalPrice.toLocaleString('vi-VN')} VND
+              </Text>
             </View>
           </View>
         </View>
 
         <View style={styles.section}>
           <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.submitButtonText}>Submit Order</Text>
+            <Text style={styles.submitButtonText}>Thanh toán</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -303,27 +346,26 @@ const OrderScreen = ({ navigation, route }) => {
       <PaymentConfirmationModal
         visible={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        amount={orderDetails.pricing.total}
+        amount={designData.totalPrice}
         onConfirm={handlePaymentConfirm}
       />
 
       <InsufficientBalanceModal
         visible={showInsufficientModal}
         onClose={() => setShowInsufficientModal(false)}
-        required={orderDetails.pricing.total}
+        required={designData.totalPrice}
         balance={balance}
         onTopUp={handleTopUp}
+      />
+
+      <SuccessModal
+        visible={showSuccessModal}
+        onClose={handleSuccessModalClose}
+        onViewOrders={handleViewOrders}
       />
     </View>
   );
 };
-
-const InfoRow = ({ icon, text }) => (
-  <View style={styles.infoRow}>
-    <Icon name={icon} size={20} color="#666" />
-    <Text style={styles.infoText}>{text}</Text>
-  </View>
-);
 
 const styles = StyleSheet.create({
   container: {
@@ -377,122 +419,28 @@ const styles = StyleSheet.create({
     color: '#333',
     flex: 1,
   },
-  customizationContainer: {
-    backgroundColor: '#F9F9F9',
-    borderRadius: 8,
-    padding: 12,
-  },
-  uploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  uploadButtonText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  imagePreviewContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-  imagePreviewWrapper: {
-    position: 'relative',
-    marginBottom: 8,
-  },
-  previewImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-  },
-  removeImageButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-  },
-  descriptionInput: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-    color: '#333',
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  materialsContainer: {
-    backgroundColor: '#F9F9F9',
-    borderRadius: 8,
-    padding: 12,
-  },
-  materialRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  materialImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  materialInfo: {
-    flex: 1,
-  },
-  materialName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 4,
-  },
-  materialQuantity: {
-    fontSize: 12,
-    color: '#666',
-  },
-  materialPrice: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 8,
-  },
-  pricingContainer: {
-    backgroundColor: '#F9F9F9',
-    borderRadius: 8,
-    padding: 12,
-  },
-  pricingRow: {
+  priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
   },
-  pricingLabel: {
+  totalRow: {
+    borderBottomWidth: 0,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+  },
+  priceLabel: {
     fontSize: 14,
     color: '#666',
   },
-  pricingAmount: {
+  priceAmount: {
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
   },
   totalLabel: {
     fontSize: 16,
@@ -514,6 +462,66 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  inputRow: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  imageUploadSection: {
+    marginTop: 16,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderStyle: 'dashed',
+  },
+  uploadButtonText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#007AFF',
+  },
+  imagePreviewContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 12,
+  },
+  imagePreviewWrapper: {
+    position: 'relative',
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  imagePreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#fff',
+    borderRadius: 12,
   },
 });
 

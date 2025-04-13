@@ -1,42 +1,33 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import axios from 'axios';
 
 const ServiceOrderScreen = ({ navigation }) => {
-  
-  const orders = [
-    {
-      id: '1',
-      orderNumber: 'SO-2024001',
-      date: '2024-03-15',
-      status: 'Completed',
-      service: 'Customize ban công',
-      time: '10:00 AM',
-      price: '$150.00',
-    },
-    {
-      id: '2',
-      orderNumber: 'SO-2024002',
-      date: '2024-03-14',
-      status: 'Completed',
-      service: 'Full Customize',
-      time: '2:30 PM',
-      price: '$85.00',
-    },
-    {
-      id: '3',
-      orderNumber: 'SO-2024003',
-      date: '2024-03-16',
-      status: 'Processing',
-      service: 'hello',
-      time: '11:30 AM',
-      price: '$75.00',
-    },
-  ];
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('http://10.0.2.2:8080/api/serviceorder/usingidea');
+      setOrders(response.data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+      setError('Failed to load orders. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
-      
       case 'Processing':
         return '#FF9500';
       case 'Completed':
@@ -46,34 +37,43 @@ const ServiceOrderScreen = ({ navigation }) => {
     }
   };
 
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'Pending':
+        return 'Processing';
+      default:
+        return status;
+    }
+  };
+
   const renderOrder = ({ item }) => (
     <TouchableOpacity 
       style={styles.orderCard}
       onPress={() => navigation.navigate('ServiceOrderDetail', { orderId: item.id })}
     >
       <View style={styles.orderHeader}>
-        <Text style={styles.orderNumber}>{item.orderNumber}</Text>
-        <Text style={[styles.status, { color: getStatusColor(item.status) }]}>
-          {item.status}
+        <Text style={styles.orderNumber}>Order #{item.id}</Text>
+        <Text style={[styles.status, { color: getStatusColor(getStatusText(item.status)) }]}>
+          {getStatusText(item.status)}
         </Text>
       </View>
       
       <View style={styles.orderDetails}>
         <View style={styles.detailRow}>
-          <Icon name="briefcase" size={20} color="#666" />
-          <Text style={styles.detailText}>{item.service}</Text>
+          <Icon name="account" size={20} color="#666" />
+          <Text style={styles.detailText}>{item.userName}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Icon name="calendar" size={20} color="#666" />
-          <Text style={styles.detailText}>{item.date}</Text>
+          <Icon name="map-marker" size={20} color="#666" />
+          <Text style={styles.detailText}>{item.address}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Icon name="clock" size={20} color="#666" />
-          <Text style={styles.detailText}>{item.time}</Text>
+          <Icon name="phone" size={20} color="#666" />
+          <Text style={styles.detailText}>{item.cusPhone}</Text>
         </View>
         <View style={styles.detailRow}>
           <Icon name="cash" size={20} color="#666" />
-          <Text style={styles.detailText}>{item.price}</Text>
+          <Text style={styles.detailText}>{item.totalCost.toLocaleString('vi-VN')} VND</Text>
         </View>
       </View>
 
@@ -86,6 +86,26 @@ const ServiceOrderScreen = ({ navigation }) => {
       </TouchableOpacity>
     </TouchableOpacity>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading orders...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchOrders}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -103,6 +123,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ff3b30',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   listContainer: {
     padding: 15,
@@ -125,6 +180,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
+    width: '70%',
   },
   status: {
     fontSize: 14,

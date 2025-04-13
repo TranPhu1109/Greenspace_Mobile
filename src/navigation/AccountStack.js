@@ -27,7 +27,7 @@ const ProfileStack = () => (
       name="UserInfo" 
       component={UserInfoScreen}
       options={{
-        unmountOnBlur: true // This will unmount the screen when navigating away
+        unmountOnBlur: true 
       }}
     />
     <Stack.Screen name="EditProfile" component={EditProfileScreen} />

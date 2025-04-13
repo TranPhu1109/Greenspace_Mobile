@@ -1,161 +1,182 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, SafeAreaView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import StatusTracking from '../components/StatusTracking';
+import StatusTrackingNoCustom from '../components/StatusTrackingNoCustom';
+import axios from 'axios';
 
 const ServiceOrderDetailScreen = ({ navigation, route }) => {
+  const [orderDetails, setOrderDetails] = useState(null);
+  console.log(orderDetails);
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [products, setProducts] = useState({});
+  const { orderId } = route.params;
 
-  const orderDetails = {
+  useEffect(() => {
+    fetchOrderDetails();
+  }, [orderId]);
 
-    userInfo: {
-      name: 'John Doe',
-      address: '123 Main Street, New York, NY 10001',
-      phone: '+1 234 567 890',
-      orderTime: '10:00 AM',
-      orderDate: '2024-03-15',
-    },
-
-    serviceInfo: {
-      serviceName: 'Customize ban công',
-      orderNumber: 'SO-2024001',
-      designArea: '15 m²',
-      status: 'Completed',
-    },
-
-    materials: [
-      {
-        id: '1',
-        name: 'Wooden Flooring',
-        quantity: '15 m²',
-        price: '$450',
-        image: require('../assets/images/furniture.jpg')
-      },
-      {
-        id: '2',
-        name: 'LED Lights',
-        quantity: '5 pieces',
-        price: '$100',
-        image: require('../assets/images/furniture.jpg')
-      },
-      {
-        id: '3',
-        name: 'Paint',
-        quantity: '2 gallons',
-        price: '$80',
-        image: require('../assets/images/furniture.jpg')
-      },
-      {
-        id: '4',
-        name: 'Plant Pots',
-        quantity: '3 pieces',
-        price: '$90',
-        image: require('../assets/images/furniture.jpg')
-      },
-    ],
-
-    payment: {
-      designPrice: 150,
-      materialPrice: 720,
-      totalPrice: 870,
-      paid: 870,
-    },
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Processing':
-        return '#FF9500';
-      case 'Completed':
-        return '#4CAF50';
-      default:
-        return '#8E8E93';
+  const fetchProductDetails = async (productId) => {
+    try {
+      const response = await axios.get(`http://10.0.2.2:8080/api/product/${productId}`);
+      return response.data;
+    } catch (err) {
+      console.error(`Error fetching product ${productId}:`, err);
+      return null;
     }
   };
 
+  const fetchOrderDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`http://10.0.2.2:8080/api/serviceorder/${orderId}`);
+      console.log(response.data);
+      
+      const orderData = response.data; // Now it's a single object, not an array
+      setOrderDetails(orderData);
+      
+      // Fetch product details for each service order detail
+      const productPromises = orderData.serviceOrderDetails.map(detail => 
+        fetchProductDetails(detail.productId)
+      );
+      const productResults = await Promise.all(productPromises);
+      
+      // Create a map of productId to product details
+      const productMap = {};
+      orderData.serviceOrderDetails.forEach((detail, index) => {
+        productMap[detail.productId] = productResults[index];
+      });
+      
+      setProducts(productMap);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching order details:', err);
+      setError('Failed to load order details. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'Pending':
+        return 'Pending';
+      default:
+        return status;
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading order details...</Text>
+      </View>
+    );
+  }
+
+  if (error || !orderDetails) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error || 'Order details not found'}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchOrderDetails}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Icon name="chevron-left" size={28} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Order Details</Text>
-          <View style={{ width: 28 }} />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Icon name="chevron-left" size={28} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Order Details</Text>
+        <View style={{ width: 28 }} />
+      </View>
+
+      <ScrollView style={styles.content} removeClippedSubviews={false}>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Customer Information</Text>
+          <View style={styles.infoContainer}>
+            <InfoRow icon="account" text={orderDetails.userName} />
+            <InfoRow icon="phone" text={orderDetails.cusPhone} />
+            <InfoRow icon="map-marker" text={orderDetails.address} />
+            {orderDetails.isCustom && (
+              <InfoRow icon="ruler-square" text={`${orderDetails.length}m x ${orderDetails.width}m`} />
+            )}
+          </View>
         </View>
 
-        <ScrollView style={styles.content} removeClippedSubviews={false}>
-
-          <View style={styles.statusContainer}>
-            <Text style={[styles.statusText, { color: getStatusColor(orderDetails.serviceInfo.status) }]}>
-              {orderDetails.serviceInfo.status}
-            </Text>
-            <Text style={styles.orderNumber}>Order #{orderDetails.serviceInfo.orderNumber}</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Service Information</Text>
+          <View style={styles.infoContainer}>
+            <InfoRow icon="brush" text={orderDetails.isCustom ? "Custom Design" : "Using Design Idea"} />
+            {orderDetails.description && (
+              <InfoRow icon="text-box" text={orderDetails.description} />
+            )}
           </View>
+        </View>
 
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Customer Information</Text>
-            <View style={styles.infoContainer}>
-              <InfoRow icon="account" text={orderDetails.userInfo.name} />
-              <InfoRow icon="phone" text={orderDetails.userInfo.phone} />
-              <InfoRow icon="map-marker" text={orderDetails.userInfo.address} />
-              <InfoRow icon="clock" text={`${orderDetails.userInfo.orderTime}, ${orderDetails.userInfo.orderDate}`} />
-            </View>
-          </View>
-
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Service Information</Text>
-            <View style={styles.infoContainer}>
-              <InfoRow icon="brush" text={orderDetails.serviceInfo.serviceName} />
-              <InfoRow icon="ruler-square" text={`Design Area: ${orderDetails.serviceInfo.designArea}`} />
-            </View>
-          </View>
-
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Materials</Text>
-            <View style={styles.materialsContainer}>
-              {orderDetails.materials.map((material) => (
-                <View key={material.id} style={styles.materialRow}>
-                  <Image
-                    source={material.image}
-                    style={styles.materialImage}
-                  />
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Materials</Text>
+          <View style={styles.materialsContainer}>
+            {orderDetails.serviceOrderDetails.map((detail) => {
+              const product = products[detail.productId];
+              return (
+                <View key={detail.productId} style={styles.materialRow}>
                   <View style={styles.materialInfo}>
-                    <Text style={styles.materialName}>{material.name}</Text>
-                    <Text style={styles.materialQuantity}>{material.quantity}</Text>
+                    <Text style={styles.materialName}>
+                      {product ? product.name : `Product ID: ${detail.productId}`}
+                    </Text>
+                    <Text style={styles.materialQuantity}>Quantity: {detail.quantity}</Text>
+                    <Text style={styles.materialPrice}>
+                      {detail.totalPrice.toLocaleString('vi-VN')} VND
+                    </Text>
                   </View>
-                  <Text style={styles.materialPrice}>{material.price}</Text>
                 </View>
-              ))}
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Payment Details</Text>
+          <View style={styles.paymentContainer}>
+            <PaymentRow 
+              label="Design Price" 
+              amount={`${orderDetails.designPrice.toLocaleString('vi-VN')} VND`} 
+            />
+            <PaymentRow 
+              label="Materials Price" 
+              amount={`${orderDetails.materialPrice.toLocaleString('vi-VN')} VND`} 
+            />
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Total Amount</Text>
+              <Text style={styles.totalAmount}>
+                {orderDetails.totalCost.toLocaleString('vi-VN')} VND
+              </Text>
             </View>
           </View>
+        </View>
 
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Payment Details</Text>
-            <View style={styles.paymentContainer}>
-              <PaymentRow label="Design Price" amount={`$${orderDetails.payment.designPrice}`} />
-              <PaymentRow label="Materials Price" amount={`$${orderDetails.payment.materialPrice}`} />
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total Amount</Text>
-                <Text style={styles.totalAmount}>${orderDetails.payment.totalPrice}</Text>
-              </View>
-              <View style={styles.paidRow}>
-                <Text style={styles.paidLabel}>Paid Amount</Text>
-                <Text style={styles.paidAmount}>${orderDetails.payment.paid}</Text>
-              </View>
-            </View>
-          </View>
-          <StatusTracking />
-        </ScrollView>
-        
-      </View>
-    
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order Status</Text>
+          {orderDetails.isCustom ? (
+            <StatusTracking currentStatus={getStatusText(orderDetails.status)} />
+          ) : (
+            <StatusTrackingNoCustom currentStatus={getStatusText(orderDetails.status)} />
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -315,20 +336,40 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#007AFF',
   },
-  paidRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 12,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
-  paidLabel: {
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ff3b30',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    color: '#4CAF50',
-  },
-  paidAmount: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4CAF50',
   },
 });
 

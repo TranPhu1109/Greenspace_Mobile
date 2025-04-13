@@ -1,8 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useAuth } from '../context/AuthContext';
 
 const UserInfoScreen = ({ navigation }) => {
+  const { user } = useAuth();
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.profileHeader}>
@@ -11,8 +14,8 @@ const UserInfoScreen = ({ navigation }) => {
           style={styles.avatar}
           defaultSource={require('../assets/images/avatar.jpg')}
         />
-        <Text style={styles.name}>John Doe</Text>
-        <Text style={styles.email}>john.doe@example.com</Text>
+        <Text style={styles.name}>{user?.email || 'User'}</Text>
+        <Text style={styles.email}>{user?.email}</Text>
       </View>
 
       <View style={styles.section}>

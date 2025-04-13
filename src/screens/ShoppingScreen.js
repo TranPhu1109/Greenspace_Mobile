@@ -1,33 +1,78 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import SearchHeader from '../components/SearchHeader';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import data from '../data/data.json';
+import axios from 'axios';
 
-
+// Replace 'YOUR_IP_ADDRESS' with your computer's IP address
+// Example: const API_URL = 'http://192.168.1.5:8080/api';
+const API_URL = 'http://10.0.2.2:8080/api'; // Use this for Android Emulator
+// const API_URL = 'http://localhost:8080/api'; // Use this for iOS Simulator
 
 const ShoppingScreen = () => {
-  const [selectedCategory, setSelectedCategory] = useState(data.categories[0]);
-  const [bestSellingProducts, setBestSellingProducts] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigation = useNavigation();
 
+  // Fetch categories
   useEffect(() => {
-    const topProducts = [...data.products]
-      .sort((a, b) => b.numberOfPurchased - a.numberOfPurchased)
-      .slice(0, 5);
-    setBestSellingProducts(topProducts);
+    const fetchCategories = async () => {
+      try {
+        setError(null);
+        const response = await axios.get(`${API_URL}/categories`);
+        setCategories(response.data);
+        if (response.data.length > 0) {
+          setSelectedCategory(response.data[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        setError('Failed to load categories. Please check your connection and try again.');
+        Alert.alert(
+          'Error',
+          'Failed to load categories. Please check your connection and try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    };
+    fetchCategories();
   }, []);
 
+  // Fetch products
   useEffect(() => {
-    if (selectedCategory) {
-      const filtered = data.products.filter(
+    const fetchProducts = async () => {
+      try {
+        setError(null);
+        const response = await axios.get(`${API_URL}/product`);
+        setProducts(response.data);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setError('Failed to load products. Please check your connection and try again.');
+        Alert.alert(
+          'Error',
+          'Failed to load products. Please check your connection and try again.',
+          [{ text: 'OK' }]
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  // Filter products by category
+  useEffect(() => {
+    if (selectedCategory && products.length > 0) {
+      const filtered = products.filter(
         product => product.categoryId === selectedCategory.id
       );
       setFilteredProducts(filtered);
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, products]);
 
   const renderCategoryItem = ({ item }) => (
     <TouchableOpacity
@@ -37,11 +82,6 @@ const ShoppingScreen = () => {
       ]}
       onPress={() => setSelectedCategory(item)}
     >
-      <Image
-        source={require('../assets/images/furniture.jpg')}
-        style={styles.categoryImage}
-        resizeMode="cover"
-      />
       <Text style={[
         styles.categoryName,
         selectedCategory?.id === item.id && styles.selectedCategoryText
@@ -52,32 +92,22 @@ const ShoppingScreen = () => {
   const renderProductItem = ({ item }) => (
     <TouchableOpacity
       style={styles.productItem}
-      onPress={() => navigation.navigate('ProductDetails', { product: item })}
+      onPress={() => navigation.navigate('ProductDetails', { productId: item.id })}
     >
       <Image
-        source={require('../assets/images/furniture.jpg')}
+        source={{ uri: item.image.imageUrl }}
         style={styles.productImage}
         resizeMode="cover"
       />
-      <Text style={styles.productName}>{item.name}</Text>
-      <Text style={styles.productPrice}>{item.price}</Text>
-    </TouchableOpacity>
-  );
-
-  const renderBestSellingItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.bestSellingItem}
-      onPress={() => navigation.navigate('ProductDetails', { product: item })}
-    >
-      <Image
-        source={require('../assets/images/furniture.jpg')}
-        style={styles.bestSellingImage}
-        resizeMode="cover"
-      />
-      <View style={styles.bestSellingDetails}>
-        <Text style={styles.bestSellingName}>{item.name}</Text>
-        <Text style={styles.bestSellingPrice}>{item.price}</Text>
-        <Text style={styles.purchaseCount}>{item.numberOfPurchased} purchases</Text>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+        <View style={styles.priceContainer}>
+          <Text style={styles.priceLabel}>Giá:</Text>
+          <Text style={styles.productPrice}>
+            {item.price.toLocaleString('vi-VN')}
+            <Text style={styles.currencyText}> VNĐ</Text>
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -96,43 +126,51 @@ const ShoppingScreen = () => {
         </View>
       </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Best Selling Products</Text>
-        <TouchableOpacity
-          style={styles.viewAllButton}
-        >
-          <Icon name="arrow-forward" size={20} color="#007AFF" />
-          <Text style={styles.viewAllText}>View All</Text>
-        </TouchableOpacity>
-      </View>
+      <Text style={[styles.sectionTitle, styles.categoryTitle]}>Categories</Text>
       <FlatList
-        data={bestSellingProducts}
-        renderItem={renderBestSellingItem}
-        keyExtractor={item => item.id}
-        horizontal={true}
-        scrollEnabled={true}
-        contentContainerStyle={styles.bestSellingList}
-        removeClippedSubviews={false} 
-      />
-
-      <Text style={styles.sectionTitle}>Categories</Text>
-      <FlatList
-        data={data.categories}
+        data={categories}
         renderItem={renderCategoryItem}
         keyExtractor={item => item.id}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.categoriesList}
-        removeClippedSubviews={false} 
+        removeClippedSubviews={false}
       />
 
       {selectedCategory && (
-        <>
-          <Text style={styles.sectionTitle}>{selectedCategory.name} Products</Text>
-        </>
+        <Text style={[styles.sectionTitle, styles.productsTitle]}>{selectedCategory.name} Products</Text>
       )}
     </>
   );
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading products...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Icon name="alert-circle" size={50} color="#FF3B30" />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => {
+            setIsLoading(true);
+            setError(null);
+            fetchCategories();
+            fetchProducts();
+          }}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -153,10 +191,7 @@ const ShoppingScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  content: {
-    flex: 1,
+    backgroundColor: '#f5f6fa',
   },
   bannerContainer: {
     height: 200,
@@ -185,48 +220,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 15,
-  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-  },
-  bestSellingList: {
     paddingHorizontal: 20,
-    marginBottom: 20,
   },
-  bestSellingItem: {
-    flexDirection: 'row',
-    marginBottom: 15,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 10,
-    padding: 10,
+  categoryTitle: {
+    marginBottom: 10,
   },
-  bestSellingImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-  },
-  bestSellingDetails: {
-    flex: 1,
-    marginLeft: 15,
-    justifyContent: 'center',
-  },
-  bestSellingName: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  bestSellingPrice: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: 'bold',
+  productsTitle: {
+    marginTop: 20,
+    marginBottom: 10,
   },
   categoriesList: {
     paddingHorizontal: 20,
@@ -240,12 +245,6 @@ const styles = StyleSheet.create({
   },
   selectedCategory: {
     backgroundColor: '#e6f2ff',
-  },
-  categoryImage: {
-    width: 20,
-    height: 20,
-    borderRadius: 40,
-    marginBottom: 8,
   },
   categoryName: {
     fontSize: 14,
@@ -262,41 +261,88 @@ const styles = StyleSheet.create({
   productItem: {
     flex: 1,
     margin: 8,
-    padding: 10,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 10,
-    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    overflow: 'hidden',
   },
   productImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 10,
-    marginBottom: 8,
+    width: '100%',
+    height: 160,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  productInfo: {
+    padding: 12,
   },
   productName: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  productPrice: {
     fontSize: 14,
-    color: '#007AFF',
-    fontWeight: 'bold',
+    fontWeight: '500',
+    color: '#2c3e50',
+    marginBottom: 8,
+    height: 40,
+    lineHeight: 20,
   },
-  viewAllButton: {
+  priceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  viewAllText: {
-    marginLeft: 5,
-    color: '#007AFF',
-    fontSize: 14,
-  },
-  purchaseCount: {
-    fontSize: 14,
-    color: '#666',
     marginTop: 4,
-  }
+  },
+  priceLabel: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    marginRight: 4,
+  },
+  productPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#e74c3c',
+  },
+  currencyText: {
+    fontSize: 14,
+    fontWeight: 'normal',
+    color: '#7f8c8d',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
+  },
+  errorText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
 export default ShoppingScreen;
