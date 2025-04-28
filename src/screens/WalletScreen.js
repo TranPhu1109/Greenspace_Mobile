@@ -1,24 +1,97 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useWallet } from '../context/WalletContext';
 
 const WalletScreen = ({navigation}) => {
-  const { balance, transactions } = useWallet();
+  const { 
+    balance, 
+    purchaseTransactions,
+    depositTransactions,
+    refundTransactions,
+    isLoading, 
+    error, 
+    refreshWallet 
+  } = useWallet();
+
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [activeTab, setActiveTab] = useState('purchases');
+
+  //console.log("Purchase Transactions:", purchaseTransactions);
+  //console.log("Deposit Transactions:", depositTransactions);
+  
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await refreshWallet();
+    setRefreshing(false);
+  }, [refreshWallet]);
 
   const formatAmount = amount => {
     const absAmount = Math.abs(amount);
-    return `${amount < 0 ? '-' : '+'}${absAmount.toLocaleString()}đ`;
+    return `${amount < 0 ? '-' : '+'}${absAmount.toLocaleString('vi-VN')}đ`;
+  };
+  
+  const formatDate = dateString => {
+    if (!dateString) return 'Không có ngày';
+    
+    try {
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Ngày không hợp lệ';
+      }
+      
+      const formattedDate = date.toLocaleDateString('vi-VN');
+      const formattedTime = date.toLocaleTimeString('vi-VN', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      
+      return `${formattedDate} - ${formattedTime}`;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Lỗi định dạng ngày';
+    }
   };
 
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.errorText}>Lỗi: {error}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={refreshWallet}>
+          <Text style={styles.retryButtonText}>Thử lại</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -33,7 +106,7 @@ const WalletScreen = ({navigation}) => {
       {/* Balance Card */}
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
-        <Text style={styles.balanceAmount}>{balance.toLocaleString()}đ</Text>
+        <Text style={styles.balanceAmount}>{balance.toLocaleString('vi-VN')}đ</Text>
       </View>
 
       {/* Actions */}
@@ -47,48 +120,158 @@ const WalletScreen = ({navigation}) => {
           <Text style={styles.actionButtonText}>Nạp tiền</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, {backgroundColor: '#007AFF'}]}
-          onPress={() => {
-            /* Handle withdraw */
-          }}>
-          <Icon name="bank-transfer-out" size={24} color="#fff" />
-          <Text style={styles.actionButtonText}>Rút tiền</Text>
-        </TouchableOpacity>
+
       </View>
 
-      {/* Transactions */}
+      {/* Transactions Section */}
       <View style={styles.transactionsContainer}>
-        <Text style={styles.sectionTitle}>Lịch sử giao dịch</Text>
-        <ScrollView>
-          {transactions.map(transaction => (
-            <TouchableOpacity
-              key={transaction.id}
-              style={styles.transactionItem}
-              onPress={() => navigation.navigate('TransactionDetail', { transaction })}>
-              <View style={styles.transactionLeft}>
-                <Text style={styles.transactionDescription}>
-                  {transaction.description}
-                </Text>
-                <Text style={styles.transactionDate}>
-                  {transaction.date} - {transaction.time}
+        {/* Tab Switcher */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'purchases' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('purchases')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'purchases' && styles.tabButtonTextActive]}>
+              Lịch sử Mua hàng
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'deposits' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('deposits')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'deposits' && styles.tabButtonTextActive]}>
+              Lịch sử Nạp tiền
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'refunds' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('refunds')}
+          >
+            <Text style={[styles.tabButtonText, activeTab === 'refunds' && styles.tabButtonTextActive]}>
+              Lịch sử Hoàn tiền
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Conditional Transaction List */}
+        {activeTab === 'purchases' && (
+          <>
+            {purchaseTransactions.length === 0 ? (
+              <View style={styles.emptyTransactions}>
+                <Icon name="cart-off" size={50} color="#CCCCCC" />
+                <Text style={styles.emptyTransactionsText}>
+                  Không có lịch sử mua hàng
                 </Text>
               </View>
-              <View style={styles.transactionRight}>
-                <Text
-                  style={[
-                    styles.transactionAmount,
-                    {color: transaction.amount < 0 ? '#000' : '#4CAF50'},
-                  ]}>
-                  {formatAmount(transaction.amount)}
+            ) : (
+              purchaseTransactions.map((transaction, index) => (
+                <TouchableOpacity
+                  key={`${transaction.id}-${index}-purchase`}
+                  style={styles.transactionItem}
+                  onPress={() => navigation.navigate('TransactionDetail', { transaction })}>
+                  <View style={styles.transactionLeft}>
+                    <Text style={styles.transactionDescription} numberOfLines={2}>
+                      {transaction.description}
+                    </Text>
+                    <Text style={styles.transactionDate}>
+                      {formatDate(transaction.date)}
+                    </Text>
+                  </View>
+                  <View style={styles.transactionRight}>
+                    <Text
+                      style={[
+                        styles.transactionAmount,
+                        {color: '#FF3B30'},
+                      ]}>
+                      {formatAmount(-transaction.amount)}
+                    </Text>
+                    <Icon name="chevron-right" size={20} color="#8E8E93" />
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </>
+        )}
+
+        {activeTab === 'deposits' && (
+          <>
+            {depositTransactions.length === 0 ? (
+              <View style={styles.emptyTransactions}>
+                <Icon name="cash-refund" size={50} color="#CCCCCC" />
+                <Text style={styles.emptyTransactionsText}>
+                  Không có lịch sử nạp tiền
                 </Text>
-                <Icon name="chevron-right" size={20} color="#8E8E93" />
               </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+            ) : (
+              depositTransactions.map((transaction, index) => (
+                <TouchableOpacity
+                  key={`${transaction.id}-${index}-deposit`}
+                  style={styles.transactionItem}
+                  onPress={() => navigation.navigate('TransactionDetail', { transaction })}>
+                  <View style={styles.transactionLeft}>
+                    <Text style={styles.transactionDescription} numberOfLines={2}>
+                      {transaction.description}
+                    </Text>
+                    <Text style={styles.transactionDate}>
+                      {formatDate(transaction.date)}
+                    </Text>
+                  </View>
+                  <View style={styles.transactionRight}>
+                    <Text
+                      style={[
+                        styles.transactionAmount,
+                        {color: '#4CAF50'},
+                      ]}>
+                       {formatAmount(transaction.amount)}
+                    </Text>
+                    <Icon name="chevron-right" size={20} color="#8E8E93" />
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </>
+        )}
+
+        {activeTab === 'refunds' && (
+          <>
+            {refundTransactions.length === 0 ? (
+              <View style={styles.emptyTransactions}>
+                <Icon name="cash-refund" size={50} color="#CCCCCC" />
+                <Text style={styles.emptyTransactionsText}>
+                  Không có lịch sử hoàn tiền
+                </Text>
+              </View>
+            ) : (
+              refundTransactions.map((transaction, index) => (
+                <TouchableOpacity
+                  key={`${transaction.id}-${index}-refund`}
+                  style={styles.transactionItem}
+                  onPress={() => navigation.navigate('TransactionDetail', { transaction })}>
+                  <View style={styles.transactionLeft}>
+                    <Text style={styles.transactionDescription} numberOfLines={2}>
+                      {transaction.description}
+                    </Text>
+                    <Text style={styles.transactionDate}>
+                      {formatDate(transaction.date)}
+                    </Text>
+                  </View>
+                  <View style={styles.transactionRight}>
+                    <Text
+                      style={[
+                        styles.transactionAmount,
+                        { color: '#4CAF50' },
+                      ]}>
+                      {formatAmount(transaction.amount)}
+                    </Text>
+                    <Icon name="chevron-right" size={20} color="#8E8E93" />
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </>
+        )}
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -166,6 +349,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 16,
+    minHeight: 300,
   },
   sectionTitle: {
     fontSize: 18,
@@ -178,10 +362,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f9f9f9',
     marginBottom: 8,
     borderRadius: 8,
   },
@@ -193,6 +377,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
     marginBottom: 4,
+    fontWeight: '500',
   },
   transactionDate: {
     fontSize: 14,
@@ -206,6 +391,64 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginRight: 8,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 16,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyTransactions: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  emptyTransactionsText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#999',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  tabButton: {
+    flex: 1,
+    paddingBottom: 12,
+    paddingTop: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabButtonActive: {
+    borderBottomColor: '#007AFF',
+  },
+  tabButtonText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#666',
+  },
+  tabButtonTextActive: {
+    color: '#007AFF',
+    fontWeight: '700',
   },
 });
 

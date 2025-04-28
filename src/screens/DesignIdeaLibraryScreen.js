@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import axios from 'axios';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const DesignIdeaLibraryScreen = ({ navigation }) => {
   const [designIdeas, setDesignIdeas] = useState([]);
@@ -13,7 +14,6 @@ const DesignIdeaLibraryScreen = ({ navigation }) => {
 
   const fetchDesignIdeas = async () => {
     try {
-      console.log('Fetching design ideas...');
       const response = await axios.get('http://10.0.2.2:8080/api/designidea', {
         timeout: 10000, // 10 second timeout
         headers: {
@@ -21,7 +21,6 @@ const DesignIdeaLibraryScreen = ({ navigation }) => {
           'Content-Type': 'application/json',
         }
       });
-      console.log('Response received:', response.status);
       setDesignIdeas(response.data);
       setLoading(false);
     } catch (err) {
@@ -49,8 +48,7 @@ const DesignIdeaLibraryScreen = ({ navigation }) => {
     <TouchableOpacity 
       style={styles.itemContainer}
       onPress={() => navigation.navigate('DesignDetail', { 
-        designId: item.id,
-        designData: item
+        designId: item.id
       })}
     >
       <Image
@@ -168,6 +166,22 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
+  },
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    right: 20,
+    bottom: 20,
+    backgroundColor: '#007AFF',
+    borderRadius: 28,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });
 

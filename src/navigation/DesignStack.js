@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Dimensions, TouchableOpacity, View, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DesignIdeaLibraryScreen from '../screens/DesignIdeaLibraryScreen';
-import RecentProjectsScreen from '../screens/RecentProjectsScreen';
+import NewDesignScreen from '../screens/NewDesignScreen';
 import DesignDetailScreen from '../screens/DesignDetailScreen';
 import OrderScreen from '../screens/OrderScreen';
 
@@ -17,6 +17,7 @@ const DesignLibraryStack = () => (
     <Stack.Screen name="DesignIdeaLibrary" component={DesignIdeaLibraryScreen} />
     <Stack.Screen name="DesignDetail" component={DesignDetailScreen} />
     <Stack.Screen name="Order" component={OrderScreen} />
+    <Stack.Screen name="NewDesign" component={NewDesignScreen} />
   </Stack.Navigator>
 );
 
@@ -52,14 +53,14 @@ const DesignStack = ({ navigation }) => {
           name="DesignIdeaLibraryTab"
           component={DesignLibraryStack}
           options={{
-            tabBarLabel: 'Design Idea Library',
+            tabBarLabel: 'Thiết kế mẫu',
           }}
         />
         <Tab.Screen
           name="RecentProjects"
-          component={RecentProjectsScreen}
+          component={NewDesignScreen}
           options={{
-            tabBarLabel: 'Recent Projects',
+            tabBarLabel: 'Tạo thiết kế mới',
           }}
         />
       </Tab.Navigator>

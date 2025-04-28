@@ -47,6 +47,15 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>greenspaceapp</string>
+    </array>
+  </dict>
+</array>
 	<false/>
 </dict>
 </plist>

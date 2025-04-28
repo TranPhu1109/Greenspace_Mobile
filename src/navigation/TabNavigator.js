@@ -50,7 +50,7 @@ const TabNavigator = () => {
         name="Home"
         component={HomeScreen}
         options={{
-          title: 'Home',
+          title: 'Trang chủ',
           headerShown: false,
         }}
       />
@@ -58,7 +58,7 @@ const TabNavigator = () => {
         name="Shop"
         component={ShopStack}
         options={{
-          title: 'Shop',
+          title: 'Cửa hàng',
           headerShown: false,
         }}
       />
@@ -66,21 +66,21 @@ const TabNavigator = () => {
         name="Design"
         component={DesignStack}
         options={{
-          title: 'Design',
+          title: 'Thiết kế',
         }}
       />
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}
         options={{
-          title: 'Notifications',
+          title: 'Thông báo',
         }}
       />
       <Tab.Screen
         name="Account"
         component={AccountStack}
         options={{
-          title: 'Account',
+          title: 'Tài khoản',
           headerShown: false,
         }}
         listeners={({ navigation }) => ({

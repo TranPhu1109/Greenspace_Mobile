@@ -1,178 +1,198 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, Dimensions, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, Dimensions } from 'react-native';
 import StepIndicator from '@runonflux/react-native-step-indicator';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const { width } = Dimensions.get('window');
 
-const statusData = {
-  data: [
-    {
-      status: "Pending",
-      note: "Đơn hàng đã được đặt thành công",
-      datetime: "2025-03-18 10:00:00",
-    },
-    {
-      status: "Payment design successfull",
-      note: "Payment design successfull",
-      datetime: ""
-    },
-    {
-      status: "Processing",
-      note: "Processing",
-      datetime: ""
-    },
-    {
-      status: "Picked package and delivery",
-      note: "Picked package and delivery",
-      datetime: ""
-    },
-    {
-      status: "Delivery fail",
-      note: "Delivery fail",
-      datetime: ""
-    },
-    {
-      status: "Re-delivery",
-      note: "Re-delivery",
-      datetime: ""
-    },
-    {
-      status: "Delivered successfully",
-      note: "Delivered successfully",
-      datetime: ""
-    },
-    {
-      status: "Order completed",
-      note: "Order completed",
-      datetime: ""
-    },
-    {
-      status: "Order cancelled",
-      note: "Đơn hàng đã bị hủy",
-      datetime: ""
-    },
-  ]
+// Define the standard successful flow statuses and their display text
+const statusFlow = [
+  { status: 'Pending', label: 'Chờ xử lý', note: 'Đơn hàng chờ thanh toán' },
+  { status: 'PaymentSuccess', label: 'Thanh toán thành công', note: 'Thanh toán thành công' },
+  { status: 'Processing', label: 'Đang xử lý', note: 'Cửa hàng đang chuẩn bị hàng' },
+  { status: 'PickedPackageAndDelivery', label: 'Đã lấy hàng & đang giao', note: 'Đơn hàng đang được vận chuyển' },
+  { status: 'DeliveredSuccessfully', label: 'Đã giao hàng thành công', note: 'Đơn hàng đã đến tay bạn' },
+  { status: 'CompleteOrder', label: 'Hoàn thành đơn hàng', note: 'Đơn hàng đã hoàn thành' },
+];
+
+// Define failure/cancellation statuses
+const terminalFailureStatuses = ['DeliveryFail', 'ReDelivery', 'OrderCancelled'];
+const terminalFailureLabels = {
+    'DeliveryFail': 'Giao hàng thất bại',
+    'ReDelivery': 'Giao lại',
+    'OrderCancelled': 'Đơn hàng đã bị hủy'
 };
 
-const labels = statusData.data.map(item => item.status);
-
-// Define statuses that should be shown in green
-const successStatuses = [
-    "Payment design successfull",
-    "Delivered successfully",
-    "Order completed"
-];
-
-// Define statuses that should be shown in red
-const failureStatuses = [
-    "Delivery fail",
-    "Order cancelled"
-];
-
-// Define statuses that should be shown in blue (in progress)
-const inProgressStatuses = [
-    "Pending",
-    "Processing",
-    "Picked package and delivery",
-    "Re-delivery"
-];
-
-const customStyles = {
-    stepIndicatorSize: 20,
-    currentStepIndicatorSize: 20,
+const baseCustomStyles = {
+    stepIndicatorSize: 25,
+    currentStepIndicatorSize: 30,
     separatorStrokeWidth: 2,
-    currentStepStrokeWidth: 2,
-    stepStrokeCurrentColor: '#007AFF', // Blue for current step
-    stepStrokeWidth: 2,
-    stepStrokeFinishedColor: '#4CAF50', // Green for finished steps
-    stepStrokeUnFinishedColor: '#666666', // Gray for unfinished steps
-    separatorFinishedColor: '#4CAF50', // Green for finished separators
-    separatorUnFinishedColor: '#666666', // Gray for unfinished separators
-    stepIndicatorFinishedColor: '#ffffff',
-    stepIndicatorUnFinishedColor: '#ffffff',
-    stepIndicatorCurrentColor: '#ffffff',
-    stepIndicatorLabelFontSize: 12,
-    currentStepIndicatorLabelFontSize: 12,
-    stepIndicatorLabelCurrentColor: '#007AFF', // Blue for current step number
-    stepIndicatorLabelFinishedColor: '#4CAF50', // Green for finished step numbers
-    stepIndicatorLabelUnFinishedColor: '#666666', // Gray for unfinished step numbers
-    labelColor: '#666666',
-    labelSize: 13,
-    currentStepLabelColor: '#007AFF', // Blue for current step label
-    labelAlign: 'flex-start',
-    labelStyle: {
-        fontSize: 14,
-        fontWeight: 'normal',
-        color: '#666666',
-    }
-}
+    currentStepStrokeWidth: 3,
+    stepStrokeWidth: 0, // Hide default stroke if using custom background
+    separatorStrokeFinishedWidth: 3,
 
-const StatusTrackingNoCustom = ({ currentStatus = 'Pending', onStatusChange }) => {
+    // Colors match the indicator background colors
+    stepStrokeUnFinishedColor: '#bdc3c7',
+    separatorUnFinishedColor: '#bdc3c7',
+    stepIndicatorUnFinishedColor: '#bdc3c7',
+    stepStrokeFinishedColor: '#27ae60',
+    separatorFinishedColor: '#27ae60',
+    stepIndicatorFinishedColor: '#27ae60',
+    stepStrokeCurrentColor: '#007AFF',
+    stepIndicatorCurrentColor: '#007AFF',
+    currentStepLabelColor: '#007AFF',
+
+    // Hide default number labels inside indicators
+    stepIndicatorLabelFontSize: 0,
+    currentStepIndicatorLabelFontSize: 0,
+    stepIndicatorLabelUnFinishedColor: 'transparent',
+    stepIndicatorLabelFinishedColor: 'transparent',
+    stepIndicatorLabelCurrentColor: 'transparent',
+
+    labelColor: '#999999',
+    labelSize: 13,
+    labelAlign: 'flex-start',
+};
+
+const StatusTrackingNoCustom = ({ currentStatus }) => {
     const [currentPosition, setCurrentPosition] = useState(0);
+    const [displayLabels, setDisplayLabels] = useState([]);
+    const [isFailedOrCancelled, setIsFailedOrCancelled] = useState(false);
+    const [currentStatusLabel, setCurrentStatusLabel] = useState('');
 
     useEffect(() => {
-        // Find the index of current status in the labels array
-        const statusIndex = labels.findIndex(label => label === currentStatus);
-        if (statusIndex !== -1) {
-            setCurrentPosition(statusIndex);
-        }
-    }, [currentStatus]);
+        let position = -1;
+        let failed = false;
+        let statusLabel = '';
+        const normalizedCurrentStatus = currentStatus; // Use the status key directly
 
-    const handleNextStatus = () => {
-        if (currentPosition < labels.length - 1) {
-            const nextPosition = currentPosition + 1;
-            setCurrentPosition(nextPosition);
-            if (onStatusChange) {
-                onStatusChange(labels[nextPosition]);
+        // Check if the status is a terminal failure/cancelled state
+        if (terminalFailureStatuses.includes(normalizedCurrentStatus)) {
+            failed = true;
+            // Find where in the normal flow it failed (approximate)
+            const likelyFailurePoint = normalizedCurrentStatus === 'DeliveryFail' || normalizedCurrentStatus === 'ReDelivery' 
+                                      ? 'PickedPackageAndDelivery' 
+                                      : 'Processing'; 
+            position = statusFlow.findIndex(item => item.status === likelyFailurePoint);
+            if (position === -1) position = 2; // Default to after processing
+            statusLabel = terminalFailureLabels[normalizedCurrentStatus]; // Get specific label
+        } else {
+            // Find the index in the standard flow
+            position = statusFlow.findIndex(item => item.status === normalizedCurrentStatus);
+            if (position !== -1) {
+                statusLabel = statusFlow[position].label;
             }
         }
-    };
 
-    const getStatusColor = (status, isCurrentStep, position) => {
-        // Always show Payment design successfull in green
-        if (status === "Payment design successfull") {
-            return '#4CAF50';
+        if (position === -1) {
+            console.warn(`Status "${normalizedCurrentStatus}" not found in defined flow.`);
+            position = 0; // Default to first step
+            statusLabel = normalizedCurrentStatus; // Display raw status
         }
 
-        // For other statuses, determine color based on position
-        if (position < currentPosition) {
-            return '#4CAF50'; // Green for completed steps
-        } else if (position === currentPosition) {
-            return '#007AFF'; // Blue for current step
-        } else {
-            return '#666666'; // Gray for future steps
+        setCurrentPosition(position);
+        setDisplayLabels(statusFlow.map(item => item.label)); 
+        setIsFailedOrCancelled(failed);
+        setCurrentStatusLabel(statusLabel);
+
+    }, [currentStatus]);
+
+    // Dynamic styles based on state
+    const getDynamicStyles = () => {
+        let currentStepColor = '#007AFF'; // Default blue for current
+        if (isFailedOrCancelled) {
+            currentStepColor = terminalFailureLabels[currentStatus] === 'Giao lại' ? '#FF9500' : '#e74c3c'; // Orange for ReDelivery, Red for others
         }
+
+        return {
+            ...baseCustomStyles,
+            // Override current step colors based on failure state
+            stepStrokeCurrentColor: currentStepColor,        
+            stepIndicatorCurrentColor: currentStepColor,   
+            currentStepLabelColor: currentStepColor,       
+             // Keep finished steps green
+             stepStrokeFinishedColor: '#27ae60',         
+             separatorFinishedColor: '#27ae60',        
+             stepIndicatorFinishedColor: '#27ae60',
+             stepIndicatorLabelFinishedColor: '#ffffff',
+             // Keep unfinished steps grey
+             stepStrokeUnFinishedColor: '#bdc3c7',      
+             separatorUnFinishedColor: '#bdc3c7',     
+             stepIndicatorUnFinishedColor: '#bdc3c7',
+             stepIndicatorLabelUnFinishedColor: '#ffffff',
+        };
+        
     };
 
-    const renderLabel = ({ position }) => {
+    const renderLabel = ({ position, label }) => {
         const isCurrentStep = position === currentPosition;
-        const status = statusData.data[position].status;
-        const statusColor = getStatusColor(status, isCurrentStep, position);
+        let labelColor = baseCustomStyles.labelColor;
+        let fontWeight = 'normal';
+        let note = statusFlow[position]?.note || '';
+        let displayLabel = label; // Standard flow label
+
+        if (isCurrentStep) {
+            labelColor = isFailedOrCancelled ? '#e74c3c' : baseCustomStyles.currentStepLabelColor;
+            fontWeight = 'bold';
+            // Use the specific label for the current actual status, even if it's a failure state
+            displayLabel = currentStatusLabel || label;
+        } else if (position < currentPosition) {
+            labelColor = '#27ae60'; // Finished steps text color
+        }
 
         return (
             <View style={styles.labelContainer}>
-                <Text style={[
-                    styles.labelText,
-                    { color: statusColor }
-                ]}>
-                    {status}
+                <Text style={[styles.labelText, { color: labelColor, fontWeight }]}>
+                    {displayLabel}
                 </Text>
-                {statusData.data[position].note && (
-                    <Text style={[
-                        styles.noteText,
-                        { color: statusColor }
-                    ]}>
-                        {statusData.data[position].note}
+                {note && position <= currentPosition && (
+                    <Text style={[styles.noteText, { color: labelColor }]}>
+                        {note}
                     </Text>
                 )}
-                {statusData.data[position].datetime && (
-                    <Text style={[
-                        styles.dateText,
-                        { color: statusColor }
-                    ]}>
-                        {statusData.data[position].datetime}
-                    </Text>
-                )}
+            </View>
+        );
+    };
+
+    // Render custom icons inside the step indicator
+    const renderStepIndicator = ({ position, stepStatus }) => {
+        let iconName = 'circle-outline';
+        let iconColor = '#ffffff'; // Default white icon
+        let backgroundColor = baseCustomStyles.stepIndicatorUnFinishedColor;
+        let iconSize = 15;
+
+        switch (stepStatus) {
+            case 'current':
+                if (isFailedOrCancelled) {
+                    // Specific icons/colors for failure states
+                    if (terminalFailureLabels[currentStatus] === 'Giao lại') {
+                        backgroundColor = '#FF9500'; // Orange
+                        iconName = 'truck-fast-outline'; 
+                    } else if (terminalFailureLabels[currentStatus] === 'Đơn hàng đã bị hủy') {
+                         backgroundColor = '#e74c3c'; // Red
+                         iconName = 'cancel';
+                    } else { // DeliveryFail
+                        backgroundColor = '#e74c3c'; // Red
+                        iconName = 'alert-circle-outline';
+                    }
+                } else {
+                    backgroundColor = baseCustomStyles.stepIndicatorCurrentColor; // Blue for normal current
+                    iconName = 'radiobox-marked';
+                }
+                break;
+            case 'finished':
+                backgroundColor = baseCustomStyles.stepIndicatorFinishedColor; // Green
+                iconName = 'check'; 
+                break;
+            case 'unfinished':
+                 backgroundColor = baseCustomStyles.stepIndicatorUnFinishedColor; // Grey
+                 iconName = 'circle-outline'; 
+                break;
+        }
+
+        return (
+            <View style={[styles.stepIndicator, { backgroundColor }]}>
+                <Icon name={iconName} size={iconSize} color={iconColor} />
             </View>
         );
     };
@@ -181,32 +201,15 @@ const StatusTrackingNoCustom = ({ currentStatus = 'Pending', onStatusChange }) =
         <View style={styles.container}>
             <View style={styles.stepIndicatorContainer}>
                 <StepIndicator
-                    customStyles={{
-                        ...customStyles,
-                        stepStrokeFinishedColor: '#4CAF50',
-                        stepStrokeCurrentColor: '#007AFF',
-                        stepStrokeUnFinishedColor: '#666666',
-                        separatorFinishedColor: '#4CAF50',
-                        separatorUnFinishedColor: '#666666',
-                        stepIndicatorLabelFinishedColor: '#4CAF50',
-                        stepIndicatorLabelCurrentColor: '#007AFF',
-                        stepIndicatorLabelUnFinishedColor: '#666666',
-                    }}
+                    customStyles={getDynamicStyles()}
                     currentPosition={currentPosition}
-                    labels={labels}
+                    labels={displayLabels}
                     direction="vertical"
                     renderLabel={renderLabel}
-                    stepCount={labels.length}
+                    renderStepIndicator={renderStepIndicator}
+                    stepCount={statusFlow.length}
                 />
             </View>
-            {currentPosition < labels.length - 1 && (
-                <TouchableOpacity 
-                    style={styles.nextButton}
-                    onPress={handleNextStatus}
-                >
-                    <Text style={styles.nextButtonText}>Next Status</Text>
-                </TouchableOpacity>
-            )}
         </View>
     );
 }
@@ -215,39 +218,36 @@ export default StatusTrackingNoCustom;
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         backgroundColor: '#ffffff',
-        padding: 20,
+        paddingVertical: 10, // Reduced vertical padding
+        paddingHorizontal: 5, // Reduced horizontal padding
     },
     stepIndicatorContainer: {
-        marginVertical: 10,
+        // No specific style needed here unless adjusting margin
     },
     labelContainer: {
-        marginLeft: 10,
-        marginBottom: 20,
+        marginLeft: 15, // More space from indicator
+        marginTop: 5, // Align better vertically
+        marginBottom: 25, // More space between steps
     },
     labelText: {
-        fontSize: 14,
-        marginBottom: 4,
+        fontSize: 15,
+        marginBottom: 5,
         fontWeight: '500',
+        lineHeight: 20,
     },
     noteText: {
-        fontSize: 12,
-        marginBottom: 2,
+        fontSize: 13,
+        color: '#6c757d', // Softer note color
+        lineHeight: 18,
     },
-    dateText: {
-        fontSize: 12,
-    },
-    nextButton: {
-        backgroundColor: '#4CAF50',
-        padding: 15,
-        borderRadius: 8,
+    // Removed dateText styles as date is not part of the flow data now
+    // Removed nextButton styles
+    stepIndicator: {
+        width: 25, 
+        height: 25,
+        borderRadius: 12.5, // Make it a circle
+        justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 20,
     },
-    nextButtonText: {
-        color: '#ffffff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    }
 }); 

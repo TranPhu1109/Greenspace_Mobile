@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
@@ -22,12 +22,9 @@ api.interceptors.request.use(
         const user = JSON.parse(userJson);
         if (user.backendToken) {
           config.headers.Authorization = `Bearer ${user.backendToken}`;
-          console.log('Using token:', user.backendToken);
         } else {
-          console.log('No backend token found in user data');
         }
       } else {
-        console.log('No user data found in AsyncStorage');
       }
     } catch (error) {
       console.error('Error getting token:', error);
@@ -39,11 +36,13 @@ api.interceptors.request.use(
   }
 );
 
-export const CartContext = createContext();
+// Create context, but don't export it directly
+const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [selectedItemIds, setSelectedItemIds] = useState([]);
   const [serverCartId, setServerCartId] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const { user } = useAuth(); // Get user from AuthContext
@@ -53,8 +52,6 @@ export const CartProvider = ({ children }) => {
     const checkAuth = async () => {
       try {
         const userJson = await AsyncStorage.getItem('user');
-        console.log('Current user in storage:', userJson ? JSON.parse(userJson) : 'No user');
-        console.log('Current user in context:', user);
       } catch (error) {
         console.error('Error checking auth:', error);
       }
@@ -65,31 +62,27 @@ export const CartProvider = ({ children }) => {
   // Load cart items when app starts or user changes
   useEffect(() => {
     if (user?.backendToken) {
-      console.log('User authenticated, initializing cart');
       initializeCart();
     } else {
-      console.log('No authenticated user, loading local cart');
       loadLocalCart();
     }
   }, [user]);
 
-  // Calculate total price whenever cart items change
+  // Calculate total price whenever cart items OR selection changes
   useEffect(() => {
     calculateTotalPrice();
-  }, [cartItems]);
+  }, [cartItems, selectedItemIds]);
 
   const initializeCart = async () => {
     try {
       const userJson = await AsyncStorage.getItem('user');
       if (!userJson) {
-        console.log('No user data found, loading local cart');
         await loadLocalCart();
         return;
       }
 
       const userData = JSON.parse(userJson);
       if (!userData.backendToken) {
-        console.log('No backend token found, loading local cart');
         await loadLocalCart();
         return;
       }
@@ -99,9 +92,10 @@ export const CartProvider = ({ children }) => {
       if (savedCart) {
         const localItems = JSON.parse(savedCart);
         if (localItems.length > 0) {
-          console.log('Fetching cart from server...');
+          // Initially, select all items when loading the cart
+          setSelectedItemIds(localItems.map(item => item.id)); 
+          
           const response = await api.get('/carts');
-          console.log('Server cart response:', response.data);
           
           if (response.data) {
             setServerCartId(response.data.id);
@@ -123,9 +117,17 @@ export const CartProvider = ({ children }) => {
             
             const validItems = serverItems.filter(item => item !== null);
             setCartItems(validItems);
+            // Also select all newly loaded server items
+            setSelectedItemIds(validItems.map(item => item.id)); 
             await saveCartItems(validItems);
           }
+        } else {
+          // Clear selection if local cart is empty
+          setSelectedItemIds([]);
         }
+      } else {
+        // Clear selection if no saved cart
+        setSelectedItemIds([]);
       }
     } catch (error) {
       console.error('Error initializing cart:', error);
@@ -146,8 +148,14 @@ export const CartProvider = ({ children }) => {
         if (daysDifference > 7) {
           await clearCart();
         } else {
-          setCartItems(JSON.parse(savedCart));
+          const localItems = JSON.parse(savedCart);
+          setCartItems(localItems);
+          // Select all items loaded from local storage initially
+          setSelectedItemIds(localItems.map(item => item.id)); 
         }
+      } else {
+         // Clear selection if no saved cart
+        setSelectedItemIds([]);
       }
     } catch (error) {
       console.error('Error loading local cart:', error);
@@ -193,9 +201,58 @@ export const CartProvider = ({ children }) => {
     } catch (error) {
       console.error('Error syncing with server:', error);
       if (error.response) {
-        console.log('Error response:', error.response.data);
-        console.log('Error status:', error.response.status);
       }
+      throw error; // Re-throw to allow caller to handle
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Function to ensure server cart exists before checkout
+  const ensureServerCart = async () => {
+    if (!user?.backendToken) {
+      throw new Error('User not authenticated');
+    }
+    
+    if (cartItems.length === 0) {
+      throw new Error('Cart is empty');
+    }
+    
+    try {
+      setIsSyncing(true);
+      
+      // If we already have a server cart ID, just verify it exists
+      if (serverCartId) {
+        try {
+          // Verify the cart still exists
+          const response = await api.get('/carts');
+          return serverCartId;
+        } catch (error) {
+          // If cart doesn't exist, we'll create a new one below
+          setServerCartId(null);
+        }
+      }
+      
+      // Create a new cart on the server
+      const cartData = {
+        items: cartItems.map(item => ({
+          productId: item.id,
+          quantity: item.quantity
+        }))
+      };
+      
+      const response = await api.post('/carts', cartData);
+      
+      const newCartId = response.data.id;
+      setServerCartId(newCartId);
+      return newCartId;
+    } catch (error) {
+      console.error('Error ensuring server cart:', error);
+      if (error.response) {
+        console.error('Server error:', error.response.data);
+        throw new Error(`Server error: ${error.response.status}`);
+      }
+      throw error;
     } finally {
       setIsSyncing(false);
     }
@@ -205,6 +262,7 @@ export const CartProvider = ({ children }) => {
     try {
       const existingItem = cartItems.find(cartItem => cartItem.id === item.id);
       let updatedCart;
+      let newItemAdded = false;
 
       if (existingItem) {
         updatedCart = cartItems.map(cartItem =>
@@ -214,9 +272,14 @@ export const CartProvider = ({ children }) => {
         );
       } else {
         updatedCart = [...cartItems, { ...item, quantity: 1 }];
+        newItemAdded = true; // Flag that a new item was added
       }
 
       setCartItems(updatedCart);
+      // Automatically select the newly added item
+      if (newItemAdded) {
+        setSelectedItemIds(prev => [...prev, item.id]);
+      }
       await saveCartItems(updatedCart);
       
       // Only sync with server if we have a cart ID
@@ -230,20 +293,38 @@ export const CartProvider = ({ children }) => {
   };
 
   const updateQuantity = async (itemId, change) => {
-    try {
-      const updatedCart = cartItems.map(item => {
-        if (item.id === itemId) {
-          const newQuantity = item.quantity + change;
-          return newQuantity > 0 ? { ...item, quantity: newQuantity } : null;
-        }
-        return item;
-      }).filter(Boolean);
+    let updatedCartItems = [...cartItems];
+    const itemIndex = updatedCartItems.findIndex(item => item.id === itemId);
 
-      setCartItems(updatedCart);
-      await saveCartItems(updatedCart);
-      await syncToServer(updatedCart);
-    } catch (error) {
-      console.error('Error updating quantity:', error);
+    if (itemIndex !== -1) {
+      const currentItem = updatedCartItems[itemIndex];
+      const newQuantity = currentItem.quantity + change;
+
+      // Check stock limit ONLY when INCREASING quantity
+      if (change > 0 && newQuantity > currentItem.stock) {
+        // Optionally show an alert or feedback to the user here if desired
+        // Alert.alert("Thông báo", "Số lượng đã đạt tối đa trong kho.");
+        return; // Do not update if exceeding stock
+      }
+
+      // Ensure quantity doesn't go below 1
+      if (newQuantity >= 1) {
+        updatedCartItems[itemIndex] = {
+          ...currentItem,
+          quantity: newQuantity
+        };
+      } else {
+        // Optionally remove item if quantity goes below 1, or keep it at 1
+        // For now, let's prevent going below 1
+        updatedCartItems[itemIndex] = {
+          ...currentItem,
+          quantity: 1
+        };
+      }
+
+      setCartItems(updatedCartItems);
+      await saveCartItems(updatedCartItems);
+      await syncToServer(updatedCartItems);
     }
   };
 
@@ -251,6 +332,8 @@ export const CartProvider = ({ children }) => {
     try {
       const updatedCart = cartItems.filter(item => item.id !== itemId);
       setCartItems(updatedCart);
+      // Also remove from selected items if it was selected
+      setSelectedItemIds(prev => prev.filter(id => id !== itemId)); 
       await saveCartItems(updatedCart);
       
       if (serverCartId) {
@@ -276,6 +359,7 @@ export const CartProvider = ({ children }) => {
   const clearCart = async () => {
     try {
       setCartItems([]);
+      setSelectedItemIds([]); // Clear selection as well
       await AsyncStorage.removeItem('cartItems');
       await AsyncStorage.removeItem('cartSaveDate');
       
@@ -295,25 +379,67 @@ export const CartProvider = ({ children }) => {
 
   const calculateTotalPrice = () => {
     const total = cartItems.reduce((sum, item) => {
-      return sum + (item.price * item.quantity);
+      // Only add to sum if the item is selected
+      if (selectedItemIds.includes(item.id)) {
+        return sum + (item.price * item.quantity);
+      }
+      return sum;
     }, 0);
     setTotalPrice(total);
   };
+
+  // --- New Selection Functions ---
+  const toggleItemSelection = (itemId) => {
+    setSelectedItemIds(prevSelectedIds => {
+      if (prevSelectedIds.includes(itemId)) {
+        // If already selected, remove it
+        return prevSelectedIds.filter(id => id !== itemId);
+      } else {
+        // If not selected, add it
+        return [...prevSelectedIds, itemId];
+      }
+    });
+    // No need to save selection to AsyncStorage unless required for persistence across app restarts
+  };
+
+  const selectAllItems = () => {
+    setSelectedItemIds(cartItems.map(item => item.id));
+  };
+
+  const deselectAllItems = () => {
+    setSelectedItemIds([]);
+  };
+  // --- End New Selection Functions ---
 
   return (
     <CartContext.Provider
       value={{
         cartItems,
         totalPrice,
+        selectedItemIds,
+        toggleItemSelection,
+        selectAllItems,
+        deselectAllItems,
         addToCartItem,
         updateQuantity,
         deleteCartItem,
         clearCart,
         isSyncing,
-        initializeCart
+        initializeCart,
+        ensureServerCart,
+        serverCartId
       }}
     >
       {children}
     </CartContext.Provider>
   );
+};
+
+// Export the custom hook instead of the context itself
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
 };

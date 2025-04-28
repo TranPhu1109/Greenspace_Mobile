@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const TransactionDetailScreen = ({ navigation, route }) => {
     const transaction = route.params?.transaction;
+console.log("Transaction:", transaction);
 
     return (
         <View style={styles.container}>

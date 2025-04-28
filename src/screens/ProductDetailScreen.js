@@ -1,58 +1,83 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { CartContext } from '../context/CartContext';
+import { useCart } from '../context/CartContext';
 import axios from 'axios';
-
+import CustomModal from '../components/Modal';
 
 const API_URL = 'http://10.0.2.2:8080/api';
 
 const ProductDetailScreen = ({ route, navigation }) => {
-  const { addToCartItem } = useContext(CartContext);
+  const { addToCartItem } = useCart();
   const { productId } = route.params;
   const [product, setProduct] = useState(null);
+  console.log("product", product);
+  
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // --- Feedback State ---
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [isFeedbackLoading, setIsFeedbackLoading] = useState(true);
+  const [feedbackError, setFeedbackError] = useState(null);
+  // --- End Feedback State ---
+
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState({ title: '', message: '', buttons: [], icon: null });
+
   useEffect(() => {
-    const fetchProductDetails = async () => {
+    const fetchProductDetailsAndFeedback = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await axios.get(`${API_URL}/product/${productId}`);
-        setProduct(response.data);
+        setFeedbackError(null); // Reset feedback error
+        setIsFeedbackLoading(true); // Start feedback loading
+        
+        // Fetch Product Details
+        const productResponse = await axios.get(`${API_URL}/product/${productId}`);
+        setProduct(productResponse.data);
+        
+        // Fetch Feedback after product details are loaded
+        try {
+          const feedbackResponse = await axios.get(`${API_URL}/productfeedback/${productId}/products`);
+          //console.log("Feedback Response:", feedbackResponse.data);
+          setFeedbacks(feedbackResponse.data || []); // Assuming API returns array directly
+          // Clear any previous error if fetch is successful
+          setFeedbackError(null);
+        } catch (feedbackErr) {
+          //console.error('Error fetching feedback:', feedbackErr);
+          // Check for the specific "no feedback found" error from the API
+          if (feedbackErr.response?.data?.error?.includes("No productFeedback found")) {
+            //console.log("API indicated no feedback found for this product.");
+            setFeedbacks([]); // Ensure feedbacks is empty
+            setFeedbackError(null); // Treat as no data, not an error
+          } else {
+            // Handle other types of errors (network, server, etc.)
+            setFeedbackError('Không thể tải đánh giá.');
+            setFeedbacks([]); // Ensure feedbacks is empty on general error
+          }
+        } finally {
+          setIsFeedbackLoading(false); // Stop feedback loading
+        }
+
       } catch (error) {
-        console.error('Error fetching product details:', error);
-        setError('Failed to load product details. Please try again.');
-        Alert.alert(
-          'Error',
-          'Failed to load product details. Please try again.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
+        //console.error('Error fetching product details:', error);
+        const errorMessage = 'Failed to load product details. Please try again.';
+        setError(errorMessage);
+        setModalConfig({
+          title: 'Lỗi tải sản phẩm',
+          message: errorMessage,
+          buttons: [{ text: 'Quay lại', onPress: () => { setIsModalVisible(false); navigation.goBack(); } }]
+        });
+        setIsModalVisible(true);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchProductDetails();
+    fetchProductDetailsAndFeedback(); // Call the combined function
   }, [productId]);
-
-  // fake feedback data (you can replace this with an API call if you have feedback endpoints)
-  const feedbacks = [
-    {
-      id: 1,
-      userName: 'User 1',
-      rating: 5,
-      comment: 'Sản phẩm ok lắm',
-    },
-    {
-      id: 2,
-      userName: 'User 2',
-      rating: 5,
-      comment: 'Chất lượng sản phẩm tốt nhưng giá mắc quá',
-    },
-  ];
 
   const renderStars = (rating) => {
     return [...Array(5)].map((_, index) => (
@@ -70,27 +95,40 @@ const ProductDetailScreen = ({ route, navigation }) => {
     try {
       setIsSyncing(true);
       await addToCartItem(product);
-      Alert.alert(
-        'Thành công',
-        'Đã thêm sản phẩm vào giỏ hàng',
-        [
+      // Configure and show success modal
+      const newConfig = {
+        icon: { name: 'check-circle', color: '#4CAF50' }, // Success Icon
+        title: 'Thêm thành công',
+        message: 'Đã thêm sản phẩm vào giỏ hàng!',
+        buttons: [
           {
             text: 'Tiếp tục mua sắm',
-            style: 'cancel',
+            onPress: () => setIsModalVisible(false), 
+            style: 'cancel' 
           },
           {
             text: 'Đi đến giỏ hàng',
-            onPress: () => navigation.navigate('Cart'),
+            onPress: () => {
+              setIsModalVisible(false);
+              navigation.navigate('Cart');
+            },
+            style: 'confirm' 
           },
         ]
-      );
+      };
+      setModalConfig(newConfig);
+      setIsModalVisible(true);
     } catch (error) {
       console.error('Error adding to cart:', error);
-      Alert.alert(
-        'Lỗi',
-        'Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.',
-        [{ text: 'Đồng ý' }]
-      );
+      // Configure and show error modal
+      const errorConfig = {
+        icon: { name: 'alert-circle-outline', color: '#e74c3c' }, // Error Icon
+        title: 'Lỗi thêm vào giỏ',
+        message: 'Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.',
+        buttons: [{ text: 'Đồng ý', onPress: () => setIsModalVisible(false), style: 'confirm' }]
+      };
+      setModalConfig(errorConfig);
+      setIsModalVisible(true);
     } finally {
       setIsSyncing(false);
     }
@@ -105,11 +143,11 @@ const ProductDetailScreen = ({ route, navigation }) => {
     );
   }
 
-  if (error || !product) {
+  if (error && !product && !isModalVisible) {
     return (
       <View style={styles.errorContainer}>
         <Icon name="alert-circle" size={50} color="#FF3B30" />
-        <Text style={styles.errorText}>{error || 'Không tìm thấy sản phẩm'}</Text>
+        <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity
           style={styles.retryButton}
           onPress={() => navigation.goBack()}
@@ -120,38 +158,48 @@ const ProductDetailScreen = ({ route, navigation }) => {
     );
   }
 
+  if (!product) {
+    return null;
+  }
+
+
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content} removeClippedSubviews={false}>
-        {/* Image Gallery */}
-        <ScrollView
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          style={styles.imageGallery}
-        >
-          {product.image.imageUrl && (
-            <Image 
-              source={{ uri: product.image.imageUrl }}
-              style={styles.productImage}
-              resizeMode="cover"
-            />
-          )}
-          {product.image.image2 && product.image.image2.trim() !== '' && (
-            <Image 
-              source={{ uri: product.image.image2 }}
-              style={styles.productImage}
-              resizeMode="cover"
-            />
-          )}
-          {product.image.image3 && product.image.image3.trim() !== '' && (
-            <Image 
-              source={{ uri: product.image.image3 }}
-              style={styles.productImage}
-              resizeMode="cover"
-            />
-          )}
-        </ScrollView>
+      <ScrollView style={styles.content} removeClippedSubviews={false} nestedScrollEnabled={true}>
+        {/* Image Gallery - Add key to make sure we recreate the component when needed */}
+        <View style={styles.imageGalleryContainer}>
+          <ScrollView
+            key="imageGallery"
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            style={styles.imageGallery}
+            nestedScrollEnabled={true}
+            removeClippedSubviews={false}
+          >
+            {product.image.imageUrl && (
+              <Image 
+                source={{ uri: product.image.imageUrl }}
+                style={styles.productImage}
+                resizeMode="cover"
+              />
+            )}
+            {product.image.image2 && product.image.image2.trim() !== '' && (
+              <Image 
+                source={{ uri: product.image.image2 }}
+                style={styles.productImage}
+                resizeMode="cover"
+              />
+            )}
+            {product.image.image3 && product.image.image3.trim() !== '' && (
+              <Image 
+                source={{ uri: product.image.image3 }}
+                style={styles.productImage}
+                resizeMode="cover"
+              />
+            )}
+          </ScrollView>
+        </View>
         
         <View style={styles.detailsContainer}>
           <Text style={styles.productName}>{product.name}</Text>
@@ -163,7 +211,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
           </View>
 
           <View style={styles.specsContainer}>
-            <Text style={styles.specsTitle}>Thông số kỹ thuật</Text>
+            <Text style={styles.specsTitle}>Thông tin sản phẩm</Text>
             <View style={styles.specItem}>
               <Text style={styles.specLabel}>Tên sản phẩm</Text>
               <Text style={styles.specValue}>{product.name}</Text>
@@ -186,24 +234,33 @@ const ProductDetailScreen = ({ route, navigation }) => {
           {/* Feedback Section */}
           <View style={styles.feedbackContainer}>
             <View style={styles.feedbackHeader}>
-              <Text style={styles.feedbackTitle}>Đánh giá sản phẩm</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('AllFeedback', { productId: product.id })}>
+              <Text style={styles.feedbackTitle}>Đánh giá từ người dùng</Text>
+              {/* <TouchableOpacity onPress={() => navigation.navigate('AllFeedback', { productId: product.id })}>
                 <Text style={styles.viewAllText}>Xem tất cả</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
             
-            {feedbacks.map((feedback) => (
-              <View key={feedback.id} style={styles.feedbackItem}>
-                <View style={styles.userInfo}>
-                  <Icon name="account-circle" size={24} color="#666" />
-                  <Text style={styles.userName}>{feedback.userName}</Text>
+            {/* Feedback Loading/Error/Content */}
+            {isFeedbackLoading ? (
+              <ActivityIndicator style={{ marginTop: 15 }} size="small" color="#007AFF" />
+            ) : feedbackError ? (
+              <Text style={styles.feedbackErrorText}>{feedbackError}</Text>
+            ) : feedbacks.length === 0 ? (
+              <Text style={styles.noFeedbackText}>Chưa có đánh giá nào cho sản phẩm này.</Text>
+            ) : (
+              feedbacks.map((feedback) => (
+                <View key={feedback.id} style={styles.feedbackItem}>
+                  <View style={styles.userInfo}>
+                    <Icon name="account-circle" size={24} color="#666" />
+                    <Text style={styles.userName}>{feedback.userName|| 'Người dùng ẩn danh'}</Text>
+                  </View>
+                  <View style={styles.ratingContainer}>
+                    {renderStars(feedback.rating)}
+                  </View>
+                  <Text style={styles.feedbackComment}>{feedback.description}</Text>
                 </View>
-                <View style={styles.ratingContainer}>
-                  {renderStars(feedback.rating)}
-                </View>
-                <Text style={styles.feedbackComment}>{feedback.comment}</Text>
-              </View>
-            ))}
+              ))
+            )}
           </View>
         </View>
       </ScrollView>
@@ -225,6 +282,45 @@ const ProductDetailScreen = ({ route, navigation }) => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <CustomModal
+        visible={isModalVisible}
+        onClose={() => setIsModalVisible(false)}
+      >
+        <View style={styles.modalContentContainer}> 
+          {/* Add Icon Rendering */}
+          {modalConfig.icon && (
+            <Icon name={modalConfig.icon.name} size={50} color={modalConfig.icon.color || '#007AFF'} style={styles.modalIcon} />
+          )}
+          {modalConfig.title ? (
+            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+          ) : null}
+          {modalConfig.message ? (
+            <Text style={styles.modalMessage}>{modalConfig.message}</Text>
+          ) : null}
+          <View style={styles.modalButtonContainer}>
+            {modalConfig.buttons && modalConfig.buttons.map((button, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.modalButton,
+                  button.style === 'cancel' ? styles.modalButtonCancel : {},
+                  button.style === 'confirm' ? styles.modalButtonConfirm : {}
+                ]}
+                onPress={button.onPress}
+              >
+                <Text style={[
+                  styles.modalButtonText,
+                  button.style === 'cancel' ? styles.modalButtonTextCancel : {},
+                  button.style === 'confirm' ? styles.modalButtonTextConfirm : {}
+                ]}>
+                  {button.text}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </CustomModal>
     </View>
   );
 };
@@ -236,6 +332,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  imageGalleryContainer: {
+    height: 350,
+    backgroundColor: '#fff',
   },
   imageGallery: {
     height: 350,
@@ -450,6 +550,76 @@ const styles = StyleSheet.create({
   syncingButton: {
     backgroundColor: '#95a5a6',
   },
+  modalContentContainer: {
+    alignItems: 'center', 
+    paddingHorizontal: 20,
+    paddingVertical: 30,
+  },
+  modalIcon: {
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333',
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 22,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  modalButtonCancel: {
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
+  },
+  modalButtonConfirm: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  modalButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  modalButtonTextCancel: {
+     color: '#555',
+  },
+   modalButtonTextConfirm: {
+     color: '#fff',
+   },
+   // Feedback specific styles
+   noFeedbackText: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 15,
+    fontStyle: 'italic',
+   },
+   feedbackErrorText: {
+     fontSize: 14,
+     color: '#e74c3c',
+     textAlign: 'center',
+     marginTop: 15,
+   }
 });
 
 export default ProductDetailScreen; 

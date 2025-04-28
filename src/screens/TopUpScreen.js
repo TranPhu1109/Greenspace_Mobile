@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -7,26 +7,74 @@ import {
   TextInput,
   Image,
   ScrollView,
+  ActivityIndicator,
+  Alert,
+  Linking,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import QRCode from 'react-native-qrcode-svg';
+import { useWallet } from '../context/WalletContext';
+import { InAppBrowser } from 'react-native-inappbrowser-reborn' 
 
 const TopUpScreen = ({ navigation }) => {
   const [amount, setAmount] = useState('');
-  const [qrData, setQrData] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { createVnpayPayment } = useWallet();
   
   const presetAmounts = [100000, 200000, 500000, 1000000];
 
-  const generateQRCode = (value) => {
-    // In a real app, this would be your payment gateway's QR code data
-    const paymentData = {
-      type: 'top-up',
-      amount: value,
-      timestamp: new Date().toISOString(),
-      merchantId: 'YOUR_MERCHANT_ID',
-    };
-    setQrData(JSON.stringify(paymentData));
-    setAmount(value.toString());
+  const handleConfirmTopUp = async () => {
+    const numericAmount = parseInt(amount.replace(/[^0-9]/g, ''));
+
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      Alert.alert('Lỗi', 'Vui lòng nhập số tiền hợp lệ.');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const paymentUrl = await createVnpayPayment(numericAmount);
+      console.log('Received VNPay URL:', paymentUrl);
+      
+      if (await InAppBrowser.isAvailable()) {
+        console.log('InAppBrowser is available, opening URL...');
+        await InAppBrowser.open(paymentUrl, {
+          dismissButtonStyle: 'cancel',
+          preferredBarTintColor: '#4CAF50',
+          preferredControlTintColor: 'white',
+          readerMode: false,
+          animated: true,
+          modalPresentationStyle: 'fullScreen',
+          modalTransitionStyle: 'coverVertical',
+          modalEnabled: true,
+          enableUrlBarHiding: true,
+          enableDefaultShare: true,
+          forceCloseOnRedirection: false,
+          showTitle: true,
+          animations: {
+            startEnter: 'slide_in_right',
+            startExit: 'slide_out_left',
+            endEnter: 'slide_in_left',
+            endExit: 'slide_out_right'
+          },
+        });
+        console.log('InAppBrowser opened successfully');
+      } else {
+        console.log('InAppBrowser not available, falling back to Linking');
+        const supported = await Linking.canOpenURL(paymentUrl);
+        if (supported) {
+          await Linking.openURL(paymentUrl);
+        } else {
+          Alert.alert('Lỗi', `Không thể mở URL: ${paymentUrl}`);
+        }
+      }
+    } catch (error) {
+      console.error('Top-up error:', error);
+      if (error.message !== "Another InAppBrowser is already being presented." && error.message !== "browser closed") {
+          Alert.alert('Lỗi nạp tiền', error.message || 'Đã xảy ra lỗi. Vui lòng thử lại.');
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -44,16 +92,11 @@ const TopUpScreen = ({ navigation }) => {
 
       {/* Amount Input */}
       <View style={styles.amountContainer}>
-        <Text style={styles.label}>Số tiền nạp</Text>
+        <Text style={styles.label}>Số tiền nạp (VNĐ)</Text>
         <TextInput
           style={styles.input}
           value={amount}
-          onChangeText={(text) => {
-            setAmount(text);
-            if (text) {
-              generateQRCode(parseInt(text.replace(/[^0-9]/g, '')));
-            }
-          }}
+          onChangeText={(text) => setAmount(text.replace(/[^0-9]/g, ''))}
           keyboardType="numeric"
           placeholder="Nhập số tiền"
           placeholderTextColor="#999"
@@ -69,38 +112,29 @@ const TopUpScreen = ({ navigation }) => {
               styles.presetButton,
               amount === value.toString() && styles.presetButtonActive,
             ]}
-            onPress={() => generateQRCode(value)}>
+            onPress={() => setAmount(value.toString())}>
             <Text style={[
               styles.presetButtonText,
               amount === value.toString() && styles.presetButtonTextActive,
             ]}>
-              {value.toLocaleString()}đ
+              {value.toLocaleString('vi-VN')}đ
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* QR Code */}
-      <View style={styles.qrContainer}>
-        <Text style={styles.qrTitle}>Quét mã QR để nạp tiền</Text>
-        <View style={styles.qrWrapper}>
-          {qrData ? (
-            <QRCode
-              value={qrData}
-              size={200}
-              color="#000"
-              backgroundColor="#fff"
-            />
-          ) : (
-            <Text style={styles.qrPlaceholder}>
-              Vui lòng chọn số tiền để hiển thị mã QR
-            </Text>
-          )}
-        </View>
-        <Text style={styles.qrInstructions}>
-          Sử dụng ứng dụng ngân hàng để quét mã QR và thực hiện thanh toán
-        </Text>
-      </View>
+      {/* Confirm Button */}
+      <TouchableOpacity 
+        style={styles.confirmButton}
+        onPress={handleConfirmTopUp}
+        disabled={isProcessing || !amount}
+      >
+        {isProcessing ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.confirmButtonText}>Xác nhận Nạp tiền</Text>
+        )}
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -171,44 +205,19 @@ const styles = StyleSheet.create({
   presetButtonTextActive: {
     color: '#fff',
   },
-  qrContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
+  confirmButton: {
+    backgroundColor: '#4CAF50',
     margin: 16,
+    padding: 16,
     borderRadius: 12,
-    padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
   },
-  qrTitle: {
+  confirmButtonText: {
+    color: '#fff',
     fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 24,
-  },
-  qrWrapper: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    marginBottom: 24,
-  },
-  qrPlaceholder: {
-    color: '#666',
-    textAlign: 'center',
-    padding: 40,
-  },
-  qrInstructions: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    paddingHorizontal: 32,
+    fontWeight: 'bold',
   },
 });
 

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -16,15 +16,27 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useLoading } from '../context/LoadingContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const LoginScreen = () => {
+const LoginScreen = ({navigation, route}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [authError, setAuthError] = useState('');
-  const {login} = useAuth();
-  const navigation = useNavigation();
+  const {login, isAuthenticated} = useAuth();
   const { showLoading, hideLoading } = useLoading();
+
+  // Simplified logic - just check if we need to go back after login
+  useEffect(() => {
+    if (isAuthenticated) {
+      // If there are returnTo params, go back to the previous screen
+      if (route.params?.returnTo) {
+        navigation.goBack();
+      } else {
+        // Otherwise go to home
+        navigation.navigate('MainTabs');
+      }
+    }
+  }, [isAuthenticated, navigation, route.params]);
 
   const validateInputs = () => {
     let isValid = true;
@@ -53,6 +65,28 @@ const LoginScreen = () => {
     return isValid;
   };
 
+  const fetchWalletInfo = async (userId, token) => {
+    try {
+      const response = await axios.get(`http://10.0.2.2:8080/api/wallets/user${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.status === 200) {
+        const walletData = response.data;
+        console.log('Wallet data fetched:', walletData);
+        return walletData;
+      } else {
+        console.error('Failed to fetch wallet data');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching wallet:', error);
+      return null;
+    }
+  };
+
   const handleLogin = async () => {
     if (!validateInputs()) return;
 
@@ -65,29 +99,41 @@ const LoginScreen = () => {
       
       const idToken = await userCredential.user.getIdToken();
       console.log('ID Token:', idToken);
+      
 
       const fcmToken = await messaging(app).getToken();
-      console.log('FCM Token:', fcmToken);
+      //console.log('FCM Token:', fcmToken);
 
       const response = await axios.post('http://10.0.2.2:8080/api/auth', {
         token: idToken,
         fcmToken: fcmToken,
         role: 'string'
       });
+      console.log("response", response);
 
       if (response.status !== 200) {
         throw new Error('Backend authentication failed');
       }
       console.log('Backend authentication successful');
       const backendToken = response.data.token;
-      console.log('Backend Token:', backendToken);
+      //console.log('Backend Token:', backendToken);
+
+      // Fetch wallet information
+      const walletInfo = await fetchWalletInfo(response.data.user.id, backendToken);
 
       // Create user object with all necessary data
       const userData = {
-        email: userCredential.user.email,
-        token: idToken,
+        token: response.data.token,
         fcmToken: fcmToken,
-        backendToken: backendToken
+        id: response.data.user.id,
+        email: response.data.user.email,
+        name: response.data.user.name,
+        roleName: response.data.user.roleName,
+        phone: response.data.user.phone,
+        address: response.data.user.address,
+        avatarUrl: response.data.user.avatarUrl,
+        backendToken: backendToken,
+        wallet: walletInfo // Add wallet information
       };
 
       // Store user data in AsyncStorage
@@ -97,12 +143,18 @@ const LoginScreen = () => {
       // Update auth context
       login(userData);
 
-      navigation.navigate('MainTabs');
+      // Explicitly handle navigation here instead of relying solely on the useEffect
+      console.log('Login successful, redirecting...');
+      if (route.params?.returnTo) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('MainTabs');
+      }
       
     } catch (error) {
-      console.error('Login error:', error);
-      
-      if (error.code === 'auth/invalid-email') {
+      if (error.code === 'auth/network-request-failed') {
+        setAuthError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.');
+      } else if (error.code === 'auth/invalid-email') {
         setEmailError('Địa chỉ email không hợp lệ');
       } else if (error.code === 'auth/invalid-credential') {
         setAuthError('Email hoặc mật khẩu không chính xác');

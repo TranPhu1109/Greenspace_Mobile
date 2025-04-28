@@ -1,91 +1,174 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+
+const API_BASE_URL_LOCALHOST = 'http://localhost:8080/api';
+const API_BASE_URL_EMULATOR = 'http://10.0.2.2:8080/api';
+
+// Helper function to format date
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return dateString; // Return original string if formatting fails
+  }
+};
 
 const ServiceOrderScreen = ({ navigation }) => {
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    if (user?.id) {
+        fetchOrders();
+    } else {
+        setError("User not identified. Cannot load orders.");
+        setLoading(false);
+    }
+  }, [user]);
 
   const fetchOrders = async () => {
+    if (!user?.id) {
+        setError("User ID is missing.");
+        setLoading(false);
+        setRefreshing(false);
+        return;
+    }
+    
     try {
-      setLoading(true);
-      const response = await axios.get('http://10.0.2.2:8080/api/serviceorder/usingidea');
-      setOrders(response.data);
+      if (!refreshing) setLoading(true);
       setError(null);
+      
+      const userId = user.id;
+      const urlPath = `/serviceorder/userid-usingidea/${userId}`;
+      let response;
+
+      try {
+        console.log(`Fetching orders from: ${API_BASE_URL_LOCALHOST}${urlPath}`);
+        response = await axios.get(`${API_BASE_URL_LOCALHOST}${urlPath}`, {
+            headers: { 'Authorization': `Bearer ${user.backendToken}` },
+            timeout: 5000
+        });
+      } catch (err) {
+        console.warn("Localhost fetch failed, trying emulator URL...");
+        console.log(`Fetching orders from: ${API_BASE_URL_EMULATOR}${urlPath}`);
+        response = await axios.get(`${API_BASE_URL_EMULATOR}${urlPath}`, {
+            headers: { 'Authorization': `Bearer ${user.backendToken}` }
+        });
+      }
+
+      const fetchedOrders = response.data?.data || response.data || [];
+      setOrders(fetchedOrders);
+      console.log(`Fetched ${fetchedOrders.length} orders.`);
+      
     } catch (err) {
       console.error('Error fetching orders:', err);
       setError('Failed to load orders. Please try again later.');
+      setOrders([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+  
+  const onRefresh = () => {
+      setRefreshing(true);
+      fetchOrders();
+  };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Processing':
-        return '#FF9500';
-      case 'Completed':
-        return '#4CAF50';
+  const getStatusInfo = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+        return { text: 'Chờ xử lý', color: '#FF9500', icon: 'credit-card-clock-outline' };
+      case 'paymentsuccess':
+        return { text: 'Thanh toán thành công', color: '#007AFF', icon: 'credit-card-check-outline' };
+      case 'processing':
+        return { text: 'Đang xử lý', color: '#FF9500', icon: 'cogs' };
+      case 'pickedpackageanddelivery':
+        return { text: 'Đang giao hàng', color: '#5AC8FA', icon: 'truck-delivery-outline' };
+      case 'deliveryfail':
+        return { text: 'Giao hàng thất bại', color: '#FF3B30', icon: 'alert-circle-outline' };
+      case 'redelivery':
+        return { text: 'Giao hàng lại', color: '#FF9500', icon: 'truck-fast-outline' };
+      case 'deliveredsuccessfully':
+        return { text: 'Giao hàng thành công', color: '#34C759', icon: 'package-variant-closed-check' };
+      case 'completeorder':
+        return { text: 'Hoàn tất', color: '#30A46C', icon: 'check-decagram-outline' };
+      case 'ordercancelled':
+        return { text: 'Đã hủy', color: '#FF3B30', icon: 'cancel' };
       default:
-        return '#8E8E93';
+        return { text: status || 'Không xác định', color: '#8E8E93', icon: 'help-circle-outline' };
     }
   };
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'Pending':
-        return 'Processing';
-      default:
-        return status;
-    }
-  };
+  const renderOrder = ({ item }) => {
+    const statusInfo = getStatusInfo(item.status);
+    const formattedDate = formatDate(item.creationDate);
 
-  const renderOrder = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.orderCard}
-      onPress={() => navigation.navigate('ServiceOrderDetail', { orderId: item.id })}
-    >
-      <View style={styles.orderHeader}>
-        <Text style={styles.orderNumber}>Order #{item.id}</Text>
-        <Text style={[styles.status, { color: getStatusColor(getStatusText(item.status)) }]}>
-          {getStatusText(item.status)}
-        </Text>
-      </View>
-      
-      <View style={styles.orderDetails}>
-        <View style={styles.detailRow}>
-          <Icon name="account" size={20} color="#666" />
-          <Text style={styles.detailText}>{item.userName}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Icon name="map-marker" size={20} color="#666" />
-          <Text style={styles.detailText}>{item.address}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Icon name="phone" size={20} color="#666" />
-          <Text style={styles.detailText}>{item.cusPhone}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Icon name="cash" size={20} color="#666" />
-          <Text style={styles.detailText}>{item.totalCost.toLocaleString('vi-VN')} VND</Text>
-        </View>
-      </View>
-
-      <TouchableOpacity 
-        style={styles.viewButton}
-        onPress={() => navigation.navigate('ServiceOrderDetail', { orderId: item.id })}
-      >
-        <Text style={styles.viewButtonText}>View Details</Text>
-        <Icon name="chevron-right" size={20} color="#007AFF" />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    return (
+        <TouchableOpacity 
+          style={styles.orderCard}
+          onPress={() => navigation.navigate('ServiceOrderDetail', { orderId: item.id })}
+        >
+          <View style={styles.orderHeader}>
+              <View style={styles.headerLeft}>
+                  <Text style={styles.orderNumber} numberOfLines={1} ellipsizeMode="tail">
+                    Đơn hàng #{item.id.substring(0, 8)}
+                  </Text>
+                  <Text style={styles.orderDate}>{formattedDate}</Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}>
+                  <Icon name={statusInfo.icon} size={14} color="#fff" />
+                  <Text style={styles.statusText}>{statusInfo.text}</Text>
+              </View>
+          </View>
+          
+          <View style={styles.customerInfoSection}>
+            <View style={styles.detailRow}>
+              <Icon name="account-outline" size={18} color="#555" />
+              <Text style={styles.detailText}>{item.userName || 'N/A'}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="phone-outline" size={18} color="#555" />
+              <Text style={styles.detailText}>{item.cusPhone || 'N/A'}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="map-marker-outline" size={18} color="#555" />
+              <Text style={styles.detailText} >
+                  {item.address ? item.address.split('|').join(', ') : 'N/A'}
+              </Text>
+            </View>
+          </View>
+    
+          <View style={styles.pricingSection}>
+            <Text style={styles.totalCostLabel}>Tổng giá:</Text>
+            <Text style={styles.totalCostValue}>{item.totalCost?.toLocaleString('vi-VN') || 0} VND</Text>
+          </View>
+    
+          <TouchableOpacity 
+            style={styles.viewDetailsButton}
+            onPress={() => navigation.navigate('ServiceOrderDetail', { orderId: item.id })}
+          >
+            <Text style={styles.viewDetailsText}>Xem chi tiết</Text>
+            <Icon name="chevron-right" size={22} color="#007AFF" />
+          </TouchableOpacity>
+        </TouchableOpacity>
+    );
+  }
 
   if (loading) {
     return (
@@ -99,8 +182,10 @@ const ServiceOrderScreen = ({ navigation }) => {
   if (error) {
     return (
       <View style={styles.errorContainer}>
+          <Icon name="alert-circle-outline" size={60} color="#ff3b30" style={{ marginBottom: 15 }}/>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={fetchOrders}>
+            <Icon name="refresh" size={18} color="#fff" style={{ marginRight: 8 }}/>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -112,8 +197,17 @@ const ServiceOrderScreen = ({ navigation }) => {
       <FlatList
         data={orders}
         renderItem={renderOrder}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item.id?.toString() || Math.random().toString()}
         contentContainerStyle={styles.listContainer}
+        ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+                <Icon name="clipboard-text-outline" size={60} color="#ccc" style={{ marginBottom: 15 }}/>
+                <Text style={styles.emptyText}>Không tìm thấy đơn hàng.</Text>
+            </View>
+        )}
+        refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />
+        }
       />
     </View>
   );
@@ -122,37 +216,45 @@ const ServiceOrderScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F8F9FA',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#F8F9FA',
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 15,
     fontSize: 16,
-    color: '#666',
+    color: '#6c757d',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#F8F9FA',
     padding: 20,
   },
   errorText: {
-    fontSize: 16,
-    color: '#ff3b30',
+    fontSize: 17,
+    color: '#dc3545',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 25,
+    lineHeight: 24,
   },
   retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 25,
+    paddingVertical: 12,
     borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   retryButtonText: {
     color: '#fff',
@@ -160,60 +262,116 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContainer: {
-    padding: 15,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   orderCard: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: 12,
     marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
+    padding: 18,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    borderWidth: 0,
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 15,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  headerLeft: {
+      flex: 1,
+      marginRight: 10,
   },
   orderNumber: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    width: '70%',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#343a40',
+    marginBottom: 4,
   },
-  status: {
-    fontSize: 14,
+  orderDate: {
+      fontSize: 12,
+      color: '#6c757d',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 15,
+  },
+  statusText: {
+    fontSize: 12,
     fontWeight: '600',
+    color: '#fff',
+    marginLeft: 5,
   },
-  orderDetails: {
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
-    paddingTop: 15,
+  customerInfoSection: {
+      marginBottom: 15,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginTop: 8,
   },
   detailText: {
     fontSize: 14,
-    color: '#666',
-    marginLeft: 10,
+    color: '#495057',
+    marginLeft: 12,
+    flex: 1,
   },
-  viewButton: {
+  pricingSection: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 15,
+      marginTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: '#F0F0F0',
+  },
+  totalCostLabel: {
+      fontSize: 14,
+      color: '#6c757d',
+      fontWeight: '500',
+  },
+  totalCostValue: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#007AFF',
+  },
+  viewDetailsButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10,
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
+    marginTop: 15,
+    paddingVertical: 10,
+    backgroundColor: '#E9F5FF',
+    borderRadius: 8,
   },
-  viewButtonText: {
+  viewDetailsText: {
     fontSize: 14,
+    fontWeight: '600',
     color: '#007AFF',
     marginRight: 5,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50,
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6c757d',
+    textAlign: 'center',
   },
 });
 

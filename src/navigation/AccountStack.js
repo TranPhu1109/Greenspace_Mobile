@@ -26,9 +26,6 @@ const ProfileStack = () => (
     <Stack.Screen 
       name="UserInfo" 
       component={UserInfoScreen}
-      options={{
-        unmountOnBlur: true 
-      }}
     />
     <Stack.Screen name="EditProfile" component={EditProfileScreen} />
     <Stack.Screen name="ShippingAddress" component={ShippingAddressScreen} />
@@ -109,22 +106,22 @@ const AccountStack = ({ navigation }) => {
           name="Profile"
           component={ProfileStack}
           options={{
-            tabBarLabel: 'Profile',
+            tabBarLabel: 'Cá nhân',
+            unmountOnBlur: true
           }}
         />
         <Tab.Screen
           name="ServiceOrdersTab"
           component={ServiceStack}
           options={{
-            tabBarLabel: 'Services',
+            tabBarLabel: 'Đơn đặt dịch vụ',
           }}
         />
         <Tab.Screen
           name="MaterialOrdersTab"
           component={MaterialStack}
-
           options={{
-            tabBarLabel: 'Materials',
+            tabBarLabel: 'Đơn đặt vật liệu',
           }}
         />
       </Tab.Navigator>

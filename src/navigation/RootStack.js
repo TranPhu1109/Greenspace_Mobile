@@ -12,35 +12,14 @@ const RootStack = () => {
   const { isAuthenticated } = useAuth();
 
   return (
-    // <Stack.Navigator screenOptions={{ headerShown: false }}>
-    //   {isAuthenticated ? (
-    //     // Protected routes - only accessible when logged in
-    //     <>
-    //       <Stack.Screen name="MainTabs" component={TabNavigator} />
-    //       <Stack.Screen name="Settings" component={SettingsScreen} />
-    //     </>
-    //   ) : (
-    //     // Public routes - only accessible when not logged in
-    //     <>
-    //       <Stack.Screen name="Login" component={LoginScreen} />
-    //       <Stack.Screen name="SignUp" component={RegisterScreen} />
-    //     </>
-    //   )}
-    // </Stack.Navigator>
-
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-     
-       
-        
-          <Stack.Screen name="MainTabs" component={TabNavigator} />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
-        
-     
-        
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="SignUp" component={RegisterScreen} />
-        
-     
+      {/* Main application screens - always accessible */}
+      <Stack.Screen name="MainTabs" component={TabNavigator} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
+      
+      {/* Authentication screens - accessible even when logged in for the cart -> login flow */}
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="SignUp" component={RegisterScreen} />
     </Stack.Navigator>
   );
 };

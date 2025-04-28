@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import SearchHeader from '../components/SearchHeader';
 import { useNavigation } from '@react-navigation/native';
@@ -19,50 +19,50 @@ const ShoppingScreen = () => {
   const [error, setError] = useState(null);
   const navigation = useNavigation();
 
-  // Fetch categories
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setError(null);
-        const response = await axios.get(`${API_URL}/categories`);
-        setCategories(response.data);
-        if (response.data.length > 0) {
-          setSelectedCategory(response.data[0]);
-        }
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-        setError('Failed to load categories. Please check your connection and try again.');
-        Alert.alert(
-          'Error',
-          'Failed to load categories. Please check your connection and try again.',
-          [{ text: 'OK' }]
-        );
+  // Define fetchCategories in component scope using useCallback
+  const fetchCategories = useCallback(async () => {
+    try {
+      // Note: Don't reset error/loading here if called alongside fetchProducts
+      const response = await axios.get(`${API_URL}/categories`);
+      setCategories(response.data);
+      // Set initial selected category only if categories were empty before
+      if (categories.length === 0 && response.data.length > 0) {
+         setSelectedCategory(response.data[0]);
       }
-    };
-    fetchCategories();
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setError('Failed to load categories. Please check your connection and try again.');
+      Alert.alert('Error', 'Failed to load categories.', [{ text: 'OK' }]);
+    }
+    // Note: Loading state is handled centrally below
+  }, [categories.length]); // Dependency ensures initial selection logic runs correctly
+
+  // Define fetchProducts in component scope using useCallback
+  const fetchProducts = useCallback(async () => {
+    try {
+      // Note: Don't reset error/loading here
+      const response = await axios.get(`${API_URL}/product`);
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      setError('Failed to load products. Please check your connection and try again.');
+      Alert.alert('Error', 'Failed to load products.', [{ text: 'OK' }]);
+    }
+    // Note: Loading state is handled centrally below
   }, []);
 
-  // Fetch products
+  // Fetch initial data on mount
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
+    const loadInitialData = async () => {
+        setIsLoading(true);
         setError(null);
-        const response = await axios.get(`${API_URL}/product`);
-        setProducts(response.data);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        setError('Failed to load products. Please check your connection and try again.');
-        Alert.alert(
-          'Error',
-          'Failed to load products. Please check your connection and try again.',
-          [{ text: 'OK' }]
-        );
-      } finally {
+        // Use Promise.all to fetch in parallel
+        await Promise.all([fetchCategories(), fetchProducts()]);
         setIsLoading(false);
-      }
     };
-    fetchProducts();
-  }, []);
+    loadInitialData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Keep dependencies empty for mount-only fetch
 
   // Filter products by category
   useEffect(() => {
@@ -73,6 +73,15 @@ const ShoppingScreen = () => {
       setFilteredProducts(filtered);
     }
   }, [selectedCategory, products]);
+
+  // Retry handler
+  const handleRetry = useCallback(async () => {
+      setIsLoading(true);
+      setError(null);
+      // Fetch both again
+      await Promise.all([fetchCategories(), fetchProducts()]);
+      setIsLoading(false);
+  }, [fetchCategories, fetchProducts]);
 
   const renderCategoryItem = ({ item }) => (
     <TouchableOpacity
@@ -159,12 +168,7 @@ const ShoppingScreen = () => {
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity
           style={styles.retryButton}
-          onPress={() => {
-            setIsLoading(true);
-            setError(null);
-            fetchCategories();
-            fetchProducts();
-          }}
+          onPress={handleRetry}
         >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
