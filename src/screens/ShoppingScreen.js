@@ -4,6 +4,7 @@ import SearchHeader from '../components/SearchHeader';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
+import { useCart } from '../context/CartContext';
 
 // Replace 'YOUR_IP_ADDRESS' with your computer's IP address
 // Example: const API_URL = 'http://192.168.1.5:8080/api';
@@ -18,6 +19,10 @@ const ShoppingScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigation = useNavigation();
+  const { cartItems } = useCart();
+  
+  // Calculate cart count - number of unique products
+  const cartCount = cartItems.length;
 
   // Define fetchCategories in component scope using useCallback
   const fetchCategories = useCallback(async () => {
@@ -178,7 +183,7 @@ const ShoppingScreen = () => {
 
   return (
     <View style={styles.container}>
-      <SearchHeader title="Shop" />
+      <SearchHeader title="Cửa hàng" cartCount={cartCount} />
       <FlatList
         ListHeaderComponent={ListHeaderComponent}
         data={filteredProducts}

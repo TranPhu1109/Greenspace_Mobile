@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 const API_BASE_URL_LOCALHOST = 'http://localhost:8080/api';
 const API_BASE_URL_EMULATOR = 'http://10.0.2.2:8080/api';
@@ -32,14 +33,16 @@ const ServiceOrderScreen = ({ navigation }) => {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    if (user?.id) {
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
         fetchOrders();
-    } else {
+      } else {
         setError("User not identified. Cannot load orders.");
         setLoading(false);
-    }
-  }, [user]);
+      }
+    }, [user])
+  );
 
   const fetchOrders = async () => {
     if (!user?.id) {
@@ -105,7 +108,7 @@ const ServiceOrderScreen = ({ navigation }) => {
       case 'redelivery':
         return { text: 'Giao hàng lại', color: '#FF9500', icon: 'truck-fast-outline' };
       case 'deliveredsuccessfully':
-        return { text: 'Giao hàng thành công', color: '#34C759', icon: 'package-variant-closed-check' };
+        return { text: 'Giao hàng thành công', color: '#34C759', icon: 'truck-check-outline' };
       case 'completeorder':
         return { text: 'Hoàn tất', color: '#30A46C', icon: 'check-decagram-outline' };
       case 'ordercancelled':
@@ -174,7 +177,7 @@ const ServiceOrderScreen = ({ navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading orders...</Text>
+        <Text style={styles.loadingText}>Đang tải danh sách đơn hàng...</Text>
       </View>
     );
   }

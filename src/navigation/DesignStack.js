@@ -57,10 +57,10 @@ const DesignStack = ({ navigation }) => {
           }}
         />
         <Tab.Screen
-          name="RecentProjects"
+          name="NewDesign"
           component={NewDesignScreen}
           options={{
-            tabBarLabel: 'Tạo thiết kế mới',
+            tabBarLabel: 'Thiết kế mới',
           }}
         />
       </Tab.Navigator>

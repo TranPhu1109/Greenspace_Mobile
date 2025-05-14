@@ -51,7 +51,6 @@ const TabNavigator = () => {
         component={HomeScreen}
         options={{
           title: 'Trang chủ',
-          headerShown: false,
         }}
       />
       <Tab.Screen

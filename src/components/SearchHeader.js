@@ -3,7 +3,7 @@ import { View, TextInput, StyleSheet, TouchableOpacity, Text } from 'react-nativ
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 
-const SearchHeader = ({ title }) => {
+const SearchHeader = ({ title, cartCount = 0 }) => {
   const navigation = useNavigation()
   return (
     <View style={styles.container}>
@@ -17,7 +17,16 @@ const SearchHeader = ({ title }) => {
         />
       </View>
       <TouchableOpacity style={styles.cartButton} onPress={() => navigation.navigate('Cart')}>
-        <Icon name="cart-outline" size={24} color="#666" />
+        <View style={styles.cartIconContainer}>
+          <Icon name="cart-outline" size={24} color="#666" />
+          {cartCount > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>
+                {cartCount > 99 ? '99+' : cartCount}
+              </Text>
+            </View>
+          )}
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -58,6 +67,31 @@ const styles = StyleSheet.create({
   },
   cartButton: {
     padding: 8,
+  },
+  cartIconContainer: {
+    position: 'relative',
+    width: 24,
+    height: 24,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -10,
+    backgroundColor: '#e74c3c',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+  cartBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 

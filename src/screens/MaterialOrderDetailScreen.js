@@ -1,28 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, Modal, TextInput, Pressable } from 'react-native';
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  TextInput,
+  Pressable,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useAuth } from '../context/AuthContext';
-import { useWallet } from '../context/WalletContext';
+import {useAuth} from '../context/AuthContext';
+import {useWallet} from '../context/WalletContext';
 import axios from 'axios';
 import StatusTrackingMaterial from '../components/StatusTrackingMaterial';
+import {isContentSafe} from '../utils/isContentSafe';
 
 const API_URL = 'http://10.0.2.2:8080/api';
 
-const MaterialOrderDetailScreen = ({ navigation, route }) => {
-  const { orderId } = route.params;
+const MaterialOrderDetailScreen = ({navigation, route}) => {
+  const {orderId} = route.params;
   //console.log("orderId", orderId);
-  
-  const { user } = useAuth();
-  const { refreshWallet, updateBalance } = useWallet();
+
+  const {user} = useAuth();
+  const {refreshWallet, updateBalance} = useWallet();
   const [orderDetails, setOrderDetails] = useState(null);
   const [productDetails, setProductDetails] = useState({});
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
-  console.log("productDetails", productDetails);
-  
-  // --- Rating State --- 
+
+  // --- Rating State ---
   const [isRatingModalVisible, setIsRatingModalVisible] = useState(false);
-  const [selectedProductForRating, setSelectedProductForRating] = useState(null);
+  const [selectedProductForRating, setSelectedProductForRating] =
+    useState(null);
   const [currentRating, setCurrentRating] = useState(0); // 0 means no rating yet
   const [ratingDescription, setRatingDescription] = useState('');
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
@@ -37,7 +50,7 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
 
   const fetchOrderDetails = async () => {
     if (!user || !user.backendToken) {
-      setError("Người dùng chưa đăng nhập.");
+      setError('Người dùng chưa đăng nhập.');
       setLoading(false);
       return;
     }
@@ -48,43 +61,47 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
       const response = await axios.get(`${API_URL}/orderproducts/${orderId}`, {
         headers: {
           Authorization: `Bearer ${user.backendToken}`,
-        }
+        },
       });
-      
-      console.log("Order details fetched successfully:", response.data);
+
+      console.log('Order details fetched successfully:', response.data);
       const orderData = response.data.data || response.data;
       setOrderDetails(orderData);
-      
+
       // Fetch product details for each product in the order
       if (orderData.orderDetails && orderData.orderDetails.length > 0) {
         await fetchProductDetails(orderData.orderDetails);
       }
     } catch (err) {
-      console.error("Error fetching order details:", err);
-      setError(err.response?.data?.message || err.message || "Không thể tải chi tiết đơn hàng.");
-      Alert.alert("Lỗi", "Không thể tải chi tiết đơn hàng.");
+      console.error('Error fetching order details:', err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          'Không thể tải chi tiết đơn hàng.',
+      );
+      Alert.alert('Lỗi', 'Không thể tải chi tiết đơn hàng.');
     } finally {
       setLoading(false);
     }
   };
-  
+
   const handleConfirmReceived = async () => {
     if (!user || !user.backendToken || !orderDetails) {
-      Alert.alert("Lỗi", "Không thể xác nhận đơn hàng. Vui lòng thử lại sau.");
+      Alert.alert('Lỗi', 'Không thể xác nhận đơn hàng. Vui lòng thử lại sau.');
       return;
     }
 
     // Show confirmation modal before proceeding
     Alert.alert(
-      "Xác nhận đã nhận hàng",
-      "Bạn đã nhận được đơn hàng và muốn xác nhận hoàn tất?",
+      'Xác nhận đã nhận hàng',
+      'Bạn đã nhận được đơn hàng và muốn xác nhận hoàn tất?',
       [
         {
-          text: "Hủy",
-          style: "cancel"
+          text: 'Hủy',
+          style: 'cancel',
         },
-        { 
-          text: "Xác nhận", 
+        {
+          text: 'Xác nhận',
           onPress: async () => {
             setConfirmLoading(true);
             try {
@@ -92,79 +109,89 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
                 `${API_URL}/orderproducts/status/${orderId}`,
                 {
                   status: 10,
-                  deliveryCode: orderDetails.deliveryCode
-                }
+                  deliveryCode: orderDetails.deliveryCode,
+                },
               );
-              if (response.data === "Update Successfully!"){
-                console.log("Order status updated successfully:", response.data);
+              if (response.data === 'Update Successfully!') {
+                console.log(
+                  'Order status updated successfully:',
+                  response.data,
+                );
+                Alert.alert('Thành công', 'Đã xác nhận nhận hàng thành công!', [
+                  {text: 'OK', onPress: () => fetchOrderDetails()},
+                ]);
+              } else {
                 Alert.alert(
-                "Thành công", 
-                "Đã xác nhận nhận hàng thành công!",
-                [{ text: "OK", onPress: () => fetchOrderDetails() }]
-              );
-              }
-              else{
-                Alert.alert(
-                  "Lỗi", 
-                  "Không thể xác nhận đơn hàng. Vui lòng thử lại sau."
+                  'Lỗi',
+                  'Không thể xác nhận đơn hàng. Vui lòng thử lại sau.',
                 );
               }
-              
             } catch (err) {
-              console.error("Error confirming order receipt:", err);
+              console.error('Error confirming order receipt:', err);
               Alert.alert(
-                "Lỗi", 
-                err.response?.data?.message || err.message || "Không thể xác nhận đơn hàng. Vui lòng thử lại sau."
+                'Lỗi',
+                err.response?.data?.message ||
+                  err.message ||
+                  'Không thể xác nhận đơn hàng. Vui lòng thử lại sau.',
               );
             } finally {
               setConfirmLoading(false);
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
-  
-  const fetchProductDetails = async (orderItems) => {
+
+  const fetchProductDetails = async orderItems => {
     const productDetailsObj = {};
-    
+
     try {
       // Create an array of promises for all product API calls
-      const productPromises = orderItems.map(async (item) => {
+      const productPromises = orderItems.map(async item => {
         try {
-          const productResponse = await axios.get(`${API_URL}/product/${item.productId}`, {
-            headers: {
-              Authorization: `Bearer ${user.backendToken}`,
-            }
-          });
-          
-          console.log(`Product details fetched for ${item.productId}:`, productResponse.data);
+          const productResponse = await axios.get(
+            `${API_URL}/product/${item.productId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${user.backendToken}`,
+              },
+            },
+          );
+
+          console.log(
+            `Product details fetched for ${item.productId}:`,
+            productResponse.data,
+          );
           const productData = productResponse.data.data || productResponse.data;
-          
+
           // Store product data in the object with productId as key
           productDetailsObj[item.productId] = productData;
         } catch (productErr) {
-          console.error(`Error fetching product ${item.productId}:`, productErr);
+          console.error(
+            `Error fetching product ${item.productId}:`,
+            productErr,
+          );
           // Continue with other products even if one fails
         }
       });
-      
+
       // Wait for all product API calls to complete
       await Promise.all(productPromises);
-      
+
       // Update state with all product details
       setProductDetails(productDetailsObj);
     } catch (err) {
-      console.error("Error in fetchProductDetails:", err);
+      console.error('Error in fetchProductDetails:', err);
       // We don't set the main error state here to allow the order to still display
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = status => {
     switch (status?.toString()) {
       case '0': // Pending
         return '#FFB700';
-      case '1': // Processing 
+      case '1': // Processing
         return '#60A99D';
       case '2': // Done
         return '#4CAF50';
@@ -189,25 +216,37 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = status => {
     switch (status?.toString()) {
-      case '0': return 'Chờ xử lý';
-      case '1': return 'Đang xử lý';
-      case '2': return 'Đã xử lý';
-      case '3': return 'Đã hủy';
-      case '4': return 'Hoàn tiền';
-      case '5': return 'Đã hoàn tiền xong';
-      case '6': return 'Đã lấy hàng & đang giao';
-      case '7': return 'Giao hàng thất bại';
-      case '8': return 'Giao lại';
-      case '9': return 'Đã giao hàng thành công';
-      case '10': return 'Hoàn tất';
-      default: return 'Không xác định';
+      case '0':
+        return 'Chờ xử lý';
+      case '1':
+        return 'Đang xử lý';
+      case '2':
+        return 'Đã xử lý';
+      case '3':
+        return 'Đã hủy';
+      case '4':
+        return 'Hoàn tiền';
+      case '5':
+        return 'Đã hoàn tiền xong';
+      case '6':
+        return 'Đã lấy hàng & đang giao';
+      case '7':
+        return 'Giao hàng thất bại';
+      case '8':
+        return 'Giao lại';
+      case '9':
+        return 'Đã giao hàng thành công';
+      case '10':
+        return 'Hoàn tất';
+      default:
+        return 'Không xác định';
     }
   };
 
   // Format date to show in UI
-  const formatDate = (dateString) => {
+  const formatDate = dateString => {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
@@ -218,21 +257,24 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
   };
 
   // Format time to show in UI
-  const formatTime = (dateString) => {
+  const formatTime = dateString => {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
-      return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      return date.toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     } catch {
       return '';
     }
   };
 
-  // --- Rating Functions --- 
+  // --- Rating Functions ---
   const handleOpenRatingModal = (product, productInfo) => {
     setSelectedProductForRating({
       productId: product.productId,
-      productName: productInfo.name || 'Sản phẩm không xác định'
+      productName: productInfo.name || 'Sản phẩm không xác định',
     });
     setCurrentRating(0); // Reset rating
     setRatingDescription(''); // Reset description
@@ -247,130 +289,165 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
 
   const handleSubmitRating = async () => {
     if (currentRating === 0) {
-      Alert.alert("Lỗi", "Vui lòng chọn số sao đánh giá.");
-      return;
-    }
-    if (!user || !user.id || !selectedProductForRating) {
-      Alert.alert("Lỗi", "Không thể gửi đánh giá. Vui lòng thử lại.");
+      Alert.alert('Lỗi', 'Vui lòng chọn số sao đánh giá.');
       return;
     }
 
+    if (!user || !user.id || !selectedProductForRating) {
+      Alert.alert('Lỗi', 'Không thể gửi đánh giá. Vui lòng thử lại.');
+      return;
+    }
+
+    // ✅ KIỂM DUYỆT NGÔN TỪ (local + AI)
+    if (ratingDescription.trim().length > 0) {
+      try {
+        const result = await isContentSafe(ratingDescription);
+
+        if (!result.ok) {
+          const msg =
+            result.reason +
+            (result.flaggedBy === 'openai' && result.categories
+              ? '\n\nChi tiết:\n' +
+                Object.entries(result.categories)
+                  .filter(([_, val]) => val === true)
+                  .map(([cat]) => `• ${cat}`)
+                  .join('\n')
+              : '');
+
+          Alert.alert('⚠️ Nội dung không phù hợp', msg);
+          return;
+        }
+      } catch (err) {
+        console.warn('Lỗi kiểm duyệt ngôn từ:', err);
+        // Cho phép gửi tiếp nếu AI lỗi mạng
+      }
+    }
+
+    // ✅ Gửi đánh giá nếu hợp lệ
     setIsSubmittingRating(true);
     try {
       const payload = {
         userId: user.id,
         productId: selectedProductForRating.productId,
         rating: currentRating,
-        description: ratingDescription
+        description: ratingDescription,
       };
-
-      console.log('Submitting rating:', payload);
 
       const response = await axios.post(`${API_URL}/productfeedback`, payload, {
         headers: {
           Authorization: `Bearer ${user.backendToken}`,
-        }
+        },
       });
 
-      console.log('Rating submission response:', response.data);
-      Alert.alert("Thành công", "Cảm ơn bạn đã đánh giá sản phẩm!");
-      handleCloseRatingModal(); // Close modal on success
-      // Optionally: Disable the rating button for this product visually if needed
-
+      Alert.alert('✅ Thành công', 'Cảm ơn bạn đã đánh giá sản phẩm!');
+      handleCloseRatingModal();
     } catch (err) {
-      console.error("Error submitting rating:", err.response?.data || err.message);
+      console.error(
+        'Error submitting rating:',
+        err.response?.data || err.message,
+      );
       Alert.alert(
-        "Lỗi", 
-        err.response?.data?.message || err.message || "Không thể gửi đánh giá. Vui lòng thử lại sau."
+        'Lỗi',
+        err.response?.data?.message ||
+          err.message ||
+          'Không thể gửi đánh giá. Vui lòng thử lại sau.',
       );
     } finally {
       setIsSubmittingRating(false);
     }
   };
+
   // --- End Rating Functions ---
 
-  // --- Cancel Order Function --- 
+  // --- Cancel Order Function ---
   const handleCancelOrder = async () => {
-
     // Confirmation Dialog
     Alert.alert(
-      "Xác nhận hủy đơn hàng",
-      "Bạn có chắc chắn muốn hủy đơn hàng này không? Tiền sẽ được hoàn lại vào ví của bạn.",
+      'Xác nhận hủy đơn hàng',
+      'Bạn có chắc chắn muốn hủy đơn hàng này không? Tiền sẽ được hoàn lại vào ví của bạn.',
       [
         {
-          text: "Không",
-          style: "cancel"
+          text: 'Không',
+          style: 'cancel',
         },
         {
-          text: "Hủy đơn hàng",
-          style: "destructive",
+          text: 'Hủy đơn hàng',
+          style: 'destructive',
           onPress: async () => {
             setIsCancelling(true);
             try {
               // Step 1: Refund
               const refundResponse = await axios.post(
-                `${API_URL}/wallets/refund-order?id=${orderId}`, 
-                {}, 
+                `${API_URL}/wallets/refund-order?id=${orderId}`,
+                {},
                 {
                   headers: {
                     Authorization: `Bearer ${user.backendToken}`,
                   },
-                  timeout: 10000 
-                }
+                  timeout: 10000,
+                },
               );
 
-              if (refundResponse.data !== "Refund successful.") {
-                throw new Error(refundResponse.data || "Hoàn tiền không thành công.");
+              if (refundResponse.data !== 'Refund successful.') {
+                throw new Error(
+                  refundResponse.data || 'Hoàn tiền không thành công.',
+                );
               }
 
               // Step 2: Update Order Status to Cancelled (3)
               const updateResponse = await axios.put(
                 `${API_URL}/orderproducts/status/${orderId}`,
                 {
-                  status: 3, 
-                  deliveryCode: orderDetails.deliveryCode || "" 
+                  status: 3,
+                  deliveryCode: orderDetails.deliveryCode || '',
                 },
                 {
                   headers: {
                     Authorization: `Bearer ${user.backendToken}`,
-                  }
-                }
+                  },
+                },
               );
 
-              if (updateResponse.data !== "Update Successfully!") {
+              if (updateResponse.data !== 'Update Successfully!') {
                 Alert.alert(
-                  "Cảnh báo", 
-                  "Đã hoàn tiền thành công nhưng không thể cập nhật trạng thái đơn hàng. Vui lòng liên hệ hỗ trợ."
+                  'Cảnh báo',
+                  'Đã hoàn tiền thành công nhưng không thể cập nhật trạng thái đơn hàng. Vui lòng liên hệ hỗ trợ.',
                 );
                 // Refresh order details anyway
-                fetchOrderDetails(); 
+                fetchOrderDetails();
                 // Also refresh wallet data even if order status failed to update
-                await refreshWallet(); 
+                await refreshWallet();
               } else {
                 // Both steps successful - Refresh Wallet Data HERE
-                console.log("Order cancelled and refunded, refreshing wallet data...");
+                console.log(
+                  'Order cancelled and refunded, refreshing wallet data...',
+                );
                 await refreshWallet(); // Call refreshWallet from context
 
                 // Show success message and refresh order details
                 Alert.alert(
-                  "Thành công", 
-                  "Đã hủy đơn hàng thành công và hoàn tiền vào ví của bạn.",
-                  [{ text: "OK", onPress: () => fetchOrderDetails() }] 
+                  'Thành công',
+                  'Đã hủy đơn hàng thành công và hoàn tiền vào ví của bạn.',
+                  [{text: 'OK', onPress: () => fetchOrderDetails()}],
                 );
               }
-
             } catch (err) {
-              console.error("Error cancelling order:", err.response?.data || err.message);
+              console.error(
+                'Error cancelling order:',
+                err.response?.data || err.message,
+              );
               Alert.alert(
-                "Lỗi hủy đơn hàng", 
-                err.response?.data?.message || err.message || "Đã xảy ra lỗi trong quá trình hủy đơn. Vui lòng thử lại."
+                'Lỗi hủy đơn hàng',
+                err.response?.data?.message ||
+                  err.message ||
+                  'Đã xảy ra lỗi trong quá trình hủy đơn. Vui lòng thử lại.',
               );
             } finally {
               setIsCancelling(false);
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
   // --- End Cancel Order Function ---
@@ -387,7 +464,9 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>Lỗi: {error}</Text>
-        <TouchableOpacity onPress={fetchOrderDetails} style={styles.retryButton}>
+        <TouchableOpacity
+          onPress={fetchOrderDetails}
+          style={styles.retryButton}>
           <Text style={styles.retryButtonText}>Thử lại</Text>
         </TouchableOpacity>
       </View>
@@ -406,30 +485,35 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
+          style={styles.backButton}>
           <Icon name="chevron-left" size={28} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chi tiết đơn hàng</Text>
-        <View style={{ width: 28 }} />
+        <View style={{width: 28}} />
       </View>
 
       <ScrollView style={styles.content} removeClippedSubviews={false}>
         <View style={styles.statusContainer}>
-          <Text style={[styles.statusText, { color: getStatusColor(orderDetails.status) }]}>
+          <Text
+            style={[
+              styles.statusText,
+              {color: getStatusColor(orderDetails.status)},
+            ]}>
             {getStatusText(orderDetails.status)}
           </Text>
           <Text style={styles.orderNumber}>Mã đơn hàng: {orderDetails.id}</Text>
-          
-          {/* Cancel Button - Only shows for Pending status */} 
+
+          {/* Cancel Button - Only shows for Pending status */}
           {orderDetails.status === '0' && (
-            <TouchableOpacity 
-              style={[styles.cancelButton, isCancelling && styles.cancelButtonDisabled]}
+            <TouchableOpacity
+              style={[
+                styles.cancelButton,
+                isCancelling && styles.cancelButtonDisabled,
+              ]}
               onPress={handleCancelOrder}
-              disabled={isCancelling}
-            >
+              disabled={isCancelling}>
               {isCancelling ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
@@ -440,19 +524,20 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
         </View>
 
         <View style={styles.trackingContainer}>
-        <Text style={styles.orderNumber}>Mã vận chuyển: {orderDetails.deliveryCode || 'Chưa có'}</Text>
+          <Text style={styles.orderNumber}>
+            Mã vận chuyển: {orderDetails.deliveryCode || 'Chưa có'}
+          </Text>
 
           <StatusTrackingMaterial currentStatus={orderDetails.status} />
 
           {orderDetails.status === '9' && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.confirmButton,
-                confirmLoading && styles.confirmButtonDisabled
+                confirmLoading && styles.confirmButtonDisabled,
               ]}
               onPress={handleConfirmReceived}
-              disabled={confirmLoading}
-            >
+              disabled={confirmLoading}>
               {confirmLoading ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="small" color="#fff" />
@@ -460,9 +545,9 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
                 </View>
               ) : (
                 <View style={styles.confirmButtonContent}>
-                  <Icon 
-                    name="check-circle-outline" 
-                    size={24} 
+                  <Icon
+                    name="check-circle-outline"
+                    size={24}
                     color="#fff"
                     style={styles.confirmIcon}
                   />
@@ -478,60 +563,94 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
           <View style={styles.infoContainer}>
-            <InfoRow icon="account" text={orderDetails.userName || 'Không có thông tin'} />
-            <InfoRow icon="phone" text={orderDetails.phone || 'Không có thông tin'} />
-            <InfoRow icon="map-marker" text={orderDetails.address || 'Không có thông tin'} />
-            <InfoRow icon="clock" text={`${formatTime(orderDetails.creationDate)}, ${formatDate(orderDetails.creationDate)}`} />
+            <InfoRow
+              icon="account"
+              text={orderDetails.userName || 'Không có thông tin'}
+            />
+            <InfoRow
+              icon="phone"
+              text={orderDetails.phone || 'Không có thông tin'}
+            />
+            <InfoRow
+              icon="map-marker"
+              text={orderDetails.address || 'Không có thông tin'}
+            />
+            <InfoRow
+              icon="clock"
+              text={`${formatTime(orderDetails.creationDate)}, ${formatDate(
+                orderDetails.creationDate,
+              )}`}
+            />
           </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sản phẩm</Text>
           <View style={styles.productsContainer}>
-            {orderDetails.orderDetails && orderDetails.orderDetails.map((product) => {
-              // Get associated product details if available
-              const productInfo = productDetails[product.productId] || {};
-              
-              return (
-                <View key={product.productId} style={styles.productRow}>
-                  <Image 
-                    source={{ uri: productInfo.image.imageUrl}}
-                    defaultSource={require('../assets/images/furniture.jpg')}
-                    style={styles.productImage}
-                  />
-                  <View style={styles.productInfo}>
-                    <Text style={styles.productName}>{productInfo.name || 'Sản phẩm không xác định'}</Text>
-                    <Text style={styles.productQuantity}>Số lượng: {product.quantity}</Text>
-                    {productInfo.categoryName && (
-                      <Text style={styles.productCategory}>{productInfo.categoryName}</Text>
-                    )}
-                    {/* --- Rating Button --- */}
-                    {orderDetails.status === '10' && (
-                      <TouchableOpacity 
-                        style={styles.rateButton}
-                        onPress={() => handleOpenRatingModal(product, productInfo)}
-                      >
-                        <Icon name="star-outline" size={16} color="#007AFF" />
-                        <Text style={styles.rateButtonText}>Đánh giá</Text>
-                      </TouchableOpacity>
-                    )}
-                    {/* --- End Rating Button --- */}
+            {orderDetails.orderDetails &&
+              orderDetails.orderDetails.map(product => {
+                // Get associated product details if available
+                const productInfo = productDetails[product.productId] || {};
+
+                return (
+                  <View key={product.productId} style={styles.productRow}>
+                    <Image
+                      source={{uri: productInfo.image.imageUrl}}
+                      defaultSource={require('../assets/images/furniture.jpg')}
+                      style={styles.productImage}
+                    />
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName}>
+                        {productInfo.name || 'Sản phẩm không xác định'}
+                      </Text>
+                      <Text style={styles.productQuantity}>
+                        Số lượng: {product.quantity}
+                      </Text>
+                      {productInfo.categoryName && (
+                        <Text style={styles.productCategory}>
+                          {productInfo.categoryName}
+                        </Text>
+                      )}
+                      {/* --- Rating Button --- */}
+                      {orderDetails.status === '10' && (
+                        <TouchableOpacity
+                          style={styles.rateButton}
+                          onPress={() =>
+                            handleOpenRatingModal(product, productInfo)
+                          }>
+                          <Icon name="star-outline" size={16} color="#007AFF" />
+                          <Text style={styles.rateButtonText}>Đánh giá</Text>
+                        </TouchableOpacity>
+                      )}
+                      {/* --- End Rating Button --- */}
+                    </View>
+                    <Text style={styles.productPrice}>
+                      {product.price?.toLocaleString('vi-VN')} VNĐ
+                    </Text>
                   </View>
-                  <Text style={styles.productPrice}>{product.price?.toLocaleString('vi-VN')} VNĐ</Text>
-                </View>
-              );
-            })}
+                );
+              })}
           </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Chi tiết thanh toán</Text>
           <View style={styles.paymentContainer}>
-            <PaymentRow label="Tổng tiền hàng" amount={`${(orderDetails.totalAmount - orderDetails.shipPrice)?.toLocaleString('vi-VN')} VNĐ`} />
-            <PaymentRow label="Phí vận chuyển" amount={`${orderDetails.shipPrice?.toLocaleString('vi-VN')} VNĐ`} />
+            <PaymentRow
+              label="Tổng tiền hàng"
+              amount={`${(
+                orderDetails.totalAmount - orderDetails.shipPrice
+              )?.toLocaleString('vi-VN')} VNĐ`}
+            />
+            <PaymentRow
+              label="Phí vận chuyển"
+              amount={`${orderDetails.shipPrice?.toLocaleString('vi-VN')} VNĐ`}
+            />
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Tổng thanh toán</Text>
-              <Text style={styles.totalAmount}>{orderDetails.totalAmount?.toLocaleString('vi-VN')} VNĐ</Text>
+              <Text style={styles.totalAmount}>
+                {orderDetails.totalAmount?.toLocaleString('vi-VN')} VNĐ
+              </Text>
             </View>
           </View>
         </View>
@@ -543,21 +662,22 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
           animationType="slide"
           transparent={true}
           visible={isRatingModalVisible}
-          onRequestClose={handleCloseRatingModal}
-        >
+          onRequestClose={handleCloseRatingModal}>
           <View style={styles.modalCenteredView}>
             <View style={styles.modalView}>
               <Text style={styles.modalTitle}>Đánh giá sản phẩm</Text>
-              <Text style={styles.modalProductName}>{selectedProductForRating.productName}</Text>
+              <Text style={styles.modalProductName}>
+                {selectedProductForRating.productName}
+              </Text>
 
               {/* Star Rating Input */}
               <View style={styles.starsContainer}>
-                {[1, 2, 3, 4, 5].map((star) => (
+                {[1, 2, 3, 4, 5].map(star => (
                   <Pressable key={star} onPress={() => setCurrentRating(star)}>
-                    <Icon 
-                      name={star <= currentRating ? "star" : "star-outline"} 
-                      size={32} 
-                      color={star <= currentRating ? "#FFB700" : "#ccc"}
+                    <Icon
+                      name={star <= currentRating ? 'star' : 'star-outline'}
+                      size={32}
+                      color={star <= currentRating ? '#FFB700' : '#ccc'}
                       style={styles.starIcon}
                     />
                   </Pressable>
@@ -580,19 +700,23 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
                 <TouchableOpacity
                   style={[styles.modalButton, styles.modalButtonCancel]}
                   onPress={handleCloseRatingModal}
-                  disabled={isSubmittingRating}
-                >
+                  disabled={isSubmittingRating}>
                   <Text style={styles.modalButtonTextCancel}>Hủy</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.modalButton, styles.modalButtonSubmit, isSubmittingRating && styles.modalButtonDisabled]}
+                  style={[
+                    styles.modalButton,
+                    styles.modalButtonSubmit,
+                    isSubmittingRating && styles.modalButtonDisabled,
+                  ]}
                   onPress={handleSubmitRating}
-                  disabled={isSubmittingRating}
-                >
+                  disabled={isSubmittingRating}>
                   {isSubmittingRating ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={styles.modalButtonTextSubmit}>Gửi đánh giá</Text>
+                    <Text style={styles.modalButtonTextSubmit}>
+                      Gửi đánh giá
+                    </Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -605,20 +729,18 @@ const MaterialOrderDetailScreen = ({ navigation, route }) => {
   );
 };
 
-const InfoRow = ({ icon, text }) => (
+const InfoRow = ({icon, text}) => (
   <View style={styles.infoRow}>
     <Icon name={icon} size={20} color="#666" />
     <Text style={styles.infoText}>{text}</Text>
   </View>
 );
 
-const PaymentRow = ({ label, amount, isDiscount }) => (
+const PaymentRow = ({label, amount, isDiscount}) => (
   <View style={styles.paymentRow}>
     <Text style={styles.paymentLabel}>{label}</Text>
-    <Text style={[
-      styles.paymentAmount, 
-      isDiscount ? styles.discountText : null
-    ]}>
+    <Text
+      style={[styles.paymentAmount, isDiscount ? styles.discountText : null]}>
       {amount}
     </Text>
   </View>
@@ -803,7 +925,7 @@ const styles = StyleSheet.create({
   },
   trackingContainer: {
     backgroundColor: '#fff',
-    paddingLeft:20,
+    paddingLeft: 20,
     paddingVertical: 5,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
@@ -820,7 +942,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
@@ -873,20 +995,20 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalCenteredView: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
   },
   modalView: {
     margin: 20,
-    backgroundColor: "white",
+    backgroundColor: 'white',
     borderRadius: 20,
     padding: 25,
-    alignItems: "center",
-    shadowColor: "#000",
+    alignItems: 'center',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2
+      height: 2,
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -937,23 +1059,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalButtonCancel: {
-    backgroundColor: "#f0f0f0",
+    backgroundColor: '#f0f0f0',
   },
   modalButtonSubmit: {
-    backgroundColor: "#007AFF",
+    backgroundColor: '#007AFF',
   },
   modalButtonDisabled: {
-    backgroundColor: "#a0cfff",
+    backgroundColor: '#a0cfff',
   },
   modalButtonTextCancel: {
-    color: "#333",
-    fontWeight: "bold",
-    textAlign: "center",
+    color: '#333',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   modalButtonTextSubmit: {
-    color: "white",
-    fontWeight: "bold",
-    textAlign: "center",
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   // Cancel Button Styles
   cancelButton: {
@@ -976,4 +1098,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MaterialOrderDetailScreen; 
+export default MaterialOrderDetailScreen;

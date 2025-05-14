@@ -1,21 +1,70 @@
-import React, { useContext, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
+import React, { useContext, useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator, Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useCart } from '../context/CartContext';
 import axios from 'axios';
 import CustomModal from '../components/Modal';
 
 const API_URL = 'http://10.0.2.2:8080/api';
+const { width } = Dimensions.get('window');
 
 const ProductDetailScreen = ({ route, navigation }) => {
-  const { addToCartItem } = useCart();
+  const { addToCartItem, cartItems } = useCart();
   const { productId } = route.params;
   const [product, setProduct] = useState(null);
   console.log("product", product);
   
+  // Calculate cart count - number of unique products, not the total quantity
+  const cartCount = cartItems.length;
+  
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Toast notification state
+  const [showToast, setShowToast] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  
+  // Toast animation function
+  const showToastWithAnimation = () => {
+    setShowToast(true);
+    // Reset animations
+    fadeAnim.setValue(0);
+    scaleAnim.setValue(0.8);
+    
+    // Run parallel animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      })
+    ]).start();
+    
+    // Hide after delay
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 300,
+          useNativeDriver: true,
+        })
+      ]).start(() => {
+        setShowToast(false);
+      });
+    }, 2000);
+  };
 
   // --- Feedback State ---
   const [feedbacks, setFeedbacks] = useState([]);
@@ -95,29 +144,11 @@ const ProductDetailScreen = ({ route, navigation }) => {
     try {
       setIsSyncing(true);
       await addToCartItem(product);
-      // Configure and show success modal
-      const newConfig = {
-        icon: { name: 'check-circle', color: '#4CAF50' }, // Success Icon
-        title: 'Thêm thành công',
-        message: 'Đã thêm sản phẩm vào giỏ hàng!',
-        buttons: [
-          {
-            text: 'Tiếp tục mua sắm',
-            onPress: () => setIsModalVisible(false), 
-            style: 'cancel' 
-          },
-          {
-            text: 'Đi đến giỏ hàng',
-            onPress: () => {
-              setIsModalVisible(false);
-              navigation.navigate('Cart');
-            },
-            style: 'confirm' 
-          },
-        ]
-      };
-      setModalConfig(newConfig);
-      setIsModalVisible(true);
+      
+      // Show toast notification instead of modal
+      showToastWithAnimation();
+      
+      // We keep error handling with the modal
     } catch (error) {
       console.error('Error adding to cart:', error);
       // Configure and show error modal
@@ -165,6 +196,52 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* Toast Notification */}
+      {showToast && (
+        <View style={styles.toastWrapper}>
+          <Animated.View 
+            style={[
+              styles.toastContainer,
+              { 
+                opacity: fadeAnim,
+                transform: [{ scale: scaleAnim }] 
+              }
+            ]}
+          >
+            <Icon name="cart" size={24} color="#FFFFFF" />
+            <Text style={styles.toastText}>Đã thêm sản phẩm vào giỏ hàng!</Text>
+          </Animated.View>
+        </View>
+      )}
+      
+      {/* Header with back button, title and cart icon */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.headerButton} 
+          onPress={() => navigation.goBack()}
+        >
+          <Icon name="arrow-left" size={24} color="#000" />
+        </TouchableOpacity>
+        
+        <Text style={styles.headerTitle}>Chi tiết sản phẩm</Text>
+        
+        <TouchableOpacity 
+          style={styles.headerButton} 
+          onPress={() => navigation.navigate('Cart')}
+        >
+          <View style={styles.cartIconContainer}>
+            <Icon name="cart-outline" size={24} color="#000" />
+            {cartCount > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>
+                  {cartCount > 99 ? '99+' : cartCount}
+                </Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView style={styles.content} removeClippedSubviews={false} nestedScrollEnabled={true}>
         {/* Image Gallery - Add key to make sure we recreate the component when needed */}
         <View style={styles.imageGalleryContainer}>
@@ -329,6 +406,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f6fa',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  headerButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#000000',
+    flex: 1,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
@@ -619,7 +721,64 @@ const styles = StyleSheet.create({
      color: '#e74c3c',
      textAlign: 'center',
      marginTop: 15,
-   }
+   },
+   toastWrapper: {
+     position: 'absolute',
+     top: 0,
+     left: 0,
+     right: 0,
+     bottom: 0,
+     justifyContent: 'center',
+     alignItems: 'center',
+     zIndex: 1000,
+     pointerEvents: 'none',
+   },
+   toastContainer: {
+     backgroundColor: 'rgba(60, 60, 60, 0.92)',
+     paddingVertical: 12,
+     paddingHorizontal: 20,
+     borderRadius: 8,
+     flexDirection: 'row',
+     alignItems: 'center',
+     justifyContent: 'center',
+     shadowColor: '#000',
+     shadowOffset: { width: 0, height: 2 },
+     shadowOpacity: 0.2,
+     shadowRadius: 4,
+     elevation: 4,
+     maxWidth: width * 0.8,
+   },
+   toastText: {
+     color: '#fff',
+     fontSize: 15,
+     fontWeight: '600',
+     marginLeft: 10,
+   },
+   cartIconContainer: {
+     position: 'relative',
+     width: 24,
+     height: 24,
+   },
+   cartBadge: {
+     position: 'absolute',
+     top: -8,
+     right: -10,
+     backgroundColor: '#e74c3c',
+     borderRadius: 10,
+     minWidth: 18,
+     height: 18,
+     justifyContent: 'center',
+     alignItems: 'center',
+     paddingHorizontal: 4,
+     borderWidth: 1.5,
+     borderColor: '#fff',
+   },
+   cartBadgeText: {
+     color: '#fff',
+     fontSize: 10,
+     fontWeight: 'bold',
+     textAlign: 'center',
+   },
 });
 
 export default ProductDetailScreen; 

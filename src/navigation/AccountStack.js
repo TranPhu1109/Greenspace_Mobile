@@ -13,6 +13,9 @@ import MaterialOrderDetailScreen from '../screens/MaterialOrderDetailScreen';
 import WalletScreen from '../screens/WalletScreen';
 import TransactionDetailScreen from '../screens/TransactionDetailScreen';
 import TopUpScreen from '../screens/TopUpScreen';
+import ServiceOrderNoUsingScreen from '../screens/ServiceOrderNoUsingScreen';
+import ServiceOrderNoUsingDetailScreen from '../screens/ServiceOrderNoUsingDetailScreen';
+
 
 const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -42,6 +45,13 @@ const ServiceStack = () => (
   </Stack.Navigator>
 );
 
+const ServiceNoUsingStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="ServiceNoUsingOrders" component={ServiceOrderNoUsingScreen} />
+    <Stack.Screen name="ServiceOrderNoUsingDetail" component={ServiceOrderNoUsingDetailScreen} />
+  </Stack.Navigator>
+);
+
 const MaterialStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="MaterialOrders" component={MaterialOrderScreen} />
@@ -66,7 +76,7 @@ const AccountStack = ({ navigation }) => {
           fontWeight: '600',
           color: '#000',
         }}>
-          User name
+          Green Space
         </Text>
         <TouchableOpacity 
           onPress={() => navigation.navigate('Settings')}
@@ -115,6 +125,13 @@ const AccountStack = ({ navigation }) => {
           component={ServiceStack}
           options={{
             tabBarLabel: 'Đơn đặt dịch vụ',
+          }}
+        />
+        <Tab.Screen
+          name="NewDesignTab"
+          component={ServiceNoUsingStack}
+          options={{
+            tabBarLabel: 'Đơn đặt thiết kế mới',
           }}
         />
         <Tab.Screen

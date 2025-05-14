@@ -47,7 +47,7 @@ const getStatusInfo = (status) => {
       case 'redelivery':
         return { text: 'Giao hàng lại', color: '#FF9500', icon: 'truck-fast-outline' };
       case 'deliveredsuccessfully':
-        return { text: 'Giao hàng thành công', color: '#34C759', icon: 'package-variant-closed-check' };
+        return { text: 'Giao hàng thành công', color: '#34C759', icon: 'truck-check-outline' };
       case 'completeorder':
         return { text: 'Hoàn tất', color: '#30A46C', icon: 'check-decagram-outline' };
       case 'ordercancelled':
@@ -184,10 +184,10 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
   if (loading) {
     return (
       <View style={styles.container}> 
-        <Header navigation={navigation} title="Loading Details..." />
+        <Header navigation={navigation} title="Đang tải đơn hàng..." />
         <View style={styles.centeredContainer}> 
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading order details...</Text>
+          <Text style={styles.loadingText}>Đang tải đơn hàng...</Text>
         </View>
       </View>
     );
@@ -199,10 +199,10 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
         <Header navigation={navigation} title="Error" />
         <View style={styles.centeredContainer}> 
           <Icon name="alert-circle-outline" size={60} color="#FF3B30" style={{ marginBottom: 15 }}/>
-          <Text style={styles.errorText}>{error || 'Order details could not be loaded.'}</Text>
+          <Text style={styles.errorText}>{error || 'Không thể tải đơn hàng.'}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchOrderDetails}>
             <Icon name="refresh" size={18} color="#fff" style={{ marginRight: 8 }}/>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>Thử lại</Text>
           </TouchableOpacity>
         </View>
       </View>

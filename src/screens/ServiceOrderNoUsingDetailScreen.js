@@ -1,0 +1,4042 @@
+import React, {useState, useEffect, useCallback, useRef} from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+  Dimensions,
+  TouchableOpacity,
+  Modal,
+  TouchableWithoutFeedback,
+  Alert,
+  TextInput,
+  RefreshControl,
+  Keyboard,
+} from 'react-native';
+import {Card, Divider} from 'react-native-paper';
+import axios from 'axios';
+import {useAuth} from '../context/AuthContext';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useFocusEffect} from '@react-navigation/native';
+import ContractModal from '../components/ContractModal';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import {styles} from './ServiceOrderNoUsingDetailScreen.styles';
+import {uploadImageToCloudinary} from '../hooks/UploadToCloud';
+import StatusTrackingMaterial from '../components/StatusTrackingMaterial';
+import { useWallet } from '../context/WalletContext';
+
+const API_BASE_URL_LOCALHOST = 'http://localhost:8080/api';
+const API_BASE_URL_EMULATOR = 'http://10.0.2.2:8080/api';
+const {width, height} = Dimensions.get('window');
+
+const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
+  const {orderId} = route.params;
+  const {user} = useAuth();
+  const {balance} = useWallet();
+
+  const [order, setOrder] = useState(null);
+
+  const [recordSketches, setRecordSketches] = useState([]);
+  const [recordDesigns, setRecordDesigns] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [selectedRecordId, setSelectedRecordId] = useState(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [contract, setContract] = useState(null);
+  const [contractLoading, setContractLoading] = useState(false);
+  const [contractError, setContractError] = useState(null);
+  const [contractModalVisible, setContractModalVisible] = useState(false);
+  const [contractStep, setContractStep] = useState(1);
+  const [signatureImage, setSignatureImage] = useState(null);
+  const [showSignatureOptions, setShowSignatureOptions] = useState(false);
+  const [showGuidance, setShowGuidance] = useState(false);
+  const [showSignConfirmModal, setShowSignConfirmModal] = useState(false);
+  const [contractSignLoading, setContractSignLoading] = useState(false);
+  const [isDesignConfirmation, setIsDesignConfirmation] = useState(false);
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [maxPhase, setMaxPhase] = useState(0);
+  const [maxPhaseDesign, setMaxPhaseDesign] = useState(0);
+  const [redraftModalVisible, setRedraftModalVisible] = useState(false);
+  const [redraftReason, setRedraftReason] = useState('');
+  const [redraftLoading, setRedraftLoading] = useState(false);
+  const [redesignModalVisible, setRedesignModalVisible] = useState(false);
+  const [redesignReason, setRedesignReason] = useState('');
+  const [redesignLoading, setRedesignLoading] = useState(false);
+  const [materialProducts, setMaterialProducts] = useState({});
+  // Add refreshing state
+  const [refreshing, setRefreshing] = useState(false);
+  // Add these state variables at the top with other useState declarations
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+
+
+  // Add useRefs for TextInputs
+  const redraftInputRef = useRef(null);
+  const redesignInputRef = useRef(null);
+  
+  // Add this function to handle redraft text changes without losing focus
+  const handleRedraftReasonChange = (text) => {
+    setRedraftReason(text);
+  };
+  
+  // Add this function to handle redesign text changes without losing focus
+  const handleRedesignReasonChange = (text) => {
+    setRedesignReason(text);
+  };
+
+  const showSketchPhaseStatuses = [
+    'DoneDeterminingDesignPrice', // 22
+    'WaitDeposit', // 21
+    'DepositSuccessful', // 3
+    'AssignToDesigner', // 4
+    'DeterminingMaterialPrice', // 5
+    'DoneDesign', // 6
+    'DoneDeterminingMaterialPrice', // 23
+    'PaymentSuccess', // 7
+    'Processing', // 8
+    'PickedPackageAndDelivery', // 9
+    'DeliveryFail', // 10
+    'ReDelivery', // 11
+    'DeliveredSuccessfully', // 12
+    'CompleteOrder', // 13
+    'Warning', // 15
+    'ReConsultingAndSketching', // 19
+    'ReDesign', // 20
+    // Add other relevant statuses if needed
+  ];
+
+  const showDesignPhaseStatuses = [
+    'AssignToDesigner', // 4
+    'DeterminingMaterialPrice', // 5
+    'DoneDesign', // 6
+    'DoneDeterminingMaterialPrice', // 23
+    'PaymentSuccess', // 7
+    'Processing', // 8
+    'PickedPackageAndDelivery', // 9
+    'DeliveryFail', // 10
+    'ReDelivery', // 11
+    'DeliveredSuccessfully', // 12
+    'CompleteOrder', // 13
+    'Warning', // 15
+    'ReDesign', // 20
+  ];
+
+
+  // Handle pull-to-refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchOrderDetails().finally(() => setRefreshing(false));
+  }, [orderId, user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrderDetails();
+
+      return () => {
+        // Any cleanup code can go here
+      };
+    }, [orderId, user]),
+  );
+
+  // Helper function to check if contract should be displayed for current status
+  const shouldDisplayContract = status => {
+    const contractDisplayStatuses = [
+      'waitdeposit', // 21
+      'depositsuccessful', // 3
+      'assigntodesigner', // 4
+      'determiningmaterialprice', // 5
+      'donedesign', // 6
+      'donedeterminingmaterialprice', // 23
+      'paymentsuccess', // 7
+      'processing', // 8
+      'pickedpackageanddelivery', // 9
+      'deliveryfail', // 10
+      'redelivery', // 11
+      'deliveredsuccessfully', // 12
+      'completeorder', // 13
+      'warning', // 15
+      'redesign', // 20
+    ];
+
+    return contractDisplayStatuses.includes(status?.toLowerCase());
+  };
+
+  const fetchOrderDetails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const urlPath = `/serviceorder/${orderId}`;
+      let response;
+
+      try {
+        // console.log(`Fetching order details from: ${API_BASE_URL_LOCALHOST}${urlPath}`);
+        response = await axios.get(`${API_BASE_URL_LOCALHOST}${urlPath}`, {
+          headers: {Authorization: `Bearer ${user.backendToken}`},
+          timeout: 5000,
+        });
+      } catch (err) {
+        // console.warn("Localhost fetch failed, trying emulator URL...");
+        // console.log(`Fetching order details from: ${API_BASE_URL_EMULATOR}${urlPath}`);
+        response = await axios.get(`${API_BASE_URL_EMULATOR}${urlPath}`, {
+          headers: {Authorization: `Bearer ${user.backendToken}`},
+        });
+      }
+
+      const orderData = response.data;
+      setOrder(orderData);
+
+      // Check if we need to fetch record sketches
+      if (orderData.recordSketches && orderData.recordSketches.length > 0) {
+        fetchRecordSketches(orderId);
+      }
+
+      // Fetch record designs
+      fetchRecordDesigns(orderId);
+
+      // Check if we need to handle contract based on status
+      if (shouldDisplayContract(orderData.status)) {
+        handleContract(orderData);
+      }
+
+      // Fetch product details if serviceOrderDetails exist
+      if (
+        orderData.serviceOrderDetails &&
+        orderData.serviceOrderDetails.length > 0
+      ) {
+        for (const detail of orderData.serviceOrderDetails) {
+          fetchProductDetails(detail.productId);
+        }
+      }
+    } catch (err) {
+      // console.error('Error fetching order details:', err);
+      setError('Không thể tải thông tin đơn hàng. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRecordSketches = async orderId => {
+    try {
+      const urlPath = `/recordsketch/${orderId}/orderservice`;
+      let response;
+
+      try {
+        // console.log(`Fetching record sketches from: ${API_BASE_URL_LOCALHOST}${urlPath}`);
+        response = await axios.get(`${API_BASE_URL_LOCALHOST}${urlPath}`, {
+          headers: {Authorization: `Bearer ${user.backendToken}`},
+          timeout: 5000,
+        });
+      } catch (err) {
+        // console.warn("Localhost fetch failed, trying emulator URL...");
+        // console.log(`Fetching record sketches from: ${API_BASE_URL_EMULATOR}${urlPath}`);
+        response = await axios.get(`${API_BASE_URL_EMULATOR}${urlPath}`, {
+          headers: {Authorization: `Bearer ${user.backendToken}`},
+        });
+      }
+
+      const sketches = response.data || [];
+      setRecordSketches(sketches);
+
+      // Calculate maximum phase from sketches
+      if (sketches.length > 0) {
+        const maxSketchPhase = Math.max(
+          ...sketches.map(sketch => sketch.phase),
+        );
+        setMaxPhase(prev => Math.max(prev, maxSketchPhase));
+      }
+    } catch (err) {
+      // console.error('Error fetching record sketches:', err);
+      // We don't set error state here to avoid blocking the entire screen
+    }
+  };
+
+  const fetchRecordDesigns = async orderId => {
+    try {
+      const urlPath = `/recorddesign/${orderId}/orderservice`;
+      let response;
+
+      try {
+        // console.log(`Fetching record designs from: ${API_BASE_URL_LOCALHOST}${urlPath}`);
+        response = await axios.get(`${API_BASE_URL_LOCALHOST}${urlPath}`, {
+          headers: {Authorization: `Bearer ${user.backendToken}`},
+          timeout: 5000,
+        });
+      } catch (err) {
+        // console.warn("Localhost fetch failed, trying emulator URL...");
+        // console.log(`Fetching record designs from: ${API_BASE_URL_EMULATOR}${urlPath}`);
+        response = await axios.get(`${API_BASE_URL_EMULATOR}${urlPath}`, {
+          headers: {Authorization: `Bearer ${user.backendToken}`},
+        });
+      }
+
+      const designs = response.data || [];
+
+      setRecordDesigns(designs);
+      if (designs.length > 0) {
+        const maxDesignPhase = Math.max(
+          ...designs.map(design => design.phase),
+        );
+        setMaxPhaseDesign(prev => Math.max(prev, maxDesignPhase));
+      }
+    } catch (err) {
+      // console.error('Error fetching record designs:', err);
+      // We don't set error state here to avoid blocking the entire screen
+    }
+  };
+
+  const handleImagePress = imageUri => {
+    setSelectedImage(imageUri);
+    setModalVisible(true);
+  };
+
+  const handleConfirmSketch = recordId => {
+    setSelectedRecordId(recordId);
+    setIsDesignConfirmation(false);
+    setConfirmModalVisible(true);
+  };
+
+  const confirmSketch = async () => {
+    try {
+      setConfirmLoading(true);
+
+      // Check if this is a design confirmation
+      if (isDesignConfirmation) {
+        await confirmDesign();
+        return;
+      }
+
+      // Step 1: Confirm the record sketch
+      const recordSketchUrl = `/recordsketch/${selectedRecordId}`;
+      let response;
+
+      try {
+        // console.log(`Confirming sketch at: ${API_BASE_URL_LOCALHOST}${recordSketchUrl}`);
+        response = await axios.put(
+          `${API_BASE_URL_LOCALHOST}${recordSketchUrl}`,
+          {
+            isSelected: true,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        // console.warn("Localhost request failed, trying emulator URL...");
+        // console.log(`Confirming sketch at: ${API_BASE_URL_EMULATOR}${recordSketchUrl}`);
+        response = await axios.put(
+          `${API_BASE_URL_EMULATOR}${recordSketchUrl}`,
+          {
+            isSelected: true,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+          },
+        );
+      }
+
+      // Step 2: Update the order status
+      const updateStatusUrl = `/serviceorder/status/${orderId}`;
+      try {
+        // console.log(`Updating order status at: ${API_BASE_URL_LOCALHOST}${updateStatusUrl}`);
+        await axios.put(
+          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
+          {
+            status: 21,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        // console.warn("Localhost request failed, trying emulator URL...");
+        // console.log(`Updating order status at: ${API_BASE_URL_EMULATOR}${updateStatusUrl}`);
+        await axios.put(
+          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
+          {
+            status: 21,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+          },
+        );
+      }
+
+      // Close confirmation modal and show success modal
+      setConfirmModalVisible(false);
+      setSuccessModalVisible(true);
+
+      // Refresh data
+      fetchOrderDetails();
+    } catch (err) {
+      // console.error('Error confirming sketch:', err);
+      Alert.alert(
+        'Lỗi',
+        'Không thể xác nhận bản phác thảo. Vui lòng thử lại sau.',
+      );
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
+  const handleContract = async orderData => {
+    try {
+      setContractLoading(true);
+      setContractError(null);
+
+      // First, try to fetch existing contract
+      const contractFetchUrl = `/contract/${orderId}/serviceorder`;
+      let existingContract = null;
+
+      try {
+        // console.log(`Fetching contract from: ${API_BASE_URL_LOCALHOST}${contractFetchUrl}`);
+        const response = await axios.get(
+          `${API_BASE_URL_LOCALHOST}${contractFetchUrl}`,
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+        existingContract =
+          response.data && response.data.length > 0 ? response.data[0] : null;
+      } catch (fetchErr) {
+        // console.warn("Localhost fetch failed, trying emulator URL...");
+        try {
+          // console.log(`Fetching contract from: ${API_BASE_URL_EMULATOR}${contractFetchUrl}`);
+          const response = await axios.get(
+            `${API_BASE_URL_EMULATOR}${contractFetchUrl}`,
+            {
+              headers: {Authorization: `Bearer ${user.backendToken}`},
+            },
+          );
+          existingContract =
+            response.data && response.data.length > 0 ? response.data[0] : null;
+        } catch (emulatorFetchErr) {
+          // console.error("Failed to fetch contract from both URLs", emulatorFetchErr);
+        }
+      }
+
+      if (existingContract) {
+        // Contract already exists, just set it
+        setContract(existingContract);
+        // console.log("Existing contract found:", existingContract);
+      } else {
+        // Need to create a new contract
+        const contractData = {
+          userId: orderData.userId,
+          serviceOrderId: orderData.id,
+          name: orderData.userName,
+          email: orderData.email,
+          address: orderData.address,
+          phone: orderData.cusPhone,
+          designPrice: orderData.designPrice || 0,
+        };
+
+        // console.log("Creating new contract with data:", contractData);
+
+        // Create the contract
+        const contractCreateUrl = `/contract`;
+        let createResponse;
+
+        try {
+          // console.log(`Creating contract at: ${API_BASE_URL_LOCALHOST}${contractCreateUrl}`);
+          createResponse = await axios.post(
+            `${API_BASE_URL_LOCALHOST}${contractCreateUrl}`,
+            contractData,
+            {
+              headers: {Authorization: `Bearer ${user.backendToken}`},
+              timeout: 10000, // Longer timeout for contract creation
+            },
+          );
+        } catch (createErr) {
+          // console.warn("Localhost contract creation failed, trying emulator URL...");
+          // console.log(`Creating contract at: ${API_BASE_URL_EMULATOR}${contractCreateUrl}`);
+          createResponse = await axios.post(
+            `${API_BASE_URL_EMULATOR}${contractCreateUrl}`,
+            contractData,
+            {
+              headers: {Authorization: `Bearer ${user.backendToken}`},
+            },
+          );
+        }
+
+        // Fetch the newly created contract
+        try {
+          // console.log(`Fetching created contract from: ${API_BASE_URL_LOCALHOST}${contractFetchUrl}`);
+          const fetchResponse = await axios.get(
+            `${API_BASE_URL_LOCALHOST}${contractFetchUrl}`,
+            {
+              headers: {Authorization: `Bearer ${user.backendToken}`},
+              timeout: 5000,
+            },
+          );
+
+          if (fetchResponse.data && fetchResponse.data.length > 0) {
+            setContract(fetchResponse.data[0]);
+            // console.log("New contract created and fetched:", fetchResponse.data[0]);
+          }
+        } catch (fetchNewErr) {
+          // console.warn("Localhost fetch failed, trying emulator URL...");
+          try {
+            // console.log(`Fetching created contract from: ${API_BASE_URL_EMULATOR}${contractFetchUrl}`);
+            const fetchResponse = await axios.get(
+              `${API_BASE_URL_EMULATOR}${contractFetchUrl}`,
+              {
+                headers: {Authorization: `Bearer ${user.backendToken}`},
+              },
+            );
+
+            if (fetchResponse.data && fetchResponse.data.length > 0) {
+              setContract(fetchResponse.data[0]);
+              // console.log("New contract created and fetched:", fetchResponse.data[0]);
+            }
+          } catch (emulatorFetchNewErr) {
+            // console.error("Failed to fetch new contract", emulatorFetchNewErr);
+            setContractError('Không thể tải hợp đồng. Vui lòng thử lại sau.');
+          }
+        }
+      }
+    } catch (err) {
+      // console.error('Error handling contract:', err);
+      setContractError(
+        'Không thể tạo hoặc tải hợp đồng. Vui lòng thử lại sau.',
+      );
+    } finally {
+      setContractLoading(false);
+    }
+  };
+
+  const handleViewContract = () => {
+    setContractModalVisible(true);
+  };
+
+  const ImageModal = () => {
+    return (
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setModalVisible(false);
+          setSelectedImage(null);
+        }}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={() => {
+              setModalVisible(false);
+              setSelectedImage(null);
+            }}>
+            <Icon name="close" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          
+          <TouchableWithoutFeedback
+            onPress={() => {
+              setModalVisible(false);
+              setSelectedImage(null);
+            }}>
+            <Image
+              source={{uri: selectedImage}}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
+            />
+          </TouchableWithoutFeedback>
+        </View>
+      </Modal>
+    );
+  };
+
+  const ConfirmModal = () => (
+    <Modal
+      visible={confirmModalVisible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setConfirmModalVisible(false)}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.confirmModalContent}>
+          <Text style={styles.confirmModalTitle}>
+            {isDesignConfirmation
+              ? 'Xác nhận bản vẽ chi tiết'
+              : 'Xác nhận bản phác thảo'}
+          </Text>
+          <Text style={styles.confirmModalText}>
+            {isDesignConfirmation
+              ? 'Bạn có chắc chắn muốn xác nhận bản vẽ chi tiết này không? Sau khi chọn, thiết kế này sẽ được sử dụng để xác định giá vật liệu và tiến hành các bước tiếp theo.'
+              : 'Bạn có chắc chắn muốn xác nhận bản phác thảo này không?'}
+          </Text>
+          <View style={styles.confirmModalButtons}>
+            <TouchableOpacity
+              style={[
+                styles.confirmModalButton,
+                styles.confirmModalButtonCancel,
+              ]}
+              onPress={() => setConfirmModalVisible(false)}
+              disabled={confirmLoading}>
+              <Text style={styles.confirmModalButtonText}>Hủy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.confirmModalButton,
+                styles.confirmModalButtonConfirm,
+              ]}
+              onPress={confirmSketch}
+              disabled={confirmLoading}>
+              {confirmLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.confirmModalButtonText}>Xác nhận</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const SuccessModal = () => (
+    <Modal
+      visible={successModalVisible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setSuccessModalVisible(false)}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.successModalContent}>
+          <Icon
+            name="check-circle-outline"
+            size={60}
+            color="#34C759"
+            style={styles.successIcon}
+          />
+          <Text style={styles.successModalTitle}>Xác nhận thành công</Text>
+          <Text style={styles.successModalText}>
+            {isDesignConfirmation
+              ? 'Bản vẽ chi tiết đã được xác nhận thành công.'
+              : 'Bản phác thảo đã được xác nhận thành công.'}
+          </Text>
+          <TouchableOpacity
+            style={styles.successModalButton}
+            onPress={() => setSuccessModalVisible(false)}>
+            <Text style={styles.successModalButtonText}>Đóng</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const chooseSignatureFromGallery = () => {
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        selectionLimit: 1,
+        quality: 0.8,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        includeBase64: false,
+      },
+      response => {
+        if (response.didCancel) {
+          // console.log('User cancelled image picker');
+        } else if (response.errorCode) {
+          // console.log('ImagePicker Error: ', response.errorMessage);
+          Alert.alert('Lỗi', 'Không thể tải ảnh. Vui lòng thử lại.');
+        } else if (response.assets && response.assets.length > 0) {
+          setSignatureImage(response.assets[0].uri);
+          setShowSignatureOptions(false);
+        }
+      },
+    );
+  };
+
+  const captureSignatureFromCamera = () => {
+    launchCamera(
+      {
+        mediaType: 'photo',
+        quality: 0.8,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        includeBase64: false,
+      },
+      response => {
+        if (response.didCancel) {
+          // console.log('User cancelled camera');
+        } else if (response.errorCode) {
+          // console.log('Camera Error: ', response.errorMessage);
+          Alert.alert('Lỗi', 'Không thể chụp ảnh. Vui lòng thử lại.');
+        } else if (response.assets && response.assets.length > 0) {
+          setSignatureImage(response.assets[0].uri);
+          setShowSignatureOptions(false);
+        }
+      },
+    );
+  };
+
+  const openSignatureDrawing = () => {
+    Alert.alert(
+      'Tính năng đang phát triển',
+      'Chức năng vẽ chữ ký đang được phát triển. Vui lòng sử dụng các phương thức khác.',
+    );
+    setShowSignatureOptions(false);
+  };
+
+  const handleSignaturePreview = imageUri => {
+    // A separate state could be used for signature preview to avoid conflicts
+    setSelectedImage(imageUri);
+    // We'll only use modalVisible for image previews, not signatures
+  };
+
+  const handleSignContract = () => {
+    if (!signatureImage) {
+      Alert.alert('Thông báo', 'Vui lòng tải lên chữ ký trước khi xác nhận.');
+      return;
+    }
+
+    setShowSignConfirmModal(true);
+  };
+
+  const confirmSignContract = async () => {
+    if (!signatureImage || !contract || !order) {
+      Alert.alert('Lỗi', 'Thiếu thông tin cần thiết để ký hợp đồng.');
+      setShowSignConfirmModal(false);
+      return;
+    }
+
+    setContractSignLoading(true);
+
+    try {
+      // Step 1: Upload signature to cloud
+      // console.log('Uploading signature to cloud...');
+      const signaturePhoto = {uri: signatureImage};
+      const signatureUrl = await uploadImageToCloudinary(signaturePhoto);
+      // console.log('Signature uploaded, URL:', signatureUrl);
+
+      // Step 2: Call API to sign contract
+      // console.log('Signing contract...');
+      const contractId = contract.id;
+      let signContractResponse;
+
+      try {
+        signContractResponse = await axios.put(
+          `${API_BASE_URL_LOCALHOST}/contract/${contractId}`,
+          {signatureUrl: signatureUrl},
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        // console.warn("Localhost request failed, trying emulator URL...");
+        signContractResponse = await axios.put(
+          `${API_BASE_URL_EMULATOR}/contract/${contractId}`,
+          {signatureUrl: signatureUrl},
+          {headers: {Authorization: `Bearer ${user.backendToken}`}},
+        );
+      }
+
+      // console.log('Contract signed successfully:', signContractResponse.data);
+
+      // Step 3: Get deposit payment percentage
+      // console.log('Getting deposit percentage...');
+      let percentageResponse;
+
+      try {
+        percentageResponse = await axios.get(
+          `${API_BASE_URL_LOCALHOST}/percentage`,
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        // console.warn("Localhost request failed, trying emulator URL...");
+        percentageResponse = await axios.get(
+          `${API_BASE_URL_EMULATOR}/percentage`,
+          {headers: {Authorization: `Bearer ${user.backendToken}`}},
+        );
+      }
+
+      const depositPercentage = percentageResponse.data.depositPercentage;
+      // console.log('Deposit percentage:', depositPercentage);
+
+      // Step 4: Process payment
+      // console.log('Processing payment...');
+      const amount = Math.round((order.designPrice * depositPercentage) / 100); // Ensure amount is a whole number
+      // console.log('Payment amount:', amount);
+
+      const paymentDescription = `Pay ${depositPercentage}% design fee for order ${order.id}`;
+
+      // Create payment payload
+      const paymentPayload = {
+        walletId: user.wallet.id,
+        serviceOrderId: order.id,
+        amount: amount,
+        description: paymentDescription,
+      };
+
+      // console.log('Payment payload:', JSON.stringify(paymentPayload));
+
+      let paymentResponse;
+      try {
+        paymentResponse = await axios.post(
+          `${API_BASE_URL_LOCALHOST}/bill`,
+          paymentPayload,
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 8000, // Extend timeout for payment processing
+          },
+        );
+      } catch (err) {
+        // console.warn("Localhost payment request failed, trying emulator URL...");
+        // console.log("Payment error details:", err.response?.data || err.message);
+
+        // Try emulator URL
+        paymentResponse = await axios.post(
+          `${API_BASE_URL_EMULATOR}/bill`,
+          paymentPayload,
+          {headers: {Authorization: `Bearer ${user.backendToken}`}},
+        );
+      }
+
+      // console.log('Payment processed:', paymentResponse.data);
+
+      // Step 5: Update order status
+      // console.log('Updating order status...');
+      let updateOrderResponse;
+
+      try {
+        updateOrderResponse = await axios.put(
+          `${API_BASE_URL_LOCALHOST}/serviceorder/status/${order.id}`,
+          {status: 3},
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        // console.warn("Localhost request failed, trying emulator URL...");
+        updateOrderResponse = await axios.put(
+          `${API_BASE_URL_EMULATOR}/serviceorder/status/${order.id}`,
+          {status: 3},
+          {headers: {Authorization: `Bearer ${user.backendToken}`}},
+        );
+      }
+
+      // console.log('Order status updated:', updateOrderResponse.data);
+
+      // Step 6: Update task order if workTasks exists
+      if (order.workTasks && order.workTasks.length > 0) {
+        // console.log('Updating work task...');
+        const taskId = order.workTasks[0].id;
+        let updateTaskResponse;
+
+        try {
+          updateTaskResponse = await axios.put(
+            `${API_BASE_URL_LOCALHOST}/worktask/${taskId}`,
+            {
+              serviceOrderId: order.id,
+              userId: user.id,
+              dateAppointment: order.workTasks[0].dateAppointment,
+              timeAppointment: order.workTasks[0].timeAppointment,
+              status: 2,
+              note: 'Đã thanh toán cọc và ký hợp đồng',
+            },
+            {
+              headers: {Authorization: `Bearer ${user.backendToken}`},
+              timeout: 5000,
+            },
+          );
+        } catch (err) {
+          // console.warn("Localhost request failed, trying emulator URL...");
+          updateTaskResponse = await axios.put(
+            `${API_BASE_URL_EMULATOR}/worktask/${taskId}`,
+            {
+              serviceOrderId: order.id,
+              userId: user.id,
+              dateAppointment: order.workTasks[0].dateAppointment,
+              timeAppointment: order.workTasks[0].timeAppointment,
+              status: 2,
+              note: 'Đã thanh toán cọc và ký hợp đồng',
+            },
+            {headers: {Authorization: `Bearer ${user.backendToken}`}},
+          );
+        }
+
+        // console.log('Work task updated:', updateTaskResponse.data);
+      }
+
+      // Step 7: Refresh data and close modal
+      setShowSignConfirmModal(false);
+
+      // Show success message
+      Alert.alert(
+        'Thành công',
+        'Bạn đã ký hợp đồng và thanh toán cọc thành công.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Refresh order details
+              fetchOrderDetails();
+            },
+          },
+        ],
+      );
+    } catch (error) {
+      // console.error('Error processing contract signing:', error);
+      // console.error('Error response data:', error.response?.data);
+      // console.error('Error status:', error.response?.status);
+      setShowSignConfirmModal(false);
+      Alert.alert(
+        'Lỗi',
+        'Có lỗi xảy ra trong quá trình ký hợp đồng: ' +
+          (error.response?.data?.message || error.message),
+      );
+    } finally {
+      setContractSignLoading(false);
+    }
+  };
+
+  const SignContractConfirmModal = () => (
+    <Modal
+      visible={showSignConfirmModal}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() =>
+        !contractSignLoading && setShowSignConfirmModal(false)
+      }>
+      <View style={styles.modalOverlay}>
+        <View style={styles.confirmModalContent}>
+          <View style={styles.confirmModalHeader}>
+            <Icon
+              name="check"
+              size={32}
+              color="#007AFF"
+              style={styles.confirmModalIcon}
+            />
+            <Text style={styles.confirmModalTitle}>Xác nhận ký hợp đồng</Text>
+          </View>
+
+          <Text style={styles.confirmModalText}>
+            Bằng việc nhấn nút "Xác nhận & Thanh toán cọc", bạn đồng ý với các
+            điều khoản trong hợp đồng và đồng ý thanh toán
+          </Text>
+
+          <View style={styles.confirmModalButtons}>
+            <TouchableOpacity
+              style={[
+                styles.confirmModalButton,
+                styles.confirmModalButtonCancel,
+              ]}
+              onPress={() => setShowSignConfirmModal(false)}
+              disabled={contractSignLoading}>
+              <Text style={styles.confirmModalButtonCancelText}>Hủy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.confirmModalButton,
+                styles.confirmModalButtonConfirm,
+              ]}
+              onPress={confirmSignContract}
+              disabled={contractSignLoading}>
+              {contractSignLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.confirmModalButtonText}>
+                  Xác nhận & Thanh toán cọc
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Update the handleConfirmDesign function to use modal instead of Alert
+  const handleConfirmDesign = recordId => {
+    setSelectedRecordId(recordId);
+    setIsDesignConfirmation(true);
+    setConfirmModalVisible(true);
+  };
+
+  // Updated confirmDesign function to work with the modal
+  const confirmDesign = async () => {
+    try {
+      // Confirm the record design
+      const recordDesignUrl = `/recorddesign/${selectedRecordId}`;
+      let response;
+
+      try {
+        console.log(
+          `Confirming design at: ${API_BASE_URL_LOCALHOST}${recordDesignUrl}`,
+        );
+        response = await axios.put(
+          `${API_BASE_URL_LOCALHOST}${recordDesignUrl}`,
+          {
+            isSelected: true,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        console.warn('Localhost request failed, trying emulator URL...');
+        console.log(
+          `Confirming design at: ${API_BASE_URL_EMULATOR}${recordDesignUrl}`,
+        );
+        response = await axios.put(
+          `${API_BASE_URL_EMULATOR}${recordDesignUrl}`,
+          {
+            isSelected: true,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+          },
+        );
+      }
+
+      // Step 2: Update the order status to 6 (DoneDesign)
+      const updateStatusUrl = `/serviceorder/status/${orderId}`;
+      try {
+        console.log(
+          `Updating order status at: ${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
+        );
+        await axios.put(
+          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
+          {
+            status: 6,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        console.warn('Localhost request failed, trying emulator URL...');
+        console.log(
+          `Updating order status at: ${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
+        );
+        await axios.put(
+          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
+          {
+            status: 6,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+          },
+        );
+      }
+
+      // Close confirmation modal and show success modal
+      setConfirmModalVisible(false);
+      setSuccessModalVisible(true);
+
+      // Refresh data
+      fetchOrderDetails();
+
+      return true;
+    } catch (err) {
+      console.error('Error confirming design:', err);
+      Alert.alert(
+        'Lỗi',
+        'Không thể xác nhận bản vẽ chi tiết. Vui lòng thử lại sau.',
+      );
+      return false;
+    }
+  };
+
+  // Add handler for opening payment modal
+  const handlePaymentPress = () => {
+    setPaymentModalVisible(true);
+  };
+
+  // Add function to handle payment confirmation
+  const handleConfirmPayment = async () => {
+    try {
+      setPaymentLoading(true);
+
+      // Calculate amounts
+      const designFeeTotal = order.designPrice || 0;
+      const designFeeRemaining = designFeeTotal * 0.5;
+      const materialPrice = order.materialPrice || 0;
+      const totalPayment = designFeeRemaining + materialPrice;
+
+      // API call to process payment
+      const paymentDescription = `Thanh toán phí thiết kế còn lại (50%) và giá vật liệu cho đơn hàng ${order.id}.`;
+
+      // Create payment payload
+      const paymentPayload = {
+        walletId: user.wallet?.id || user.id,
+        serviceOrderId: order.id,
+        amount: totalPayment,
+        description: paymentDescription,
+      };
+
+      console.log('Payment payload:', JSON.stringify(paymentPayload));
+
+      let paymentResponse;
+      try {
+        paymentResponse = await axios.post(
+          `${API_BASE_URL_LOCALHOST}/bill`,
+          paymentPayload,
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 8000,
+          },
+        );
+      } catch (err) {
+        console.warn(
+          'Localhost payment request failed, trying emulator URL...',
+        );
+        console.log(
+          'Payment error details:',
+          err.response?.data || err.message,
+        );
+
+        paymentResponse = await axios.post(
+          `${API_BASE_URL_EMULATOR}/bill`,
+          paymentPayload,
+          {headers: {Authorization: `Bearer ${user.backendToken}`}},
+        );
+      }
+
+
+      // Update order status to "PaymentSuccess" (7)
+      const updateStatusUrl = `/serviceorder/status/${order.id}`;
+      try {
+        await axios.put(
+          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
+          {status: 7},
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        console.warn('Localhost request failed, trying emulator URL...');
+        await axios.put(
+          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
+          {status: 7},
+          {headers: {Authorization: `Bearer ${user.backendToken}`}},
+        );
+      }
+
+      // Close payment modal
+      setPaymentModalVisible(false);
+
+      // Show success message
+      Alert.alert(
+        'Thanh toán thành công',
+        'Thanh toán đã được xử lý thành công. Đơn hàng của bạn đang được chuẩn bị',
+        [
+          {
+            text: 'OK',
+            onPress: () => fetchOrderDetails(),
+          },
+        ],
+      );
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+
+      Alert.alert(
+        'Lỗi thanh toán',
+        'Có lỗi xảy ra trong quá trình thanh toán. Vui lòng thử lại sau.',
+      );
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // Add Payment Modal component
+  const PaymentModal = () => {
+    // Calculate payment amounts
+    const designFeeTotal = order?.designPrice || 0;
+    const designFeePaid = designFeeTotal * 0.5; // Assuming 50% was already paid
+    const designFeeRemaining = designFeeTotal * 0.5;
+    const materialPrice = order?.materialPrice || 0;
+    const totalPayment = designFeeRemaining + materialPrice;
+
+    return (
+      <Modal
+        visible={paymentModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => !paymentLoading && setPaymentModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.paymentModalContent}>
+            <View style={styles.paymentModalHeader}>
+              <Text style={styles.paymentModalTitle}>
+                Thanh toán 50% phí thiết kế còn lại và giá vật liệu
+              </Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() =>
+                  !paymentLoading && setPaymentModalVisible(false)
+                }>
+                <Icon name="close" size={24} color="#000" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.paymentDetailsContainer}>
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>
+                  Phí thiết kế đã thanh toán (50%):
+                </Text>
+                <Text style={styles.paymentValue}>
+                  {formatCurrency(designFeePaid)}
+                </Text>
+              </View>
+
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>
+                  Phí thiết kế còn lại (50%):
+                </Text>
+                <Text style={[styles.paymentValue, styles.highlightedAmount]}>
+                  {formatCurrency(designFeeRemaining)}
+                </Text>
+              </View>
+
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>Giá vật liệu:</Text>
+                <Text style={[styles.paymentValue, styles.highlightedAmount]}>
+                  {formatCurrency(materialPrice)}
+                </Text>
+              </View>
+
+              <View style={[styles.paymentRow, styles.totalRow]}>
+                <Text style={styles.totalLabel}>Tổng thanh toán:</Text>
+                <Text style={styles.totalValue}>
+                  {formatCurrency(totalPayment)}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.paymentInfoContainer}>
+              <View style={styles.infoRow}>
+                <Icon
+                  name="check-circle"
+                  size={16}
+                  color="#4CAF50"
+                  style={styles.infoIcon}
+                />
+                <Text style={styles.infoText}>
+                  Thanh toán này bao gồm 50% phí thiết kế còn lại và toàn bộ giá
+                  vật liệu
+                </Text>
+              </View>
+
+              <View style={styles.infoRow}>
+                <Icon
+                  name="check-circle"
+                  size={16}
+                  color="#4CAF50"
+                  style={styles.infoIcon}
+                />
+                <Text style={styles.infoText}>
+                  Sau khi thanh toán, đơn hàng của bạn sẽ được xử lý và chuyển
+                  sang giai đoạn sản xuất
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.paymentButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => !paymentLoading && setPaymentModalVisible(false)}
+                disabled={paymentLoading}>
+                <Text style={styles.cancelButtonText}>Hủy bỏ</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.confirmPaymentButton}
+                onPress={handleConfirmPayment}
+                disabled={paymentLoading}>
+                {paymentLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.confirmPaymentText}>
+                    Xác nhận thanh toán
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  // Create a separate component for the input modals to manage their own state
+  const InputModal = ({ 
+    visible, 
+    onClose, 
+    onSubmit, 
+    title, 
+    description, 
+    initialValue = '',
+    isLoading
+  }) => {
+    // Local state that doesn't affect parent component
+    const [localInputValue, setLocalInputValue] = useState(initialValue);
+    const inputRef = useRef(null);
+    
+    // Reset local state when modal opens/closes
+    useEffect(() => {
+      if (visible) {
+        setLocalInputValue(initialValue);
+      }
+    }, [visible, initialValue]);
+    
+    const handleSubmit = () => {
+      onSubmit(localInputValue);
+    };
+    
+    return (
+      <Modal
+        visible={visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => !isLoading && onClose()}>
+        <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.redraftModalContent}>
+              <Text style={styles.redraftModalTitle}>{title}</Text>
+              <Text style={styles.redraftModalText}>{description}</Text>
+
+              <TextInput
+                ref={inputRef}
+                style={styles.redraftReasonInput}
+                placeholder="Nhập lý do của bạn ở đây..."
+                multiline={true}
+                numberOfLines={4}
+                value={localInputValue}
+                onChangeText={setLocalInputValue}
+                editable={!isLoading}
+                autoFocus={true}
+              />
+
+              <View style={styles.redraftModalButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.redraftModalButton,
+                    styles.redraftModalButtonCancel,
+                  ]}
+                  onPress={onClose}
+                  disabled={isLoading}>
+                  <Text style={styles.redraftModalButtonCancelText}>Hủy</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.redraftModalButton,
+                    styles.redraftModalButtonConfirm,
+                  ]}
+                  onPress={handleSubmit}
+                  disabled={isLoading}>
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.redraftModalButtonText}>Xác nhận</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    );
+  };
+
+  // Use the separated component
+  const handleRedraftConfirmWithValue = (value) => {
+    setRedraftReason(value);
+    handleRedraftConfirm();
+  };
+
+  const handleRedesignConfirmWithValue = (value) => {
+    setRedesignReason(value);
+    handleRedesignConfirm();
+  };
+
+  // Replace RedraftModal and RedesignModal with the InputModal component
+  const redraftModal = (
+    <InputModal
+      visible={redraftModalVisible}
+      onClose={() => setRedraftModalVisible(false)}
+      onSubmit={handleRedraftConfirmWithValue}
+      title="Yêu cầu phác thảo lại"
+      description="Vui lòng cung cấp lý do bạn muốn yêu cầu phác thảo lại:"
+      initialValue={redraftReason}
+      isLoading={redraftLoading}
+    />
+  );
+
+  const redesignModal = (
+    <InputModal
+      visible={redesignModalVisible}
+      onClose={() => setRedesignModalVisible(false)}
+      onSubmit={handleRedesignConfirmWithValue}
+      title="Yêu cầu thiết kế lại"
+      description="Vui lòng cung cấp lý do bạn muốn yêu cầu thiết kế lại:"
+      initialValue={redesignReason}
+      isLoading={redesignLoading}
+    />
+  );
+
+  // Add new function to handle re-draft button press
+  const handleRedraftPress = () => {
+    setRedraftReason('');
+    setRedraftModalVisible(true);
+  };
+
+  // Add new function to handle re-draft confirmation
+  const handleRedraftConfirm = async () => {
+    // Validate reason
+    if (!redraftReason.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập lý do yêu cầu phác thảo lại.');
+      return;
+    }
+
+    try {
+      setRedraftLoading(true);
+
+      // Step 1: Update order status to 19 (reconsultingandsketching)
+      const updateStatusUrl = `/serviceorder/status/${orderId}`;
+      try {
+        await axios.put(
+          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
+          {
+            status: 19,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        await axios.put(
+          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
+          {
+            status: 19,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+          },
+        );
+      }
+
+      // Step 2: Update work task if available
+      if (order.workTasks && order.workTasks.length > 0) {
+        const taskId = order.workTasks[0].id;
+        const updateWorkTaskUrl = `/worktask/${taskId}`;
+
+        try {
+          await axios.put(
+            `${API_BASE_URL_LOCALHOST}${updateWorkTaskUrl}`,
+            {
+              serviceOrderId: order.id,
+              userId: user.id,
+              dateAppointment: order.workTasks[0].dateAppointment,
+              timeAppointment: order.workTasks[0].timeAppointment,
+              status: 0,
+              note: redraftReason,
+            },
+            {
+              headers: {Authorization: `Bearer ${user.backendToken}`},
+              timeout: 5000,
+            },
+          );
+        } catch (err) {
+          await axios.put(
+            `${API_BASE_URL_EMULATOR}${updateWorkTaskUrl}`,
+            {
+              serviceOrderId: order.id,
+              userId: user.id,
+              dateAppointment: order.workTasks[0].dateAppointment,
+              timeAppointment: order.workTasks[0].timeAppointment,
+              status: 0,
+              note: redraftReason,
+            },
+            {
+              headers: {Authorization: `Bearer ${user.backendToken}`},
+            },
+          );
+        }
+      }
+
+      // Close modal and refresh data
+      setRedraftModalVisible(false);
+
+      // Show success message
+      Alert.alert(
+        'Thành công',
+        'Yêu cầu phác thảo lại đã được gửi thành công.',
+        [
+          {
+            text: 'OK',
+            onPress: () => fetchOrderDetails(),
+          },
+        ],
+      );
+    } catch (err) {
+      Alert.alert(
+        'Lỗi',
+        'Không thể gửi yêu cầu phác thảo lại. Vui lòng thử lại sau.',
+      );
+    } finally {
+      setRedraftLoading(false);
+    }
+  };
+
+  const handleRedesignPress = () => {
+    setRedesignReason('');
+    setRedesignModalVisible(true);
+  };
+
+  // Add new function to handle re-draft confirmation
+  const handleRedesignConfirm = async () => {
+    // Validate reason
+    if (!redesignReason.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập lý do yêu cầu thiết kế lại.');
+      return;
+    }
+    const payload = {
+      serviceType: 1,
+      designPrice: order?.designPrice,
+      description: order?.description,
+      status: 20, // ReDesign
+      report: order?.report, // Add note to report field
+      reportManger: order?.reportManager,
+      reportAccoutant: order?.reportAccoutant,
+      skecthReport: order?.skecthReport,
+    };
+
+    try {
+      setRedesignLoading(true);
+
+      // Step 1: Update order status to 19 (reconsultingandsketching)
+      const updateStatusUrl = `/serviceorder/customer/${orderId}`;
+      try {
+        await axios.put(
+          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
+          payload,
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        await axios.put(`${API_BASE_URL_EMULATOR}${updateStatusUrl}`, payload, {
+          headers: {Authorization: `Bearer ${user.backendToken}`},
+        });
+      }
+
+       // Step 2: Update work task if available
+       if (order.workTasks && order.workTasks.length > 0) {
+        const taskId = order.workTasks[0].id;
+        const updateWorkTaskUrl = `/worktask/${taskId}`;
+
+        try {
+          await axios.put(
+            `${API_BASE_URL_LOCALHOST}${updateWorkTaskUrl}`,
+            {
+              serviceOrderId: order.id,
+              userId: user.id,
+              dateAppointment: order.workTasks[0].dateAppointment,
+              timeAppointment: order.workTasks[0].timeAppointment,
+              status: 2,
+              note: redesignReason,
+            },
+            {
+              headers: {Authorization: `Bearer ${user.backendToken}`},
+              timeout: 5000,
+            },
+          );
+        } catch (err) {
+          await axios.put(
+            `${API_BASE_URL_EMULATOR}${updateWorkTaskUrl}`,
+            {
+              serviceOrderId: order.id,
+              userId: user.id,
+              dateAppointment: order.workTasks[0].dateAppointment,
+              timeAppointment: order.workTasks[0].timeAppointment,
+              status: 2,
+              note: redesignReason,
+            },
+            {
+              headers: {Authorization: `Bearer ${user.backendToken}`},
+            },
+          );
+        }
+      }
+
+      // Close modal and refresh data
+      setRedesignModalVisible(false);
+
+      // Show success message
+      Alert.alert(
+        'Thành công',
+        'Yêu cầu thiết kế lại đã được gửi thành công.',
+        [
+          {
+            text: 'OK',
+            onPress: () => fetchOrderDetails(),
+          },
+        ],
+      );
+    } catch (err) {
+      Alert.alert(
+        'Lỗi',
+        'Không thể gửi yêu cầu thiết kế lại. Vui lòng thử lại sau.',
+      );
+    } finally {
+      setRedesignLoading(false);
+    }
+  };
+
+  // Add this new function after other existing fetch functions
+  const fetchProductDetails = async productId => {
+    try {
+      if (materialProducts[productId]) {
+        return materialProducts[productId]; // Return cached product if already fetched
+      }
+
+      const urlPath = `/product/${productId}`;
+      let response;
+
+      try {
+        response = await axios.get(`${API_BASE_URL_LOCALHOST}${urlPath}`, {
+          headers: {Authorization: `Bearer ${user.backendToken}`},
+          timeout: 5000,
+        });
+      } catch (err) {
+        response = await axios.get(`${API_BASE_URL_EMULATOR}${urlPath}`, {
+          headers: {Authorization: `Bearer ${user.backendToken}`},
+        });
+      }
+
+      const productData = response.data;
+
+      // Update state with the new product
+      setMaterialProducts(prev => ({
+        ...prev,
+        [productId]: productData,
+      }));
+
+      return productData;
+    } catch (err) {
+      console.error('Error fetching product details:', err);
+      return null;
+    }
+  };
+
+  // Add this function to handle service cancellation
+  const handleCancelService = async () => {
+    try {
+      setCancelLoading(true);
+
+      // API call to update order status to 18 (stopService)
+      const updateStatusUrl = `/serviceorder/status/${orderId}`;
+      try {
+        await axios.put(
+          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
+          {
+            status: 18,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        await axios.put(
+          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
+          {
+            status: 18,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+          },
+        );
+      }
+
+      // Hide modal and show success message
+      setCancelModalVisible(false);
+      Alert.alert(
+        'Thành công',
+        'Dịch vụ đã được hủy thành công.',
+        [
+          {
+            text: 'OK',
+            onPress: () => fetchOrderDetails(),
+          },
+        ],
+      );
+    } catch (err) {
+      Alert.alert(
+        'Lỗi',
+        'Không thể hủy dịch vụ. Vui lòng thử lại sau.',
+      );
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  // Add this function to handle service cancellation with refund
+  const handleCancelWithRefund = async () => {
+    try {
+      setCancelLoading(true);
+
+      // Step 1: Call refund API
+      try {
+        console.log("1");
+        // First API call: Refund 10% of design deposit
+        await axios.post(
+          `${API_BASE_URL_LOCALHOST}/wallets/refund?id=${orderId}`,
+          {}, // Empty request body or add body data if needed
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 8000,
+          },
+        );
+      } catch (err) {
+        console.log("err", err);
+        
+        console.log("2");
+        // Try emulator URL if localhost fails
+        await axios.post(
+          `${API_BASE_URL_EMULATOR}/wallets/refund?id=${orderId}`,
+          {}, // Empty request body or add body data if needed
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+          },
+        );
+      }
+
+      // Step 2: Update order status to StopService (18)
+      const updateStatusUrl = `/serviceorder/status/${orderId}`;
+      try {
+        await axios.put(
+          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
+          {
+            status: 18,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        await axios.put(
+          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
+          {
+            status: 18,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+          },
+        );
+      }
+
+      // Hide modal and show success message
+      setCancelModalVisible(false);
+      Alert.alert(
+        'Thành công',
+        'Dịch vụ đã được hủy thành công và 10% tiền cọc sẽ được hoàn trả vào ví của bạn.',
+        [
+          {
+            text: 'OK',
+            onPress: () => fetchOrderDetails(),
+          },
+        ],
+      );
+    } catch (err) {
+      console.log("err", err);
+      setCancelModalVisible(false);
+
+      Alert.alert(
+        'Lỗi',
+        'Không thể hủy dịch vụ. Vui lòng thử lại sau.',
+      );
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  // Add this function to handle cancellation with payment of remaining design fee
+  const handleCancelWithPayment = async () => {
+    try {
+      setCancelLoading(true);
+
+      // Calculate payment amount - remaining 50% of design fee
+      const designFeeTotal = order.designPrice || 0;
+      const remainingDesignFee = designFeeTotal * 0.5; // 50% of design fee
+      
+      // Create payment payload
+      const paymentDescription = `Thanh toán phí thiết kế còn lại (50%) và hủy đơn hàng ${order.id}`;
+      const paymentPayload = {
+        walletId: user.wallet?.id || user.id,
+        serviceOrderId: order.id,
+        amount: remainingDesignFee,
+        description: paymentDescription,
+      };
+
+      // Step 1: Process payment
+      let paymentResponse;
+      try {
+        paymentResponse = await axios.post(
+          `${API_BASE_URL_LOCALHOST}/bill`,
+          paymentPayload,
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 8000,
+          },
+        );
+      } catch (err) {
+        // Try emulator URL if localhost fails
+        paymentResponse = await axios.post(
+          `${API_BASE_URL_EMULATOR}/bill`,
+          paymentPayload,
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+          },
+        );
+      }
+
+      // Step 2: Update order status to StopService (18)
+      const updateStatusUrl = `/serviceorder/status/${orderId}`;
+      try {
+        await axios.put(
+          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
+          {
+            status: 18,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+            timeout: 5000,
+          },
+        );
+      } catch (err) {
+        await axios.put(
+          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
+          {
+            status: 18,
+          },
+          {
+            headers: {Authorization: `Bearer ${user.backendToken}`},
+          },
+        );
+      }
+
+      // Hide modal and show success message
+      setCancelModalVisible(false);
+      Alert.alert(
+        'Thành công',
+        'Đã thanh toán phí thiết kế còn lại và hủy dịch vụ thành công.',
+        [
+          {
+            text: 'OK',
+            onPress: () => fetchOrderDetails(),
+          },
+        ],
+      );
+    } catch (err) {
+      setCancelModalVisible(false);
+      Alert.alert(
+        'Lỗi',
+        'Không thể thanh toán và hủy dịch vụ. Vui lòng thử lại sau.',
+      );
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  // Add the cancel confirmation modal component
+  const CancelServiceModal = () => {
+    // Calculate financial information for DepositSuccessful status
+    const designPrice = order?.designPrice || 0;
+    const depositAmount = designPrice * 0.5; // 50% of design price
+    const refundAmount = depositAmount * 0.1; // 10% of deposit
+    const walletBalance = user?.wallet?.amount || 0;
+    
+    const isDepositSuccessful = order.status?.toLowerCase() === 'depositsuccessful';
+    const isDesignPhase = order.status?.toLowerCase() === 'determiningmaterialprice' ||
+                          order.status?.toLowerCase() === 'donedeterminingmaterialprice' ||
+                          order.status?.toLowerCase() === 'donedesign';
+    
+    return (
+      <Modal
+        visible={cancelModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => !cancelLoading && setCancelModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModalContent}>
+            <Icon
+              name="alert-circle-outline"
+              size={60}
+              color="#FF3B30"
+              style={{marginBottom: 10}}
+            />
+            <Text style={styles.confirmModalTitle}>Xác nhận hủy dịch vụ</Text>
+            
+            {isDepositSuccessful && (
+              <View style={styles.financialInfoContainer}>
+                <View style={styles.financialInfoRow}>
+                  <Text style={styles.financialInfoLabel}>Giá thiết kế:</Text>
+                  <Text style={styles.financialInfoValue}>{formatCurrency(designPrice)}</Text>
+                </View>
+                <View style={styles.financialInfoRow}>
+                  <Text style={styles.financialInfoLabel}>Tiền cọc đã thanh toán (50%):</Text>
+                  <Text style={styles.financialInfoValue}>{formatCurrency(depositAmount)}</Text>
+                </View>
+                <View style={styles.financialInfoRow}>
+                  <Text style={styles.financialInfoLabel}>Số tiền hoàn trả (10% cọc):</Text>
+                  <Text style={[styles.financialInfoValue, {color: '#34C759'}]}>{formatCurrency(refundAmount)}</Text>
+                </View>
+                <View style={styles.financialInfoRow}>
+                  <Text style={styles.financialInfoLabel}>Số dư ví hiện tại:</Text>
+                  <Text style={styles.financialInfoValue}>{formatCurrency(balance)}</Text>
+                </View>
+                <View style={styles.financialInfoRow}>
+                  <Text style={styles.financialInfoLabel}>Số dư sau khi hoàn tiền:</Text>
+                  <Text style={[styles.financialInfoValue, {fontWeight: 'bold', color: '#007AFF'}]}>
+                    {formatCurrency(balance + refundAmount)}
+                  </Text>
+                </View>
+              </View>
+            )}
+            
+            {isDesignPhase && (
+              <View style={styles.financialInfoContainer}>
+                <View style={styles.financialInfoRow}>
+                  <Text style={styles.financialInfoLabel}>Giá thiết kế:</Text>
+                  <Text style={styles.financialInfoValue}>{formatCurrency(designPrice)}</Text>
+                </View>
+                <View style={styles.financialInfoRow}>
+                  <Text style={styles.financialInfoLabel}>Tiền cọc đã thanh toán (50%):</Text>
+                  <Text style={styles.financialInfoValue}>{formatCurrency(depositAmount)}</Text>
+                </View>
+                <View style={styles.financialInfoRow}>
+                  <Text style={styles.financialInfoLabel}>Phí thiết kế còn lại cần thanh toán:</Text>
+                  <Text style={[styles.financialInfoValue, {color: '#FF3B30'}]}>{formatCurrency(depositAmount)}</Text>
+                </View>
+                <View style={styles.financialInfoRow}>
+                  <Text style={styles.financialInfoLabel}>Số dư ví hiện tại:</Text>
+                  <Text style={styles.financialInfoValue}>{formatCurrency(balance)}</Text>
+                </View>
+                <View style={styles.financialInfoRow}>
+                  <Text style={styles.financialInfoLabel}>Số dư sau khi thanh toán:</Text>
+                  <Text style={[styles.financialInfoValue, {fontWeight: 'bold', color: '#007AFF'}]}>
+                    {formatCurrency(balance - depositAmount)}
+                  </Text>
+                </View>
+              </View>
+            )}
+            
+            <Text style={styles.confirmModalText}>
+              {isDepositSuccessful
+                ? 'Bạn có chắc chắn muốn hủy dịch vụ này không? 10% tiền cọc sẽ được hoàn trả vào ví của bạn. Hành động này không thể hoàn tác.'
+                : isDesignPhase
+                ? 'Bạn có chắc chắn muốn hủy dịch vụ này không? Bạn cần thanh toán 50% phí thiết kế còn lại để hủy đơn hàng. Hành động này không thể hoàn tác.'
+                : 'Bạn có chắc chắn muốn hủy dịch vụ này không? Hành động này không thể hoàn tác.'}
+            </Text>
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.confirmModalButton,
+                  styles.confirmModalButtonCancel,
+                ]}
+                onPress={() => setCancelModalVisible(false)}
+                disabled={cancelLoading}>
+                <Text style={styles.confirmModalButtonCancelText}>Không</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.confirmModalButton,
+                  {backgroundColor: '#FF3B30', flex: 1, marginLeft: 7},
+                ]}
+                onPress={isDepositSuccessful 
+                  ? handleCancelWithRefund 
+                  : isDesignPhase
+                  ? handleCancelWithPayment
+                  : handleCancelService}
+                disabled={cancelLoading}>
+                {cancelLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.confirmModalButtonText}>
+                    {isDesignPhase ? 'Thanh toán & Hủy' : 'Đồng ý hủy'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Đang tải thông tin đơn hàng...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Icon
+          name="alert-circle-outline"
+          size={60}
+          color="#ff3b30"
+          style={{marginBottom: 15}}
+        />
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
+  if (!order) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Không tìm thấy đơn hàng</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['#007AFF']}
+          tintColor={'#007AFF'}
+        />
+      }>
+      {/* Header Section */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}>
+          <Icon name="arrow-left" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.orderNumber}>
+          Đơn hàng #{order.id.substring(0, 8)}
+        </Text>
+      </View>
+
+      {/* Status Section */}
+      <View style={styles.statusSection}>
+        <View
+          style={[
+            styles.statusPill,
+            {backgroundColor: getStatusColor(order.status)},
+          ]}>
+          <Text style={styles.statusPillText}>
+            {getStatusText(order.status)}
+          </Text>
+        </View>
+        <Text style={styles.statusDate}>{formatDate(order.creationDate)}</Text>
+      </View>
+
+      {/* Delivery Tracking Section - Add after status and before customer info */}
+      {(order.status?.toLowerCase() === 'pickedpackageanddelivery' ||
+        order.status?.toLowerCase() === 'processing' ||
+        order.status?.toLowerCase() === 'deliveryfail' ||
+        order.status?.toLowerCase() === 'redelivery' ||
+        order.status?.toLowerCase() === 'deliveredsuccessfully' ||
+        order.status?.toLowerCase() === 'completeorder') && (
+        <View style={styles.trackingContainer}>
+          <Text style={styles.trackingTitle}>Thông tin vận chuyển</Text>
+          <Text style={styles.deliveryCode}>
+            Mã vận chuyển: {order.deliveryCode || 'Chưa có'}
+          </Text>
+
+          <StatusTrackingMaterial
+            currentStatus={
+              order.status?.toLowerCase() === 'pickedpackageanddelivery'
+                ? '6'
+                : order.status?.toLowerCase() === 'deliveryfail'
+                ? '7'
+                : order.status?.toLowerCase() === 'redelivery'
+                ? '8'
+                : order.status?.toLowerCase() === 'deliveredsuccessfully'
+                ? '9'
+                : order.status?.toLowerCase() === 'completeorder'
+                ? '10'
+                : '0'
+            }
+          />
+
+          {order.status?.toLowerCase() === 'deliveredsuccessfully' && (
+            <TouchableOpacity
+              style={styles.confirmDeliveryButton}
+              onPress={() => {
+                Alert.alert(
+                  'Xác nhận đã nhận hàng',
+                  'Bạn đã nhận được đơn hàng và muốn xác nhận hoàn tất?',
+                  [
+                    {
+                      text: 'Hủy',
+                      style: 'cancel',
+                    },
+                    {
+                      text: 'Xác nhận',
+                      onPress: async () => {
+                        try {
+                          setLoading(true);
+                          const updateStatusUrl = `/serviceorder/status/${orderId}`;
+
+                          try {
+                            const response = await axios.put(
+                              `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
+                              {status: 13}, // CompleteOrder status
+                              {
+                                headers: {
+                                  Authorization: `Bearer ${user.backendToken}`,
+                                },
+                                timeout: 5000,
+                              },
+                            );
+                          } catch (localErr) {
+                            console.warn(
+                              'Localhost request failed, trying emulator URL...',
+                            );
+                            await axios.put(
+                              `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
+                              {status: 13}, // CompleteOrder status
+                              {
+                                headers: {
+                                  Authorization: `Bearer ${user.backendToken}`,
+                                },
+                              },
+                            );
+                          }
+
+                          Alert.alert(
+                            'Thành công',
+                            'Đã xác nhận nhận hàng thành công!',
+                          );
+                          // Refresh data
+                          fetchOrderDetails();
+                        } catch (err) {
+                          console.error('Error confirming order receipt:', err);
+                          Alert.alert(
+                            'Lỗi',
+                            'Không thể xác nhận đơn hàng. Vui lòng thử lại sau.',
+                          );
+                        } finally {
+                          setLoading(false);
+                        }
+                      },
+                    },
+                  ],
+                );
+              }}>
+              <View style={styles.confirmButtonContent}>
+                <Icon
+                  name="check-circle-outline"
+                  size={24}
+                  color="#fff"
+                  style={styles.confirmButtonIcon}
+                />
+                <Text style={styles.confirmButtonText}>
+                  Xác nhận đã nhận hàng
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Payment Section - Only show when status is DoneDesign (6) */}
+      {order.status?.toLowerCase() === 'donedesign' && (
+        <Card style={styles.section}>
+          <Card.Title
+            title="Thanh toán phần còn lại"
+            titleStyle={styles.sectionTitle}
+            left={props => (
+              <Icon {...props} name="cash-multiple" size={24} color="#007AFF" />
+            )}
+          />
+          <Divider style={styles.divider} />
+          <Card.Content>
+            <View style={styles.paymentSection}>
+              <Text style={styles.paymentDescription}>
+                Thiết kế của bạn đã hoàn thành. Vui lòng thanh toán 50% phí
+                thiết kế còn lại và tiền vật liệu để hoàn thành đơn hàng.
+              </Text>
+
+              <View style={styles.paymentSummary}>
+                <View style={styles.paymentSummaryRow}>
+                  <Text style={styles.paymentSummaryLabel}>
+                    Phí thiết kế còn lại:
+                  </Text>
+                  <Text style={styles.paymentSummaryValue}>
+                    {formatCurrency(order.designPrice * 0.5)}
+                  </Text>
+                </View>
+
+                <View style={styles.paymentSummaryRow}>
+                  <Text style={styles.paymentSummaryLabel}>Giá vật liệu:</Text>
+                  <Text style={styles.paymentSummaryValue}>
+                    {formatCurrency(order.materialPrice || 0)}
+                  </Text>
+                </View>
+
+                <View
+                  style={[styles.paymentSummaryRow, styles.totalSummaryRow]}>
+                  <Text style={styles.totalSummaryLabel}>Tổng cộng:</Text>
+                  <Text style={styles.totalSummaryValue}>
+                    {formatCurrency(
+                      order.designPrice * 0.5 + (order.materialPrice || 0),
+                    )}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.payNowButton}
+                onPress={handlePaymentPress}>
+                <Icon
+                  name="cash-register"
+                  size={20}
+                  color="#fff"
+                  style={styles.payNowIcon}
+                />
+                <Text style={styles.payNowText}>Thanh toán ngay</Text>
+              </TouchableOpacity>
+            </View>
+          </Card.Content>
+        </Card>
+      )}
+
+      {/* Part 1: Customer Information */}
+      <Card style={styles.section}>
+        <Card.Title
+          title="Thông tin khách hàng"
+          titleStyle={styles.sectionTitle}
+          left={props => (
+            <Icon
+              {...props}
+              name="account-circle-outline"
+              size={24}
+              color="#007AFF"
+            />
+          )}
+        />
+        <Divider style={styles.divider} />
+        <Card.Content>
+          <View style={styles.infoRow}>
+            <Icon
+              name="account-outline"
+              size={20}
+              color="#666"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.infoText}>{order.userName}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Icon
+              name="email-outline"
+              size={20}
+              color="#666"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.infoText}>{order.email}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Icon
+              name="phone-outline"
+              size={20}
+              color="#666"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.infoText}>{order.cusPhone}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Icon
+              name="map-marker-outline"
+              size={20}
+              color="#666"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.infoText}>{order.address}</Text>
+          </View>
+
+          {order.workTasks && order.workTasks.length > 0 ? (
+            <>
+              <Text style={styles.appointmentLabel}>
+                Thời gian designer liên hệ:
+              </Text>
+              <View style={styles.appointmentRow}>
+                <Icon
+                  name="calendar"
+                  size={20}
+                  color="#666"
+                  style={styles.infoIcon}
+                />
+                <Text style={styles.infoText}>
+                  Ngày:{' '}
+                  {formatAppointmentDate(order.workTasks[0].dateAppointment)}
+                </Text>
+              </View>
+              <View style={styles.appointmentRow}>
+                <Icon
+                  name="clock-outline"
+                  size={20}
+                  color="#666"
+                  style={styles.infoIcon}
+                />
+                <Text style={styles.infoText}>
+                  Giờ:{' '}
+                  {formatAppointmentTime(order.workTasks[0].timeAppointment)}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.infoRow}>
+              <Icon
+                name="calendar-clock"
+                size={20}
+                color="#666"
+                style={styles.infoIcon}
+              />
+              <Text style={styles.infoText}>
+                Thời gian designer liên hệ: Chờ xác nhận
+              </Text>
+            </View>
+          )}
+        </Card.Content>
+      </Card>
+
+      {/* Part 2: Design Information */}
+      <Card style={styles.section}>
+        <Card.Title
+          title="Thông tin thiết kế"
+          titleStyle={styles.sectionTitle}
+          left={props => (
+            <Icon
+              {...props}
+              name="ruler-square-compass"
+              size={24}
+              color="#007AFF"
+            />
+          )}
+        />
+        <Divider style={styles.divider} />
+        <Card.Content>
+          <View style={styles.infoRow}>
+            <Icon name="ruler" size={20} color="#666" style={styles.infoIcon} />
+            <Text style={styles.infoText}>
+              Kích thước: {order.length}m x {order.width}m
+            </Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Icon
+              name="format-list-bulleted-type"
+              size={20}
+              color="#666"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.infoText}>
+              Loại dịch vụ:{' '}
+              {order.serviceType === 'NoDesignIdea'
+                ? 'Dịch vụ tư vấn và thiết kế'
+                : getServiceTypeText(order.serviceType)}
+            </Text>
+          </View>
+          
+          {/* Highlighted Price Section */}
+          <View style={styles.pricingContainer}>
+            <View style={styles.pricingRow}>
+              <Icon
+                name="currency-usd"
+                size={22}
+                color="#007AFF"
+                style={styles.pricingIcon}
+              />
+              <Text style={styles.pricingLabel}>
+                Chi phí thiết kế chi tiết:
+              </Text>
+              <Text style={styles.pricingValue}>
+                {formatCurrency(order.designPrice || 0)}
+              </Text>
+            </View>
+            
+            <View style={styles.pricingRow}>
+              <Icon
+                name="package-variant"
+                size={22}
+                color="#007AFF"
+                style={styles.pricingIcon}
+              />
+              <Text style={styles.pricingLabel}>
+                Chi phí vật liệu:
+              </Text>
+              <Text style={styles.pricingValue}>
+                {formatCurrency(order.materialPrice || 0)}
+              </Text>
+            </View>
+            
+            <View style={styles.totalPricingRow}>
+              <Icon
+                name="cash-multiple"
+                size={24}
+                color="#34C759"
+                style={styles.pricingIcon}
+              />
+              <Text style={styles.totalPricingLabel}>
+                Tổng chi phí:
+              </Text>
+              <Text style={styles.totalPricingValue}>
+                {formatCurrency(
+                  (order.designPrice || 0) + (order.materialPrice || 0),
+                )}
+              </Text>
+            </View>
+          </View>
+        </Card.Content>
+      </Card>
+
+      {/* Part 3: Description */}
+      <Card style={styles.section}>
+        <Card.Title
+          title="Mô tả của bạn"
+          titleStyle={styles.sectionTitle}
+          left={props => (
+            <Icon
+              {...props}
+              name="text-box-outline"
+              size={24}
+              color="#007AFF"
+            />
+          )}
+        />
+        <Divider style={styles.divider} />
+        <Card.Content>
+          <Text style={styles.description}>{order.description}</Text>
+        </Card.Content>
+      </Card>
+
+      {/* Part 4: Consulting Content */}
+      <Card style={styles.section}>
+        <Card.Title
+          title="Nội dung tư vấn"
+          titleStyle={styles.sectionTitle}
+          left={props => (
+            <Icon
+              {...props}
+              name="message-text-outline"
+              size={24}
+              color="#007AFF"
+            />
+          )}
+        />
+        <Divider style={styles.divider} />
+        <Card.Content>
+          <View style={styles.consultingNote}>
+            {!order.skecthReport ? (
+              <Text style={styles.noteText}>
+                Designer của chúng tôi sẽ liên hệ với bạn để tư vấn và hỗ trợ
+                trong thời gian sớm nhất.
+              </Text>
+            ) : (
+              <Text style={styles.noteText}>
+                {order.skecthReport
+                  .replace(/<[^>]+>/g, '\n')
+                  .replace(/&nbsp;/g, ' ')
+                  .trim()}
+              </Text>
+            )}
+          </View>
+        </Card.Content>
+      </Card>
+
+      {/* Customer Provided Images */}
+      <Card style={styles.section}>
+        <Card.Title
+          title="Hình ảnh khách hàng cung cấp"
+          titleStyle={styles.sectionTitle}
+          left={props => (
+            <Icon
+              {...props}
+              name="image-multiple-outline"
+              size={24}
+              color="#007AFF"
+            />
+          )}
+        />
+        <Divider style={styles.divider} />
+        <Card.Content>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.imageContainer}
+          >
+            {recordSketches.length > 0 ? (
+              // Get customer images from phase 0
+              recordSketches
+                .filter(sketch => sketch.phase === 0)
+                .map((sketch, index) => (
+                  <React.Fragment key={`phase0-${index}`}>
+                    {sketch.image?.imageUrl && (
+                      <TouchableOpacity
+                        onPress={() => handleImagePress(sketch.image.imageUrl)}>
+                        <Image
+                          source={{ uri: sketch.image.imageUrl }}
+                          style={styles.image}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    )}
+                    {sketch.image?.image2 && sketch.image.image2 !== "" && (
+                      <TouchableOpacity
+                        onPress={() => handleImagePress(sketch.image.image2)}>
+                        <Image
+                          source={{ uri: sketch.image.image2 }}
+                          style={styles.image}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    )}
+                    {sketch.image?.image3 && sketch.image.image3 !== "" && (
+                      <TouchableOpacity
+                        onPress={() => handleImagePress(sketch.image.image3)}>
+                        <Image
+                          source={{ uri: sketch.image.image3 }}
+                          style={styles.image}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </React.Fragment>
+                ))
+            ) : (
+              // Use order.image if no recordSketches
+              <>
+                {order.image?.imageUrl && (
+                  <TouchableOpacity
+                    onPress={() => handleImagePress(order.image.imageUrl)}>
+                    <Image
+                      source={{ uri: order.image.imageUrl }}
+                      style={styles.image}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                )}
+                {order.image?.image2 && order.image.image2 !== "" && (
+                  <TouchableOpacity
+                    onPress={() => handleImagePress(order.image.image2)}>
+                    <Image
+                      source={{ uri: order.image.image2 }}
+                      style={styles.image}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                )}
+                {order.image?.image3 && order.image.image3 !== "" && (
+                  <TouchableOpacity
+                    onPress={() => handleImagePress(order.image.image3)}>
+                    <Image
+                      source={{ uri: order.image.image3 }}
+                      style={styles.image}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+          </ScrollView>
+        </Card.Content>
+      </Card>
+
+      {/* First Sketch Images */}
+      {recordSketches.some(sketch => sketch.phase === 1) &&
+        showSketchPhaseStatuses
+          .map(s => s.toLowerCase())
+          .includes(order.status?.toLowerCase()) && (
+          <Card style={styles.section}>
+            <Card.Title
+              title="Phác thảo lần 1"
+              titleStyle={styles.sectionTitle}
+              left={props => (
+                <Icon
+                  {...props}
+                  name="pencil-outline"
+                  size={24}
+                  color="#007AFF"
+                />
+              )}
+            />
+            <Divider style={styles.divider} />
+            <Card.Content>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imageContainer}
+              >
+                {recordSketches
+                  .filter(sketch => sketch.phase === 1)
+                  .map((sketch, index) => (
+                    <View key={`phase1-${index}`} style={styles.imageWrapper}>
+                      {sketch.isSelected && (
+                        <View style={styles.selectedTag}>
+                          <Icon name="check-circle" size={12} color="#fff" style={styles.selectedTagIcon} />
+                          <Text style={styles.selectedTagText}>Đã chọn</Text>
+                        </View>
+                      )}
+                      {sketch.image?.imageUrl && (
+                        <TouchableOpacity onPress={() => handleImagePress(sketch.image.imageUrl)}>
+                          <Image
+                            source={{ uri: sketch.image.imageUrl }}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {sketch.image?.image2 && sketch.image.image2 !== "" && (
+                        <TouchableOpacity onPress={() => handleImagePress(sketch.image.image2)}>
+                          <Image
+                            source={{ uri: sketch.image.image2 }}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {sketch.image?.image3 && sketch.image.image3 !== "" && (
+                        <TouchableOpacity onPress={() => handleImagePress(sketch.image.image3)}>
+                          <Image
+                            source={{ uri: sketch.image.image3 }}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+              </ScrollView>
+
+              {/* Action buttons - only show for DoneDeterminingDesignPrice status */}
+              {order.status?.toLowerCase() === 'donedeterminingdesignprice' && (
+                <>
+                  {recordSketches.filter(sketch => sketch.phase === 1).length >
+                    0 &&
+                    !recordSketches.some(sketch => sketch.isSelected) && (
+                      <TouchableOpacity
+                        style={styles.confirmButton}
+                        onPress={() =>
+                          handleConfirmSketch(
+                            recordSketches.find(sketch => sketch.phase === 1)
+                              .id,
+                          )
+                        }>
+                        <Icon
+                          name="check-circle"
+                          size={20}
+                          color="#007AFF"
+                          style={styles.confirmButtonIcon}
+                        />
+                        <Text style={styles.confirmButtonText}>
+                          Xác nhận bản phác thảo
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  {maxPhase < 3 && (
+                    <TouchableOpacity
+                      style={styles.resketchOutlinedButton}
+                      onPress={handleRedraftPress}>
+                      <Icon
+                        name="refresh"
+                        size={16}
+                        color="#FF9500"
+                        style={styles.resketchButtonIcon}
+                      />
+                      <Text style={styles.resketchOutlinedButtonText}>
+                        Yêu cầu phác thảo lại
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </Card.Content>
+          </Card>
+        )}
+
+      {/* Second Sketch Images */}
+      {recordSketches.some(sketch => sketch.phase === 2) &&
+        showSketchPhaseStatuses
+          .map(s => s.toLowerCase())
+          .includes(order.status?.toLowerCase()) && (
+          <Card style={styles.section}>
+            <Card.Title
+              title="Phác thảo lần 2"
+              titleStyle={styles.sectionTitle}
+              left={props => (
+                <Icon
+                  {...props}
+                  name="pencil-outline"
+                  size={24}
+                  color="#007AFF"
+                />
+              )}
+            />
+            <Divider style={styles.divider} />
+            <Card.Content>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imageContainer}
+              >
+                {recordSketches
+                  .filter(sketch => sketch.phase === 2)
+                  .map((sketch, index) => (
+                    <View key={`phase2-${index}`} style={styles.imageWrapper}>
+                      {sketch.isSelected && (
+                        <View style={styles.selectedTag}>
+                          <Icon name="check-circle" size={12} color="#fff" style={styles.selectedTagIcon} />
+                          <Text style={styles.selectedTagText}>Đã chọn</Text>
+                        </View>
+                      )}
+                      {sketch.image?.imageUrl && (
+                        <TouchableOpacity onPress={() => handleImagePress(sketch.image.imageUrl)}>
+                          <Image
+                            source={{ uri: sketch.image.imageUrl }}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {sketch.image?.image2 && sketch.image.image2 !== "" && (
+                        <TouchableOpacity onPress={() => handleImagePress(sketch.image.image2)}>
+                          <Image
+                            source={{ uri: sketch.image.image2 }}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {sketch.image?.image3 && sketch.image.image3 !== "" && (
+                        <TouchableOpacity onPress={() => handleImagePress(sketch.image.image3)}>
+                          <Image
+                            source={{ uri: sketch.image.image3 }}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+              </ScrollView>
+
+              {/* Action buttons - only show for DoneDeterminingDesignPrice status */}
+              {order.status?.toLowerCase() === 'donedeterminingdesignprice' && (
+                <>
+                  {recordSketches.filter(sketch => sketch.phase === 2).length >
+                    0 &&
+                    !recordSketches.some(sketch => sketch.isSelected) && (
+                      <TouchableOpacity
+                        style={styles.confirmButton}
+                        onPress={() =>
+                          handleConfirmSketch(
+                            recordSketches.find(sketch => sketch.phase === 2)
+                              .id,
+                          )
+                        }>
+                        <Icon
+                          name="check-circle"
+                          size={20}
+                          color="#007AFF"
+                          style={styles.confirmButtonIcon}
+                        />
+                        <Text style={styles.confirmButtonText}>
+                          Xác nhận bản phác thảo
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  {maxPhase < 3 && (
+                    <TouchableOpacity
+                      style={styles.resketchOutlinedButton}
+                      onPress={handleRedraftPress}>
+                      <Icon
+                        name="refresh"
+                        size={16}
+                        color="#FF9500"
+                        style={styles.resketchButtonIcon}
+                      />
+                      <Text style={styles.resketchOutlinedButtonText}>
+                        Yêu cầu phác thảo lại
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </Card.Content>
+          </Card>
+        )}
+
+      {/* Third Sketch Images */}
+      {recordSketches.some(sketch => sketch.phase === 3) &&
+        showSketchPhaseStatuses
+          .map(s => s.toLowerCase())
+          .includes(order.status?.toLowerCase()) && (
+          <Card style={styles.section}>
+            <Card.Title
+              title="Phác thảo lần 3"
+              titleStyle={styles.sectionTitle}
+              left={props => (
+                <Icon
+                  {...props}
+                  name="pencil-outline"
+                  size={24}
+                  color="#007AFF"
+                />
+              )}
+            />
+            <Divider style={styles.divider} />
+            <Card.Content>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imageContainer}
+              >
+                {recordSketches
+                  .filter(sketch => sketch.phase === 3)
+                  .map((sketch, index) => (
+                    <View key={`phase3-${index}`} style={styles.imageWrapper}>
+                      {sketch.isSelected && (
+                        <View style={styles.selectedTag}>
+                          <Icon name="check-circle" size={12} color="#fff" style={styles.selectedTagIcon} />
+                          <Text style={styles.selectedTagText}>Đã chọn</Text>
+                        </View>
+                      )}
+                      {sketch.image?.imageUrl && (
+                        <TouchableOpacity onPress={() => handleImagePress(sketch.image.imageUrl)}>
+                          <Image
+                            source={{ uri: sketch.image.imageUrl }}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {sketch.image?.image2 && sketch.image.image2 !== "" && (
+                        <TouchableOpacity onPress={() => handleImagePress(sketch.image.image2)}>
+                          <Image
+                            source={{ uri: sketch.image.image2 }}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {sketch.image?.image3 && sketch.image.image3 !== "" && (
+                        <TouchableOpacity onPress={() => handleImagePress(sketch.image.image3)}>
+                          <Image
+                            source={{ uri: sketch.image.image3 }}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+              </ScrollView>
+
+              {/* Action buttons - only show for DoneDeterminingDesignPrice status */}
+              {order.status?.toLowerCase() === 'donedeterminingdesignprice' && (
+                <>
+                  {recordSketches.filter(sketch => sketch.phase === 3).length >
+                    0 &&
+                    !recordSketches.some(sketch => sketch.isSelected) && (
+                      <TouchableOpacity
+                        style={styles.confirmButton}
+                        onPress={() =>
+                          handleConfirmSketch(
+                            recordSketches.find(sketch => sketch.phase === 3)
+                              .id,
+                          )
+                        }>
+                        <Icon
+                          name="check-circle"
+                          size={20}
+                          color="#007AFF"
+                          style={styles.confirmButtonIcon}
+                        />
+                        <Text style={styles.confirmButtonText}>
+                          Xác nhận bản phác thảo
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  {maxPhase < 3 && (
+                    <TouchableOpacity
+                      style={styles.resketchOutlinedButton}
+                      onPress={handleRedraftPress}>
+                      <Icon
+                        name="refresh"
+                        size={16}
+                        color="#FF9500"
+                        style={styles.resketchButtonIcon}
+                      />
+                      <Text style={styles.resketchOutlinedButtonText}>
+                        Yêu cầu phác thảo lại
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </Card.Content>
+          </Card>
+        )}
+
+      {/* Detail Drawing Images - Phase 1 */}
+      {recordDesigns.some(design => design.phase === 1) &&
+        showDesignPhaseStatuses
+          .map(s => s.toLowerCase())
+          .includes(order.status?.toLowerCase()) && (
+          <Card style={styles.section}>
+            <Card.Title
+              title="Bản vẽ chi tiết lần 1"
+              titleStyle={styles.sectionTitle}
+              left={props => (
+                <Icon {...props} name="file-cad" size={24} color="#007AFF" />
+              )}
+            />
+            <Divider style={styles.divider} />
+            <Card.Content>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imageContainer}
+              >
+                {recordDesigns
+                  .filter(design => design.phase === 1)
+                  .map((design, index) => (
+                    <View
+                      key={`design-phase1-${index}`}
+                      style={styles.imageWrapper}>
+                      {design.isSelected && (
+                        <View style={styles.selectedTag}>
+                          <Icon
+                            name="check-circle"
+                            size={12}
+                            color="#fff"
+                            style={styles.selectedTagIcon}
+                          />
+                          <Text style={styles.selectedTagText}>Đã chọn</Text>
+                        </View>
+                      )}
+                      {design.image?.imageUrl && (
+                        <TouchableOpacity
+                          onPress={() =>
+                            handleImagePress(design.image.imageUrl)
+                          }>
+                          <Image
+                            source={{uri: design.image.imageUrl}}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {design.image?.image2 && design.image.image2 !== '' && (
+                        <TouchableOpacity
+                          onPress={() => handleImagePress(design.image.image2)}>
+                          <Image
+                            source={{uri: design.image.image2}}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {design.image?.image3 && design.image.image3 !== '' && (
+                        <TouchableOpacity
+                          onPress={() => handleImagePress(design.image.image3)}>
+                          <Image
+                            source={{uri: design.image.image3}}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+              </ScrollView>
+
+              {/* Action buttons - only show for DoneDeterminingMaterialPrice status */}
+              {order.status?.toLowerCase() ===
+                'donedeterminingmaterialprice' && (
+                <>
+                  {recordDesigns.filter(design => design.phase === 1).length >
+                    0 &&
+                    !recordDesigns.some(design => design.isSelected) && (
+                      <TouchableOpacity
+                        style={styles.confirmButton}
+                        onPress={() =>
+                          handleConfirmDesign(
+                            recordDesigns.find(design => design.phase === 1).id,
+                          )
+                        }>
+                        <Icon
+                          name="check-circle"
+                          size={20}
+                          color="#007AFF"
+                          style={styles.confirmButtonIcon}
+                        />
+                        <Text style={styles.confirmButtonText}>
+                          Xác nhận bản vẽ chi tiết
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  {maxPhaseDesign < 2 && (
+                    <TouchableOpacity
+                      style={styles.resketchOutlinedButton}
+                      onPress={handleRedesignPress}>
+                      <Icon
+                        name="refresh"
+                        size={16}
+                        color="#FF9500"
+                        style={styles.resketchButtonIcon}
+                      />
+                      <Text style={styles.resketchOutlinedButtonText}>
+                        Yêu cầu thiết kế lại
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </Card.Content>
+          </Card>
+        )}
+
+      {/* Detail Drawing Images - Phase 2 */}
+      {recordDesigns.some(design => design.phase === 2) &&
+        showDesignPhaseStatuses
+          .map(s => s.toLowerCase())
+          .includes(order.status?.toLowerCase()) && (
+          <Card style={styles.section}>
+            <Card.Title
+              title="Bản vẽ chi tiết lần 2"
+              titleStyle={styles.sectionTitle}
+              left={props => (
+                <Icon {...props} name="file-cad" size={24} color="#007AFF" />
+              )}
+            />
+            <Divider style={styles.divider} />
+            <Card.Content>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imageContainer}
+              >
+                {recordDesigns
+                  .filter(design => design.phase === 2)
+                  .map((design, index) => (
+                    <View
+                      key={`design-phase2-${index}`}
+                      style={styles.imageWrapper}>
+                      {design.isSelected && (
+                        <View style={styles.selectedTag}>
+                          <Icon
+                            name="check-circle"
+                            size={12}
+                            color="#fff"
+                            style={styles.selectedTagIcon}
+                          />
+                          <Text style={styles.selectedTagText}>Đã chọn</Text>
+                        </View>
+                      )}
+                      {design.image?.imageUrl && (
+                        <TouchableOpacity
+                          onPress={() =>
+                            handleImagePress(design.image.imageUrl)
+                          }>
+                          <Image
+                            source={{uri: design.image.imageUrl}}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {design.image?.image2 && design.image.image2 !== '' && (
+                        <TouchableOpacity
+                          onPress={() => handleImagePress(design.image.image2)}>
+                          <Image
+                            source={{uri: design.image.image2}}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {design.image?.image3 && design.image.image3 !== '' && (
+                        <TouchableOpacity
+                          onPress={() => handleImagePress(design.image.image3)}>
+                          <Image
+                            source={{uri: design.image.image3}}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+              </ScrollView>
+
+              {/* Action buttons - only show for DoneDeterminingMaterialPrice status */}
+              {order.status?.toLowerCase() ===
+                'donedeterminingmaterialprice' && (
+                <>
+                  {recordDesigns.filter(design => design.phase === 2).length >
+                    0 &&
+                    !recordDesigns.some(design => design.isSelected) && (
+                      <TouchableOpacity
+                        style={styles.confirmButton}
+                        onPress={() =>
+                          handleConfirmDesign(
+                            recordDesigns.find(design => design.phase === 2).id,
+                          )
+                        }>
+                        <Icon
+                          name="check-circle"
+                          size={20}
+                          color="#007AFF"
+                          style={styles.confirmButtonIcon}
+                        />
+                        <Text style={styles.confirmButtonText}>
+                          Xác nhận bản vẽ chi tiết
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  {maxPhaseDesign < 3 && (
+                    <TouchableOpacity
+                      style={styles.resketchOutlinedButton}
+                      onPress={handleRedesignPress}>
+                      <Icon
+                        name="refresh"
+                        size={16}
+                        color="#FF9500"
+                        style={styles.resketchButtonIcon}
+                      />
+                      <Text style={styles.resketchOutlinedButtonText}>
+                        Yêu cầu thiết kế lại
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </Card.Content>
+          </Card>
+        )}
+
+      {/* Detail Drawing Images - Phase 3 */}
+      {recordDesigns.some(design => design.phase === 3) &&
+        showDesignPhaseStatuses
+          .map(s => s.toLowerCase())
+          .includes(order.status?.toLowerCase()) && (
+          <Card style={styles.section}>
+            <Card.Title
+              title="Bản vẽ chi tiết lần 3"
+              titleStyle={styles.sectionTitle}
+              left={props => (
+                <Icon {...props} name="file-cad" size={24} color="#007AFF" />
+              )}
+            />
+            <Divider style={styles.divider} />
+            <Card.Content>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.imageContainer}
+              >
+                {recordDesigns
+                  .filter(design => design.phase === 3)
+                  .map((design, index) => (
+                    <View
+                      key={`design-phase3-${index}`}
+                      style={styles.imageWrapper}>
+                      {design.isSelected && (
+                        <View style={styles.selectedTag}>
+                          <Icon
+                            name="check-circle"
+                            size={12}
+                            color="#fff"
+                            style={styles.selectedTagIcon}
+                          />
+                          <Text style={styles.selectedTagText}>Đã chọn</Text>
+                        </View>
+                      )}
+                      {design.image?.imageUrl && (
+                        <TouchableOpacity
+                          onPress={() =>
+                            handleImagePress(design.image.imageUrl)
+                          }>
+                          <Image
+                            source={{uri: design.image.imageUrl}}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {design.image?.image2 && design.image.image2 !== '' && (
+                        <TouchableOpacity
+                          onPress={() => handleImagePress(design.image.image2)}>
+                          <Image
+                            source={{uri: design.image.image2}}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {design.image?.image3 && design.image.image3 !== '' && (
+                        <TouchableOpacity
+                          onPress={() => handleImagePress(design.image.image3)}>
+                          <Image
+                            source={{uri: design.image.image3}}
+                            style={styles.image}
+                            resizeMode="cover"
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+              </ScrollView>
+
+              {/* Action buttons - only show for DoneDeterminingMaterialPrice status */}
+              {order.status?.toLowerCase() ===
+                'donedeterminingmaterialprice' && (
+                <>
+                  {recordDesigns.filter(design => design.phase === 3).length >
+                    0 &&
+                    !recordDesigns.some(design => design.isSelected) && (
+                      <TouchableOpacity
+                        style={styles.confirmButton}
+                        onPress={() =>
+                          handleConfirmDesign(
+                            recordDesigns.find(design => design.phase === 3).id,
+                          )
+                        }>
+                        <Icon
+                          name="check-circle"
+                          size={20}
+                          color="#007AFF"
+                          style={styles.confirmButtonIcon}
+                        />
+                        <Text style={styles.confirmButtonText}>
+                          Xác nhận bản vẽ chi tiết
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  {maxPhaseDesign < 3 && (
+                    <TouchableOpacity
+                      style={styles.resketchOutlinedButton}
+                      onPress={handleRedesignPress}>
+                      <Icon
+                        name="refresh"
+                        size={16}
+                        color="#FF9500"
+                        style={styles.resketchButtonIcon}
+                      />
+                      <Text style={styles.resketchOutlinedButtonText}>
+                        Yêu cầu thiết kế lại
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </Card.Content>
+          </Card>
+        )}
+
+      {/* Material List Section - Only show when serviceOrderDetails has data */}
+      {order?.serviceOrderDetails && order.serviceOrderDetails.length > 0 && (
+        <Card style={styles.section}>
+          <Card.Title
+            title="Danh sách vật liệu"
+            titleStyle={styles.sectionTitle}
+            left={props => (
+              <Icon {...props} name="tree" size={24} color="#007AFF" />
+            )}
+          />
+          <Divider style={styles.divider} />
+          <Card.Content>
+            {order.serviceOrderDetails.map((detail, index) => {
+              const product = materialProducts[detail.productId];
+              return (
+                <View key={`material-${index}`} style={styles.materialItem}>
+                  {product?.image?.imageUrl ? (
+                    <TouchableOpacity
+                      onPress={() => handleImagePress(product.image.imageUrl)}
+                      style={styles.materialImageContainer}>
+                      <Image
+                        source={{uri: product.image.imageUrl}}
+                        style={styles.materialImage}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.materialImagePlaceholder}>
+                      <Icon name="image-off" size={24} color="#999" />
+                    </View>
+                  )}
+
+                  <View style={styles.materialDetails}>
+                    <Text style={styles.materialName}>
+                      {product?.name || 'Đang tải...'}
+                    </Text>
+                    <View style={styles.materialRow}>
+                      <Text style={styles.materialLabel}>Số lượng:</Text>
+                      <Text style={styles.materialValue}>
+                        {detail.quantity}
+                      </Text>
+                    </View>
+                    <View style={styles.materialRow}>
+                      <Text style={styles.materialLabel}>Đơn giá:</Text>
+                      <Text style={styles.materialValue}>
+                        {formatCurrency(detail.price)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.materialPriceContainer}>
+                    <Text style={styles.materialTotalPrice}>
+                      {formatCurrency(detail.totalPrice)}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+
+            <View style={styles.materialTotalContainer}>
+              <Text style={styles.materialTotalLabel}>Tổng cộng:</Text>
+              <Text style={styles.materialTotalValue}>
+                {formatCurrency(
+                  order.serviceOrderDetails.reduce(
+                    (total, detail) => total + detail.totalPrice,
+                    0,
+                  ),
+                )}
+              </Text>
+            </View>
+          </Card.Content>
+        </Card>
+      )}
+
+      {/* Contract Section - only show for appropriate status values */}
+      {shouldDisplayContract(order.status) && (
+        <Card style={styles.section}>
+          <Card.Title
+            title="Hợp đồng thiết kế"
+            titleStyle={styles.sectionTitle}
+            left={props => (
+              <Icon
+                {...props}
+                name="file-document-outline"
+                size={24}
+                color="#007AFF"
+              />
+            )}
+          />
+          <Divider style={styles.divider} />
+          <Card.Content>
+            {contractLoading ? (
+              <View style={styles.contractLoading}>
+                <ActivityIndicator size="small" color="#007AFF" />
+                <Text style={styles.contractLoadingText}>
+                  Đang tải hợp đồng...
+                </Text>
+              </View>
+            ) : contractError ? (
+              <View style={styles.contractError}>
+                <Icon
+                  name="alert-circle-outline"
+                  size={24}
+                  color="#FF3B30"
+                  style={{marginBottom: 8}}
+                />
+                <Text style={styles.contractErrorText}>{contractError}</Text>
+              </View>
+            ) : contract ? (
+              <>
+                {/* View Contract Section */}
+                {contract.modificationDate !== null ? (
+                  <View style={styles.contractSignedContainer}>
+                    <Icon
+                      name="check-circle"
+                      size={24}
+                      color="#34C759"
+                      style={styles.contractSignedIcon}
+                    />
+                    <Text style={styles.contractSignedText}>
+                      Đã ký hợp đồng
+                    </Text>
+
+                    <TouchableOpacity
+                      style={[styles.viewContractButton, {marginTop: 12}]}
+                      onPress={handleViewContract}>
+                      <Icon
+                        name="file-pdf-box"
+                        size={20}
+                        color="#fff"
+                        style={styles.viewContractIcon}
+                      />
+                      <Text style={styles.viewContractText}>Xem hợp đồng</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.contractInfo}>
+                    <View style={styles.infoRow}>
+                      <Icon
+                        name="file-document-outline"
+                        size={20}
+                        color="#666"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.infoText}>
+                        1: Hợp đồng thiết kế
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.viewContractButton}
+                      onPress={handleViewContract}>
+                      <Icon
+                        name="file-pdf-box"
+                        size={20}
+                        color="#fff"
+                        style={styles.viewContractIcon}
+                      />
+                      <Text style={styles.viewContractText}>Xem hợp đồng</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Signature Section - Only show for waitDeposit status */}
+                {order.status?.toLowerCase() === 'waitdeposit' &&
+                  !contract.signatureUrl && (
+                    <View style={styles.signatureSection}>
+                      <View style={styles.infoRow}>
+                        <Icon
+                          name="draw"
+                          size={20}
+                          color="#666"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.infoText}>
+                          2: Tải lên chữ ký của bạn
+                        </Text>
+                      </View>
+
+                      {/* Guidance Dropdown */}
+                      <TouchableOpacity
+                        style={styles.guidanceHeader}
+                        onPress={() => setShowGuidance(!showGuidance)}>
+                        <Icon
+                          name={showGuidance ? 'chevron-down' : 'chevron-right'}
+                          size={20}
+                          color="#007AFF"
+                          style={styles.guidanceIcon}
+                        />
+                        <Text style={styles.guidanceHeaderText}>
+                          <Icon
+                            name="information-outline"
+                            size={16}
+                            color="#007AFF"
+                          />{' '}
+                          Hướng dẫn tạo và tải lên chữ ký
+                        </Text>
+                      </TouchableOpacity>
+
+                      {showGuidance && (
+                        <View style={styles.guidanceContent}>
+                          {/* Prepare signature image */}
+                          <View style={styles.guidanceSection}>
+                            <Text style={styles.guidanceSectionTitle}>
+                              <Icon name="diamond" size={16} color="#007AFF" />{' '}
+                              Chuẩn bị hình ảnh chữ ký
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              <Text style={styles.guidanceBold}>
+                                Ký trên giấy và chụp ảnh:
+                              </Text>{' '}
+                              Dùng giấy trắng và bút mực đen. Chụp rõ nét, đủ
+                              sáng.
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              <Text style={styles.guidanceBold}>
+                                Quét (scan):
+                              </Text>{' '}
+                              Dùng máy scan chuyển chữ ký sang file ảnh.
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              <Text style={styles.guidanceBold}>
+                                Ứng dụng vẽ:
+                              </Text>{' '}
+                              Vẽ chữ ký trên điện thoại/máy tính bảng rồi xuất
+                              ra ảnh PNG/JPG.
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              <Text style={styles.guidanceBold}>
+                                Bảng vẽ điện tử:
+                              </Text>{' '}
+                              Tạo chữ ký số trực tiếp bằng bút vẽ.
+                            </Text>
+                          </View>
+
+                          {/* Signature image requirements */}
+                          <View style={styles.guidanceSection}>
+                            <Text style={styles.guidanceSectionTitle}>
+                              <Icon name="diamond" size={16} color="#007AFF" />{' '}
+                              Yêu cầu về hình ảnh chữ ký
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              <Text style={styles.guidanceBold}>
+                                Định dạng:
+                              </Text>
+                              <View style={styles.formatTag}>
+                                <Text style={styles.formatTagText}>JPG</Text>
+                              </View>
+                              ,
+                              <View style={styles.formatTag}>
+                                <Text style={styles.formatTagText}>PNG</Text>
+                              </View>
+                              ,
+                              <View style={styles.formatTag}>
+                                <Text style={styles.formatTagText}>JPEG</Text>
+                              </View>
+                              ,
+                              <View style={styles.formatTag}>
+                                <Text style={styles.formatTagText}>GIF</Text>
+                              </View>
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              <Text style={styles.guidanceBold}>
+                                Kích thước file tối đa:
+                              </Text>{' '}
+                              5MB
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              <Text style={styles.guidanceBold}>
+                                Độ phân giải khuyến nghị:
+                              </Text>{' '}
+                              300 DPI+
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              <Text style={styles.guidanceBold}>Nền:</Text>{' '}
+                              trắng hoặc trong suốt (ưu tiên)
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              <Text style={styles.guidanceBold}>Màu sắc:</Text>{' '}
+                              đen hoặc xanh đậm
+                            </Text>
+                          </View>
+
+                          {/* Steps to upload signature */}
+                          <View style={styles.guidanceSection}>
+                            <Text style={styles.guidanceSectionTitle}>
+                              <Icon name="diamond" size={16} color="#007AFF" />{' '}
+                              Các bước tải lên chữ ký
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              1. Đọc kỹ hợp đồng bên trên.
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              2. Nhấn nút{' '}
+                              <View style={styles.buttonTag}>
+                                <Text style={styles.buttonTagText}>
+                                  Tải lên chữ ký (ảnh)
+                                </Text>
+                              </View>
+                              .
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              3. Chọn file hình ảnh từ thiết bị.
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              4. Xem trước chữ ký, nhấn X để đổi nếu cần.
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              5. Nhấn{' '}
+                              <View style={styles.buttonTag}>
+                                <Text style={styles.buttonTagText}>
+                                  Xác nhận & Thanh toán cọc
+                                </Text>
+                              </View>{' '}
+                              để hoàn tất.
+                            </Text>
+                          </View>
+
+                          {/* Troubleshooting */}
+                          <View style={styles.guidanceSection}>
+                            <Text style={styles.guidanceSectionTitle}>
+                              <Icon name="diamond" size={16} color="#007AFF" />{' '}
+                              Gặp sự cố?
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              • Kiểm tra định dạng và kích thước ảnh.
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              • Thử trình duyệt khác hoặc tải lại trang.
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              • Kiểm tra kết nối internet.
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              • Thử lại với hình ảnh khác nếu ảnh bị mờ.
+                            </Text>
+                          </View>
+
+                          {/* Support Contact */}
+                          <View style={styles.guidanceSection}>
+                            <Text style={styles.guidanceSectionTitle}>
+                              <Icon
+                                name="headphones"
+                                size={16}
+                                color="#007AFF"
+                              />{' '}
+                              Hỗ trợ
+                            </Text>
+                            <Text style={styles.guidanceText}>
+                              Nếu bạn cần thêm hỗ trợ về việc tải lên chữ ký,
+                              vui lòng liên hệ với đội ngũ hỗ trợ khách hàng của
+                              chúng tôi qua:
+                            </Text>
+                            <View style={styles.supportInfoContainer}>
+                              <View style={styles.supportInfoRow}>
+                                <Text style={styles.supportLabel}>Email:</Text>
+                                <Text style={styles.supportValue}>
+                                  support@greenspace.vn
+                                </Text>
+                              </View>
+                              <View style={styles.supportInfoRow}>
+                                <Text style={styles.supportLabel}>
+                                  Hotline:
+                                </Text>
+                                <Text style={styles.supportValue}>
+                                  1900-xxxx-xxx{' '}
+                                  <Text style={styles.supportHours}>
+                                    (8:00 - 18:00, Thứ Hai - Thứ Bảy)
+                                  </Text>
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+                      )}
+
+                      {/* Signature display area */}
+                      {signatureImage ? (
+                        <View style={styles.signaturePreviewContainer}>
+                          <TouchableOpacity
+                            onPress={() =>
+                              handleSignaturePreview(signatureImage)
+                            }>
+                            <Image
+                              source={{uri: signatureImage}}
+                              style={styles.signaturePreview}
+                              resizeMode="contain"
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.removeSignatureButton}
+                            onPress={() => setSignatureImage(null)}>
+                            <Icon
+                              name="close-circle"
+                              size={22}
+                              color="#FF3B30"
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <View style={styles.uploadSignatureContainer}>
+                          <TouchableOpacity
+                            style={styles.uploadSignatureButton}
+                            onPress={() => setShowSignatureOptions(true)}>
+                            <Icon
+                              name="upload"
+                              size={24}
+                              color="#007AFF"
+                              style={styles.uploadIcon}
+                            />
+                            <Text style={styles.uploadText}>
+                              Tải lên chữ ký
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+
+                      {/* Step 3: Confirm and Sign Contract */}
+                      <View style={styles.contractInfo}>
+                        <View style={styles.infoRow}>
+                          <Icon
+                            name="check"
+                            size={20}
+                            color="#666"
+                            style={styles.infoIcon}
+                          />
+                          <Text style={styles.infoText}>
+                            3: Xác nhận và ký hợp đồng
+                          </Text>
+                        </View>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.viewContractButton,
+                            !signatureImage && styles.disabledButton,
+                          ]}
+                          onPress={handleSignContract}
+                          disabled={!signatureImage}>
+                          <Icon
+                            name="check"
+                            size={20}
+                            color="#fff"
+                            style={styles.viewContractIcon}
+                          />
+                          <Text style={styles.viewContractText}>
+                            Ký hợp đồng
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Signature upload options dropdown */}
+                      {showSignatureOptions && (
+                        <View style={styles.signatureOptionsDropdown}>
+                          <TouchableOpacity
+                            style={styles.signatureOption}
+                            onPress={captureSignatureFromCamera}>
+                            <Icon
+                              name="camera"
+                              size={20}
+                              color="#007AFF"
+                              style={styles.optionIcon}
+                            />
+                            <Text style={styles.optionText}>Chụp ảnh</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.signatureOption}
+                            onPress={chooseSignatureFromGallery}>
+                            <Icon
+                              name="image"
+                              size={20}
+                              color="#007AFF"
+                              style={styles.optionIcon}
+                            />
+                            <Text style={styles.optionText}>
+                              Chọn từ thư viện
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.signatureOption}
+                            onPress={openSignatureDrawing}>
+                            <Icon
+                              name="pencil"
+                              size={20}
+                              color="#007AFF"
+                              style={styles.optionIcon}
+                            />
+                            <Text style={styles.optionText}>Vẽ chữ ký</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[
+                              styles.signatureOption,
+                              styles.signatureOptionCancel,
+                            ]}
+                            onPress={() => setShowSignatureOptions(false)}>
+                            <Text style={styles.cancelOptionText}>Hủy</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  )}
+              </>
+            ) : (
+              <Text style={styles.noContractText}>Chưa có hợp đồng</Text>
+            )}
+          </Card.Content>
+        </Card>
+      )}
+
+      <ImageModal />
+      <ConfirmModal />
+      <SuccessModal />
+      <SignContractConfirmModal />
+      <PaymentModal />
+      {redraftModal}
+      {redesignModal}
+      <CancelServiceModal />
+      <ContractModal
+        visible={contractModalVisible}
+        pdfUrl={contract?.description}
+        onClose={() => setContractModalVisible(false)}
+      />
+
+      {/* Signature preview modal */}
+      <Modal
+        visible={!!selectedImage && !modalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedImage(null)}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalCloseButton}
+            onPress={() => setSelectedImage(null)}>
+            <Icon name="close" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Image
+            source={{uri: selectedImage}}
+            style={styles.fullScreenImage}
+            resizeMode="contain"
+          />
+        </View>
+      </Modal>
+
+      {/* Cancel Service Button */}
+      {(order.status?.toLowerCase() === 'pending' ||
+        order.status?.toLowerCase() === 'consultingandsketching' ||
+        order.status?.toLowerCase() === 'determiningdesignprice' ||
+        order.status?.toLowerCase() === 'donedeterminingdesignprice' ||
+        order.status?.toLowerCase() === 'waitdeposit' ||
+        order.status?.toLowerCase() === 'depositsuccessful' ||
+        order.status?.toLowerCase() === 'determiningmaterialprice' ||
+        order.status?.toLowerCase() === 'donedeterminingmaterialprice' ||
+        order.status?.toLowerCase() === 'donedesign') && (
+        <View style={styles.cancelServiceContainer}>
+          <TouchableOpacity
+            style={styles.cancelServiceButton}
+            onPress={() => setCancelModalVisible(true)}>
+            <Icon name="close-circle-outline" size={20} color="#fff" style={styles.cancelServiceIcon} />
+            <Text style={styles.cancelServiceText}>
+              {order.status?.toLowerCase() === 'depositsuccessful' 
+                ? 'Hủy dịch vụ (Hoàn trả 10% cọc)'
+                : (order.status?.toLowerCase() === 'determiningmaterialprice' ||
+                  order.status?.toLowerCase() === 'donedeterminingmaterialprice' ||
+                  order.status?.toLowerCase() === 'donedesign')
+                ? 'Hủy dịch vụ (Thanh toán 50% còn lại)'
+                : 'Hủy dịch vụ'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </ScrollView>
+  );
+};
+
+const getStatusText = status => {
+  switch (status?.toLowerCase()) {
+    case 'pending':
+      return 'Chờ xử lý';
+    case 'consultingandsketching':
+      return 'Đang tư vấn & phác thảo';
+    case 'determiningdesignprice':
+      return 'Đang tư vấn & phác thảo';
+    case 'depositsuccessful':
+      return 'Đặt cọc thành công';
+    case 'assigntodesigner':
+      return 'Đang trong quá trình thiết kế';
+    case 'determiningmaterialprice':
+      return 'Đang trong quá trình thiết kế';
+    case 'donedesign':
+      return 'Hoàn thành thiết kế';
+    case 'paymentsuccess':
+      return 'Thanh toán thành công';
+    case 'processing':
+      return 'Đang xử lý';
+    case 'pickedpackageanddelivery':
+      return 'Đã lấy hàng & đang giao';
+    case 'deliveryfail':
+      return 'Giao hàng thất bại';
+    case 'redelivery':
+      return 'Giao lại';
+    case 'deliveredsuccessfully':
+      return 'Đã giao hàng thành công';
+    case 'completeorder':
+      return 'Hoàn thành đơn hàng';
+    case 'ordercancelled':
+      return 'Đơn hàng đã bị hủy';
+    case 'warning':
+      return 'Cảnh báo vượt 30%';
+    case 'refund':
+      return 'Hoàn tiền';
+    case 'donerefund':
+      return 'Đã hoàn tiền';
+    case 'stopservice':
+      return 'Dừng dịch vụ';
+    case 'reconsultingandsketching':
+      return 'Phác thảo lại';
+    case 'redesign':
+      return 'Thiết kế lại';
+    case 'waitdeposit':
+      return 'Chờ đặt cọc';
+    case 'donedeterminingdesignprice':
+      return 'Hoàn thành tư vấn & phác thảo';
+    case 'donedeterminingmaterialprice':
+      return 'Hoàn thành xác định giá vật liệu';
+    case 'redeterminingdesignprice':
+      return 'Xác định lại giá thiết kế';
+    case 'exchangeprodcut':
+      return 'Đổi sản phẩm';
+    case 'waitforscheduling':
+      return 'Chờ lên lịch';
+    case 'installing':
+      return 'Đang lắp đặt';
+    case 'doneinstalling':
+      return 'Đã lắp đặt xong';
+    case 'reinstall':
+      return 'Lắp đặt lại';
+    case 'customerconfirm':
+      return 'Khách hàng xác nhận';
+    case 'successfully':
+      return 'Thành công';
+    default:
+      return status || 'Không xác định';
+  }
+};
+
+const getStatusColor = status => {
+  switch (status?.toLowerCase()) {
+    case 'pending':
+      return '#FF9500';
+
+      case 'consultingandsketching':  
+      case 'determiningdesignprice':
+      return '#5856D6'; // Purple
+      case 'depositsuccessful':
+      return '#34C759'; // Green
+      case 'assigntodesigner':
+      return '#007AFF'; // Blue
+      case 'determiningmaterialprice':
+      return '#007AFF'; // Blue
+      case 'donedesign':
+      return '#34C759'; // Green
+      case 'paymentsuccess':
+      return '#34C759'; // Green
+      case 'processing':
+      return '#FF9500'; // Orange
+      case 'pickedpackageanddelivery':
+      return '#5AC8FA'; // Blue
+      case 'deliveryfail':
+      return '#FF3B30'; // Red
+      case 'redelivery':
+      return '#FF9500'; // Orange
+      case 'deliveredsuccessfully':
+      return '#34C759'; // Green
+      case 'completeorder':
+      return '#30A46C'; // Green
+      case 'ordercancelled':
+      return '#FF3B30'; // Red
+      case 'warning':
+      return '#FF3B30'; // Red
+      case 'refund':
+      return '#FF9500'; // Orange
+      case 'donerefund':
+      return '#34C759'; // Green
+      case 'stopservice':
+      return '#8E8E93'; // Gray
+      case 'reconsultingandsketching':
+      return '#5856D6'; // Purple
+      case 'redesign':
+      return '#5856D6'; // Purple
+      case 'waitdeposit':
+      return '#FF9500'; // Orange
+      case 'donedeterminingdesignprice':
+      return '#34C759'; // Green
+      case 'donedeterminingmaterialprice':
+      return '#34C759'; // Green
+      case 'redeterminingdesignprice':
+      return '#5AC8FA'; // Blue
+      case 'exchangeprodcut':
+      return '#FF9500'; // Orange
+      case 'waitforscheduling':
+      return '#FF9500'; // Orange
+      case 'installing':
+      return '#007AFF'; // Blue
+      case 'doneinstalling':
+      return '#34C759'; // Green
+      case 'reinstall':
+      return '#FF9500'; // Orange
+      case 'customerconfirm':
+      return '#34C759'; // Green
+      case 'successfully':
+      return '#34C759'; // Green
+   
+    default:
+      return '#8E8E93'; // Gray
+  }
+};
+
+const getServiceTypeText = serviceType => {
+  switch (serviceType) {
+    case 'NoDesignIdea':
+      return 'Thiết kế mới';
+    default:
+      return serviceType || 'Không xác định';
+  }
+};
+
+const formatCurrency = amount => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(amount);
+};
+
+const formatDate = dateString => {
+  if (!dateString) return 'N/A';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString;
+  }
+};
+
+const formatAppointmentDate = dateString => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  } catch (error) {
+    console.error('Error formatting appointment date:', error);
+    return dateString;
+  }
+};
+
+const formatAppointmentTime = timeString => {
+  if (!timeString) return '';
+  try {
+    // Handle HH:MM:SS format
+    if (timeString.includes(':')) {
+      const [hours, minutes] = timeString.split(':');
+      return `${hours}:${minutes}`;
+    }
+    return timeString;
+  } catch (error) {
+    console.error('Error formatting appointment time:', error);
+    return timeString;
+  }
+};
+
+export default ServiceOrderNoUsingDetailScreen;

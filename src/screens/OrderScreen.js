@@ -119,7 +119,6 @@ const OrderScreen = ({navigation, route}) => {
         totalPrice: newTotalCost,
       }));
 
-      console.log('Recalculated Prices:', {newMaterialPrice, newTotalCost});
     } else {
       // Handle case where materials might be empty initially or after removal
       const newTotalCost = designData.designPrice || 0;
@@ -167,7 +166,6 @@ const OrderScreen = ({navigation, route}) => {
         unitPrice: m.price / m.quantity, // Ensure this calculation is correct based on API response
       }));
       setMaterials(correctedMaterials);
-      console.log('Fetched and corrected materials:', correctedMaterials);
     } catch (err) {
       console.error('Error fetching materials:', err);
       Alert.alert('Error', 'Could not load product details. Please try again.');
@@ -229,7 +227,6 @@ const OrderScreen = ({navigation, route}) => {
         );
       }
 
-      console.log('Fetched addresses:', response.data);
 
       if (response.status === 200) {
         let apiAddresses = response.data || [];
@@ -256,7 +253,6 @@ const OrderScreen = ({navigation, route}) => {
             ) {
               addressCopy.isDefault = true;
               foundContextMatch = true;
-              console.log('Found matching address in API:', addressCopy);
             }
 
             addresses.push(addressCopy);
@@ -265,22 +261,18 @@ const OrderScreen = ({navigation, route}) => {
           // Only add the context address if it wasn't found in the API results
           if (contextAddress && !foundContextMatch) {
             addresses.unshift(contextAddress); // Add to beginning of array
-            console.log("Adding context address as it wasn't found in API");
           }
         } else if (contextAddress) {
           // If no API addresses, just use the context address
           addresses.push(contextAddress);
-          console.log('No API addresses, using context address');
         }
 
-        console.log('Final addresses list:', addresses);
         setAddressList(addresses);
 
         // Select default address if none is selected
         if (!selectedAddress && addresses.length > 0) {
           const defaultAddr =
             addresses.find(addr => addr.isDefault) || addresses[0];
-          console.log('Selecting default address:', defaultAddr);
           setSelectedAddress(defaultAddr);
           setName(defaultAddr.name || user?.name || '');
           setPhone(defaultAddr.phone || user?.phone || '');
@@ -333,7 +325,6 @@ const OrderScreen = ({navigation, route}) => {
         userAddress: userAddress,
       };
 
-      console.log('Creating new address:', requestBody);
 
       // Try localhost first, then fallback to 10.0.2.2
       let response;
@@ -362,7 +353,6 @@ const OrderScreen = ({navigation, route}) => {
         );
       }
 
-      console.log('Address creation response:', response);
 
       if (response.status === 200 || response.status === 201) {
         // Clear form
@@ -537,7 +527,6 @@ const OrderScreen = ({navigation, route}) => {
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
-    navigation.navigate('Home'); // Navigate home after closing
   };
 
   const handleViewOrders = () => {
@@ -572,7 +561,6 @@ const OrderScreen = ({navigation, route}) => {
     setSavingAddress(true); // Use savingAddress state for loading indication
 
     try {
-      console.log('Starting order creation process...');
 
       // 1. Prepare Service Order Request Body
       const addressToUse =
@@ -603,10 +591,7 @@ const OrderScreen = ({navigation, route}) => {
         products: productsPayload,
       };
 
-      console.log(
-        'Creating service order with data:',
-        JSON.stringify(orderRequestBody, null, 2),
-      );
+     
 
       // 2. Create Service Order (Try localhost, then 10.0.2.2)
       let orderResponse;
@@ -635,7 +620,6 @@ const OrderScreen = ({navigation, route}) => {
         );
       }
 
-      console.log('Service order creation response:', orderResponse);
 
       if (orderResponse.status !== 200 && orderResponse.status !== 201) {
         throw new Error(
@@ -645,7 +629,6 @@ const OrderScreen = ({navigation, route}) => {
 
       const createdOrder = orderResponse.data.data; // Assuming response contains the created order with ID
       const serviceOrderId = createdOrder.id;
-      console.log(`Order created successfully with ID: ${serviceOrderId}`);
 
       // 3. Prepare Bill Request Body
       const billRequestBody = {
@@ -656,10 +639,7 @@ const OrderScreen = ({navigation, route}) => {
         description: 'Thanh toán đơn dịch vụ',
       };
 
-      console.log(
-        'Creating bill with data:',
-        JSON.stringify(billRequestBody, null, 2),
-      );
+      
 
       // 4. Create Bill (Try 10.0.2.2 first as per user request)
       const billResponse = await axios.post(
@@ -673,7 +653,6 @@ const OrderScreen = ({navigation, route}) => {
         },
       );
 
-      console.log('Bill creation response:', billResponse);
 
       if (billResponse.status !== 200 && billResponse.status !== 201) {
         // Handle bill creation failure (order was already created)
@@ -683,10 +662,8 @@ const OrderScreen = ({navigation, route}) => {
         );
       }
 
-      console.log('Bill created successfully');
 
       // --- START: Update Product Stock --- 
-      console.log('Attempting to update stock for ordered products...');
       const stockUpdatePromises = materials.map(async (material) => {
         try {
           // 1. Fetch current product details
@@ -701,7 +678,6 @@ const OrderScreen = ({navigation, route}) => {
           const newStock = Math.max(0, currentStock - orderedQuantity); // Prevent negative stock
 
           if (newStock === currentStock) {
-            console.log(`Stock for ${material.name} (${material.id}) already up-to-date or quantity was 0.`);
             return { status: 'skipped', productId: material.id };
           }
 
@@ -715,7 +691,7 @@ const OrderScreen = ({navigation, route}) => {
             price: currentProduct.price || 0,
             description: currentProduct.description || "",
             designImage1URL: currentProduct.designImage1URL || null,
-            size: currentProduct.size || 0,
+            size: currentProduct.size || 1,
             image: {
               imageUrl: currentProduct.image?.imageUrl || "",
               image2: currentProduct.image?.image2 || null,
@@ -725,7 +701,6 @@ const OrderScreen = ({navigation, route}) => {
           // Remove id from payload if backend doesn't expect it in PUT body
           // delete updatePayload.id; 
 
-          console.log(`Updating stock for ${material.name} (${material.id}) to ${newStock}. Payload:`, updatePayload);
 
           // 4. Send PUT request
           await axios.put(`${API_URL}/product/${material.id}`, updatePayload, {
@@ -734,7 +709,6 @@ const OrderScreen = ({navigation, route}) => {
               Authorization: `Bearer ${user.backendToken}`,
             }
           });
-          console.log(`Successfully updated stock for ${material.name} (${material.id})`);
           return { status: 'fulfilled', productId: material.id };
         } catch (productUpdateError) {
           console.error(`Failed to update stock for product ${material.id} (${material.name}):`, productUpdateError.response?.data || productUpdateError.message);
@@ -745,7 +719,6 @@ const OrderScreen = ({navigation, route}) => {
 
       // Wait for all updates to settle
       const results = await Promise.allSettled(stockUpdatePromises);
-      console.log('Stock update results:', results);
       // --- END: Update Product Stock ---
 
       // 5. Update Wallet Balance & Add Transaction (ONLY after both succeed)
@@ -755,7 +728,6 @@ const OrderScreen = ({navigation, route}) => {
         amount: -calculatedTotalCost,
         description: `Thanh toán thiết kế ${designData.name}`,
       });
-      console.log('Wallet updated successfully');
 
       // 6. Show Success Modal
       setShowSuccessModal(true);
@@ -785,13 +757,11 @@ const OrderScreen = ({navigation, route}) => {
   const fetchAllProducts = async () => {
     // Avoid refetching if already loaded
     if (allProducts.length > 0) {
-      console.log('Using cached products.');
       return allProducts;
     }
 
     setLoadingAllProducts(true);
     try {
-      console.log('Fetching all products...');
       // Try localhost first, then fallback
       let response;
       try {
@@ -803,7 +773,6 @@ const OrderScreen = ({navigation, route}) => {
       }
 
       const fetchedProducts = response.data?.data || response.data || []; // Handle potential data wrapping
-      console.log(`Fetched ${fetchedProducts.length} products.`);
       setAllProducts(fetchedProducts);
       return fetchedProducts;
     } catch (error) {
@@ -840,7 +809,6 @@ const OrderScreen = ({navigation, route}) => {
 
   // Placeholder for Replace Material Modal Logic
   const handleOpenReplaceModal = async materialToReplace => {
-    console.log('materialToReplace', materialToReplace);
 
     setMaterialToReplace(materialToReplace);
     setReplaceSearchTerm(''); // Reset search term
@@ -848,7 +816,6 @@ const OrderScreen = ({navigation, route}) => {
     // Fetch all products if not already cached
     const products =
       allProducts.length > 0 ? allProducts : await fetchAllProducts();
-    console.log('products', products);
 
     if (products.length === 0) {
       // Error handled in fetchAllProducts, just don't open modal
@@ -871,21 +838,16 @@ const OrderScreen = ({navigation, route}) => {
         product.id !== materialToReplace.id,
     );
 
-    console.log(
-      `Found ${options.length} replacement options for category ${categoryId}`,
-    );
+   
     setReplacementOptions(options);
     setShowReplaceModal(true); // Open modal only after filtering
   };
 
   const handleSelectReplacement = replacementProduct => {
-    console.log('replacementProduct', replacementProduct);
 
     if (!materialToReplace || !replacementProduct) return;
 
-    console.log(
-      `Replacing ${materialToReplace.name} with ${replacementProduct.name}`,
-    );
+   
 
     // Create the new material object, preserving quantity
     const newMaterial = {

@@ -27,7 +27,7 @@ api.interceptors.request.use(
         }
       }
     } catch (error) {
-      console.error('Error attaching token to Wallet API request:', error);
+      console.error('Lỗi khi thêm token vào yêu cầu API Ví:', error);
     }
     return config;
   },
@@ -62,13 +62,38 @@ const processWalletLogs = (logs) => {
 // Helper function to process refund logs into formatted transactions
 const processRefundLogs = (logs) => {
   if (!logs) return [];
-  return logs.map(log => ({
+  return logs.map(log => {
+    // Translate description if needed
+    let description = log.source || '';
+    
+    // Check if description contains English text and translate it
+    if (description.toLowerCase().includes('refund')) {
+      // Extract the percentage and order ID if present
+      const percentMatch = description.match(/(\d+)%/);
+      const percentage = percentMatch ? percentMatch[1] : '';
+      
+      const orderIdMatch = description.match(/order\s+([a-zA-Z0-9-]+)/i);
+      const orderId = orderIdMatch ? orderIdMatch[1] : '';
+      
+      if (percentage && orderId) {
+        description = `Hoàn tiền ${percentage}% cho đơn dịch vụ ${orderId}`;
+      } else if (orderId) {
+        description = `Hoàn tiền cho đơn dịch vụ ${orderId}`;
+      } else {
+        description = `Hoàn tiền cho ${description}`;
+      }
+    } else if (!description) {
+      description = 'Hoàn tiền';
+    }
+    
+    return {
     id: log.txnRef || `${log.creationDate}-${Math.random()}`, // Use txnRef or fallback
     amount: Math.abs(log.amount), // Ensure amount is positive for display
-    description: `Hoàn tiền từ ${log.source || 'đơn hàng'}`, // Description for refund
+      description: description,
     date: log.creationDate || new Date().toISOString(), // Use creationDate
     type: 'refund'
-  }));
+    };
+  });
 };
 
 // Helper function to process bills into formatted purchase transactions
@@ -77,9 +102,27 @@ const processWalletBills = (bills) => {
   return bills.map(bill => {
     const orderId = bill.orderId ? bill.orderId.substring(0, 9) : 'unknown';
     
-    let description = bill.description;
-    // If description is "Thanh toán đơn hàng" or "string", add order ID
-    if (description === "Thanh toán đơn hàng" || description === "string") {
+    let description = bill.description || '';
+    
+    // Translate English descriptions to Vietnamese
+    if (description.toLowerCase() === "string") {
+      description = `Thanh toán đơn hàng #${orderId}`;
+    } else if (description.toLowerCase().includes("payment")) {
+      description = `Thanh toán đơn hàng #${orderId}`;
+    } else if (description.toLowerCase().includes("pay") && description.toLowerCase().includes("design fee")) {
+      // Example: "Pay 50% design fee for order bd4ad6d2..."
+      const percentMatch = description.match(/(\d+)%/);
+      const percentage = percentMatch ? percentMatch[1] : '';
+      
+      const orderIdMatch = description.match(/order\s+([a-zA-Z0-9-]+)/i);
+      const orderId = orderIdMatch ? orderIdMatch[1] : '';
+      
+      if (percentage && orderId) {
+        description = `Thanh toán phí thiết kế ${percentage}% cho đơn hàng ${orderId}`;
+      } else {
+        description = `Thanh toán phí thiết kế cho đơn hàng ${bill.orderId || ''}`;
+      }
+    } else if (description === "Thanh toán đơn hàng") {
       description = `Thanh toán đơn hàng #${orderId}`;
     }
     
@@ -100,16 +143,31 @@ export const WalletProvider = ({ children }) => {
   const [refundTransactions, setRefundTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lastFetchTime, setLastFetchTime] = useState(0);
   const { user } = useAuth(); // Get user from AuthContext
 
-  const fetchWalletData = async () => {
+  const fetchWalletData = async (forceRefresh = false) => {
     try {
+      // Set loading state but not if we're just doing a background refresh
+      if (!forceRefresh) {
       setIsLoading(true);
+      }
+      
+      // Check if we need to fetch again or can use cached data
+      const currentTime = Date.now();
+      const CACHE_TIMEOUT = 30000; // 30 seconds
+      
+      if (!forceRefresh && currentTime - lastFetchTime < CACHE_TIMEOUT) {
+        // If it's been less than 30 seconds since last fetch and not forcing refresh,
+        // use cached data instead of fetching again
+        setIsLoading(false);
+        return;
+      }
+      
       const userJson = await AsyncStorage.getItem('user');
-      console.log("userJson", userJson);
       
       if (!userJson) {
-        throw new Error('No user data found');
+        throw new Error('Không tìm thấy dữ liệu người dùng');
       }
 
       const userData = JSON.parse(userJson);
@@ -119,29 +177,16 @@ export const WalletProvider = ({ children }) => {
       // Try to get walletId from cached user data first
       let walletId = userData.wallet?.id;
 
-      // If walletId not cached, fetch from /wallets/user{userId} first (optional, might indicate first load)
-      // For simplicity now, we'll assume walletId is usually cached after login/initial load.
-      // A more robust solution might fetch user wallet if not found.
       if (!walletId) {
-         console.warn('Wallet ID not found in cached user data. Fetching might fail.');
-         // Optional: Fetch /wallets/user{userId} here to get walletId if critical
-         // const userWalletResponse = await api.get(`/wallets/user${userId}`);
-         // walletId = userWalletResponse.data.id;
-         // if (!walletId) throw new Error('Failed to retrieve Wallet ID');
-         // userData.wallet = userWalletResponse.data; // Cache it
-         // await AsyncStorage.setItem('user', JSON.stringify(userData));
-         throw new Error('Wallet ID not found. Please log in again.'); // Simpler error for now
+        console.warn('Không tìm thấy ID ví trong dữ liệu người dùng đã lưu. Việc tải có thể thất bại.');
+        throw new Error('Không tìm thấy ID ví. Vui lòng đăng nhập lại.');
       }
-      console.log("Using Wallet ID:", walletId);
-      // --- End Get Wallet ID ---
       
-      // --- Fetch Data from Both Endpoints --- 
-      // Call 1: Get Wallet Details (Balance, Logs)
-      const walletDetailsResponse = await api.get(`/wallets/${walletId}`);
-      
-      // Call 2: Get User Wallet Info (Bills for purchase history)
-      const userWalletResponse = await api.get(`/wallets/user${userId}`);
-      // --- End Fetch Data ---
+      // --- Fetch Data from Both Endpoints in Parallel --- 
+      const [walletDetailsResponse, userWalletResponse] = await Promise.all([
+        api.get(`/wallets/${walletId}`),
+        api.get(`/wallets/user${userId}`)
+      ]);
 
       // Set Balance
       setBalance(walletDetailsResponse.data.amount);
@@ -165,10 +210,13 @@ export const WalletProvider = ({ children }) => {
       userData.wallet = walletDetailsResponse.data; 
       await AsyncStorage.setItem('user', JSON.stringify(userData));
       
+      // Update last fetch time
+      setLastFetchTime(Date.now());
+      
       setError(null);
     } catch (err) {
-      console.error('Error fetching wallet data:', err);
-      setError(err.message || 'Failed to fetch wallet data');
+      console.error('Lỗi khi tải dữ liệu ví:', err);
+      setError(err.message || 'Không thể tải dữ liệu ví');
       // Clear sensitive data if unauthorized or error
       if (err.response && err.response.status === 401) {
         // Maybe trigger logout or clear specific data
@@ -180,7 +228,25 @@ export const WalletProvider = ({ children }) => {
   
   useEffect(() => {
     if (user?.id) { // Fetch data only if user ID is available
-      fetchWalletData();
+      // Load initial data with a minimum display time to ensure UI consistency
+      setIsLoading(true);
+      const loadData = async () => {
+        const startTime = Date.now();
+        await fetchWalletData();
+        
+        // Ensure loading state shows for at least 300ms to avoid flicker
+        const elapsed = Date.now() - startTime;
+        const MIN_LOADING_TIME = 300;
+        if (elapsed < MIN_LOADING_TIME) {
+          setTimeout(() => {
+            setIsLoading(false);
+          }, MIN_LOADING_TIME - elapsed);
+        } else {
+          setIsLoading(false);
+        }
+      };
+      
+      loadData();
     } else {
       setIsLoading(false); // Stop loading if no user
       setBalance(0);
@@ -192,15 +258,15 @@ export const WalletProvider = ({ children }) => {
 
   const createVnpayPayment = async (amount) => {
     if (!user?.id) {
-      throw new Error('User not authenticated');
+      throw new Error('Người dùng chưa đăng nhập');
     }
     // Ensure amount is treated as a number
     const numericAmount = parseFloat(amount); 
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      throw new Error('Invalid top-up amount');
+      throw new Error('Số tiền nạp không hợp lệ');
     }
     try {
-      console.log(`Creating VNPay payment for amount: ${numericAmount} for mobile`);
+      console.log(`Tạo giao dịch VNPay với số tiền: ${numericAmount} cho thiết bị di động`);
 
       // Prepare the request body including only the amount
       const requestBody = {
@@ -215,31 +281,31 @@ export const WalletProvider = ({ children }) => {
           'Content-Type': 'application/json'
         }
       }); 
-      console.log('VNPay API Response:', response.data);
+      console.log('Phản hồi API VNPay:', response.data);
       
       if (response.data && typeof response.data === 'string') {
         return response.data; // Expecting the URL string directly
       } else {
-        throw new Error('Invalid response format from VNPay API');
+        throw new Error('Định dạng phản hồi từ API VNPay không hợp lệ');
       }
     } catch (err) {
-      console.error('Error creating VNPay payment:', err.response ? err.response.data : err);
-      throw new Error(err.response?.data?.message || 'Failed to create VNPay payment link');
+      console.error('Lỗi khi tạo giao dịch VNPay:', err.response ? err.response.data : err);
+      throw new Error(err.response?.data?.message || 'Không thể tạo liên kết thanh toán VNPay');
     }
   };
 
   const handleVnpayResponse = async (returnUrl) => {
     if (!returnUrl) {
-      throw new Error('Invalid VNPay return URL provided.');
+      throw new Error('URL phản hồi VNPay không hợp lệ.');
     }
-    console.log('Handling VNPay response URL:', returnUrl);
+    console.log('Xử lý URL phản hồi VNPay:', returnUrl);
     try {
       // Encode the returnUrl to be safely included in a query parameter
       const encodedReturnUrl = encodeURIComponent(returnUrl);
       // Construct the full URL with the query parameter
       const apiUrl = `/wallets/vn-pay/response?returnUrl=${encodedReturnUrl}`;
 
-      console.log('Sending GET request to backend:', apiUrl);
+      console.log('Gửi yêu cầu GET đến backend:', apiUrl);
 
       // Change to api.get and remove body/content-type header
       const response = await api.get(apiUrl, {
@@ -248,27 +314,27 @@ export const WalletProvider = ({ children }) => {
             // No Content-Type needed for GET
           }
       });
-      console.log('VNPay Response API success:', response.data);
+      console.log('Phản hồi API VNPay thành công:', response.data);
       
       // Assuming success means the balance is updated backend-side
-      await fetchWalletData(); // Refresh wallet balance
+      await fetchWalletData(true); // Force refresh wallet balance
 
       // Return the success message from the backend
       return response.data; 
 
     } catch (err) {
       // Log more detailed error information
-      console.error('--- Error Handling VNPay Response ---');
-      console.error('Status Code:', err.response?.status);
-      console.error('Response Data:', JSON.stringify(err.response?.data, null, 2)); // Stringify for better object logging
-      console.error('Error Message:', err.message);
-      console.error('Request URL:', err.config?.url);
-      console.error('Full Error Object:', err);
-      console.error('--- End Error Details ---');
+      console.error('--- Lỗi xử lý phản hồi VNPay ---');
+      console.error('Mã trạng thái:', err.response?.status);
+      console.error('Dữ liệu phản hồi:', JSON.stringify(err.response?.data, null, 2)); // Stringify for better object logging
+      console.error('Thông báo lỗi:', err.message);
+      console.error('URL yêu cầu:', err.config?.url);
+      console.error('Đối tượng lỗi đầy đủ:', err);
+      console.error('--- Kết thúc chi tiết lỗi ---');
 
       // Try to extract a meaningful error message from backend response
       const backendError = err.response?.data;
-      let errorMessage = 'Failed to process VNPay response.';
+      let errorMessage = 'Không thể xử lý phản hồi VNPay.';
       if (typeof backendError === 'string') {
         errorMessage = backendError;
       } else if (backendError?.title) { // Handle ASP.NET Core validation error format
@@ -281,7 +347,7 @@ export const WalletProvider = ({ children }) => {
   const updateBalance = (amount) => {
     setBalance(prevBalance => prevBalance + amount);
     // Optionally: refetch wallet data after balance update for consistency
-    // fetchWalletData(); 
+    fetchWalletData(true); 
   };
 
   const addTransaction = (transaction) => {
@@ -327,7 +393,7 @@ export const WalletProvider = ({ children }) => {
 export const useWallet = () => {
   const context = useContext(WalletContext);
   if (!context) {
-    throw new Error('useWallet must be used within a WalletProvider');
+    throw new Error('useWallet phải được sử dụng trong WalletProvider');
   }
   return context;
 }; 

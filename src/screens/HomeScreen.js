@@ -47,7 +47,7 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
-      <SearchHeader title="Home" />
+      
       <ScrollView style={styles.content} removeClippedSubviews={false}>
         <View style={styles.slideContainer}>
           <Animated.Image

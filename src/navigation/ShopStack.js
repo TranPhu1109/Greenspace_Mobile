@@ -31,21 +31,22 @@ const ShopStack = () => {
         name="ProductDetails"
         component={ProductDetailScreen}
         options={{
-          title: 'Product Details',
+          title: 'Chi tiết sản phẩm',
+          headerShown: false,
         }}
       />
       <Stack.Screen
         name="Cart"
         component={CartScreen}
         options={{
-          title: 'Cart',
+          title: 'Giỏ hàng',
         }}
       />
       <Stack.Screen
         name="CheckOut"
         component={CheckOutScreen}
         options={{
-          title: 'Checkout',
+          title: 'Thanh toán',
         }}
       />
     </Stack.Navigator>

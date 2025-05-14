@@ -3,10 +3,13 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal } fr
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { useWallet } from '../context/WalletContext';
 
 const UserInfoScreen = ({ navigation }) => {
   const { user, isAuthenticated } = useAuth();
+  const { refreshWallet } = useWallet();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [walletDataPrefetched, setWalletDataPrefetched] = useState(false);
 
   // Check authentication status when screen comes into focus
   useFocusEffect(
@@ -14,7 +17,14 @@ const UserInfoScreen = ({ navigation }) => {
       // Always reset the modal visibility based on authentication status
       // when the screen comes into focus
       setShowLoginModal(!isAuthenticated);
-    }, [isAuthenticated])
+      
+      // If authenticated, prefetch wallet data to improve navigation performance
+      if (isAuthenticated && !walletDataPrefetched) {
+        // Call refreshWallet but don't await it - let it run in background
+        refreshWallet(false); // false means don't force refresh if data is recent
+        setWalletDataPrefetched(true);
+      }
+    }, [isAuthenticated, walletDataPrefetched, refreshWallet])
   );
 
   const navigateToLogin = () => {
@@ -26,6 +36,18 @@ const UserInfoScreen = ({ navigation }) => {
   const handleDismiss = () => {
     setShowLoginModal(false);
     navigation.navigate('Home');
+  };
+
+  // Prefetch wallet data when user clicks the Wallet option
+  const handleWalletPress = () => {
+    // This is an additional optimization - start loading wallet data before navigation
+    refreshWallet(false).then(() => {
+      navigation.navigate('Wallet');
+    }).catch(() => {
+      // Even if there's an error, still navigate to the Wallet screen
+      // The wallet screen will handle the error display
+      navigation.navigate('Wallet');
+    });
   };
 
   // Login Modal Component
@@ -100,9 +122,7 @@ const UserInfoScreen = ({ navigation }) => {
 
             <TouchableOpacity 
               style={styles.option}
-              onPress={() => {
-                navigation.navigate('Wallet');
-              }}
+              onPress={handleWalletPress}
             >
               <Icon name="wallet-outline" size={24} color="#007AFF" />
               <Text style={styles.optionText}>Ví</Text>

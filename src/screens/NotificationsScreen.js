@@ -6,7 +6,6 @@ const NotificationsScreen = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Notifications Screen</Text>
       <Text style={styles.text}>Your notifications will appear here</Text>
-      <StatusTracking />
     </View>
   );
 };
