@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
@@ -85,8 +86,17 @@ const NewDesignScreen = ({ navigation }) => {
         console.log('ImagePicker Error: ', response.errorMessage);
       } else if (response.assets && response.assets.length > 0) {
         setImages([...images, ...response.assets]);
+        if (imageError) {
+          setImageError('');
+        }
       }
     });
+  };
+
+  const removeImage = (index) => {
+    const newImages = [...images];
+    newImages.splice(index, 1);
+    setImages(newImages);
   };
 
   const handleImagesChange = (newImages) => {
@@ -133,7 +143,7 @@ const NewDesignScreen = ({ navigation }) => {
       const requestBody = {
         userId: user.id,
         userName: customerName,
-        address: formatAddress(selectedAddress.userAddress),
+        address: selectedAddress.userAddress,
         cusPhone: customerPhone,
         length: parseFloat(length),
         width: parseFloat(width),
@@ -210,7 +220,7 @@ const NewDesignScreen = ({ navigation }) => {
         isDefault: true,
       };
       setSelectedAddress(contextAddress);
-       // Set initial name/phone for the new address modal based on user context
+      // Set initial name/phone for the new address modal based on user context
       setNewAddressName(user.name || '');
       setNewAddressPhone(user.phone || '');
     }
@@ -223,7 +233,7 @@ const NewDesignScreen = ({ navigation }) => {
     const ward = parts[1] || '';
     const district = parts[2] || '';
     const province = parts[3] || '';
-    return `${street}|${ward}|${district}|${province}`;
+    return `${street}, ${ward}, ${district}, ${province}`;
   };
 
   const fetchAddresses = async () => {
@@ -408,7 +418,10 @@ const NewDesignScreen = ({ navigation }) => {
 
   const handleSelectAddress = (address) => {
     setSelectedAddress(address);
-    if (customerName.trim() && customerPhone.trim() && address) {
+    // Update customer name and phone based on selected address
+    setCustomerName(address.name || user?.name || '');
+    setCustomerPhone(address.phone || user?.phone || '');
+    if (address) {
       setCustomerInfoError('');
     }
     setShowAddressModal(false);
@@ -461,14 +474,14 @@ const NewDesignScreen = ({ navigation }) => {
   };
 
   const handleLengthChange = (text) => {
-    setLength(text);
+    setLength(text.replace(/[^0-9.]/g, ''));
     if (text.trim() && width.trim()) {
       setSpatialInfoError('');
     }
   };
 
   const handleWidthChange = (text) => {
-    setWidth(text);
+    setWidth(text.replace(/[^0-9.]/g, ''));
     if (length.trim() && text.trim()) {
       setSpatialInfoError('');
     }
@@ -546,7 +559,7 @@ const NewDesignScreen = ({ navigation }) => {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <Icon name="account-lock-outline" size={60} color="#007AFF" style={styles.modalIcon} />
+          <Icon name="account-lock-outline" size={60} color="#0EA5E9" style={styles.modalIcon} />
           <Text style={styles.modalTitle}>Vui lòng đăng nhập</Text>
           <Text style={styles.modalMessage}>
             Để thực hiện yêu cầu, vui lòng đăng nhập. Xin cảm ơn
@@ -573,38 +586,39 @@ const NewDesignScreen = ({ navigation }) => {
   return (
     <ScrollView style={styles.scrollViewContainer}>
       <LoginModal />
+      <Text style={styles.title}>Gửi thông tin nhận tư vấn thiết kế</Text>
       <View style={styles.container}>
-        <Text style={styles.title}>Thông tin khách hàng</Text>
+        <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
         
         <View style={styles.formSection}>
           <Text style={styles.fieldLabel}>Họ và tên</Text>
           <TextInput
-            style={styles.formInput}
+            style={[styles.formInput, customerInfoError && !customerName.trim() ? styles.inputError : null]}
             value={customerName}
             onChangeText={handleCustomerNameChange}
             placeholder="Nhập họ và tên"
-            placeholderTextColor="#999"
+            placeholderTextColor="#94A3B8"
           />
           
           <Text style={styles.fieldLabel}>Số điện thoại</Text>
           <TextInput
-            style={styles.formInput}
+            style={[styles.formInput, customerInfoError && !customerPhone.trim() ? styles.inputError : null]}
             value={customerPhone}
             onChangeText={handleCustomerPhoneChange}
             placeholder="Nhập số điện thoại"
-            placeholderTextColor="#999"
+            placeholderTextColor="#94A3B8"
             keyboardType="phone-pad"
           />
           
           <View style={styles.addressSection}>
             <View style={styles.addressHeader}>
-              <Text style={styles.fieldLabel}>Địa chỉ giao hàng</Text>
+              <Text style={styles.fieldLabel}>Địa chỉ</Text>
               <TouchableOpacity onPress={handleChangeAddress}>
                 <Text style={styles.changeButton}>Thay đổi</Text>
               </TouchableOpacity>
             </View>
             <TouchableOpacity 
-              style={styles.addressDisplay}
+              style={[styles.addressDisplay, customerInfoError && !selectedAddress ? styles.inputError : null]}
               onPress={handleChangeAddress}
             >
               <Text style={styles.addressText}>
@@ -615,19 +629,19 @@ const NewDesignScreen = ({ navigation }) => {
           {customerInfoError ? <Text style={styles.errorText}>{customerInfoError}</Text> : null}
         </View>
 
-        <Text style={styles.title}>Thông tin không gian</Text>
+        <Text style={styles.sectionTitle}>Thông tin không gian</Text>
         <View style={styles.formSection}>
           <View style={styles.spaceInputRow}>
             <View style={styles.spaceInputGroup}>
               <Text style={styles.fieldLabel}>Chiều dài</Text>
-              <View style={styles.measurementInput}>
+              <View style={[styles.measurementInput, spatialInfoError && !length.trim() ? styles.inputError : null]}>
                 <TextInput
                   style={styles.spaceInput}
                   value={length}
                   onChangeText={handleLengthChange}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor="#999"
+                  placeholderTextColor="#94A3B8"
                 />
                 <Text style={styles.unitText}>m</Text>
               </View>
@@ -635,14 +649,14 @@ const NewDesignScreen = ({ navigation }) => {
             <View style={styles.spaceInputDivider} />
             <View style={styles.spaceInputGroup}>
               <Text style={styles.fieldLabel}>Chiều rộng</Text>
-              <View style={styles.measurementInput}>
+              <View style={[styles.measurementInput, spatialInfoError && !width.trim() ? styles.inputError : null]}>
                 <TextInput
                   style={styles.spaceInput}
                   value={width}
                   onChangeText={handleWidthChange}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor="#999"
+                  placeholderTextColor="#94A3B8"
                 />
                 <Text style={styles.unitText}>m</Text>
               </View>
@@ -651,20 +665,22 @@ const NewDesignScreen = ({ navigation }) => {
           {spatialInfoError ? <Text style={styles.errorText}>{spatialInfoError}</Text> : null}
         </View>
 
-        <Text style={styles.title}>Hình ảnh và Mô tả</Text>
+        <Text style={styles.sectionTitle}>Hình ảnh và Mô tả</Text>
         <View style={styles.formSection}>
           <View style={styles.imageUploadSection}>
             <View style={styles.uploadHeader}>
-              <Text style={styles.fieldLabel}>Hình ảnh</Text>
-              <Text style={styles.imageCountText}>{images.length}/3 ảnh</Text>
+              <Text style={styles.fieldLabel}>Hình ảnh không gian</Text>
+              <Text style={styles.imageCountText}>{images.length}/3</Text>
             </View>
             <TouchableOpacity 
-              style={[styles.uploadButton, images.length >= 3 && styles.disabledButton]}
+              style={[styles.uploadButton, imageError && images.length === 0 ? styles.inputError : null]} 
               onPress={choosePhoto}
               disabled={images.length >= 3}
             >
-              <Icon name="image-plus" size={24} color="#007AFF" />
-              <Text style={styles.uploadButtonText}>Chọn ảnh</Text>
+              <Icon name="image-plus" size={24} color="#0EA5E9" />
+              <Text style={styles.uploadButtonText}>
+                {images.length === 0 ? 'Tải lên hình ảnh không gian' : 'Thêm hình ảnh'}
+              </Text>
             </TouchableOpacity>
             
             <View style={styles.imagePreviewContainer}>
@@ -680,13 +696,9 @@ const NewDesignScreen = ({ navigation }) => {
                   />
                   <TouchableOpacity
                     style={styles.removeImageButton}
-                    onPress={() => {
-                      const newImages = [...images];
-                      newImages.splice(index, 1);
-                      handleImagesChange(newImages);
-                    }}
+                    onPress={() => removeImage(index)}
                   >
-                    <Icon name="close" size={20} color="#FF3B30" />
+                    <Icon name="close-circle" size={18} color="#475569" />
                   </TouchableOpacity>
                 </TouchableOpacity>
               ))}
@@ -694,12 +706,13 @@ const NewDesignScreen = ({ navigation }) => {
             {imageError ? <Text style={styles.errorText}>{imageError}</Text> : null}
           </View>
 
-          <Text style={[styles.fieldLabel, { marginTop: 15 }]}>Mô tả yêu cầu:</Text>
+          <Text style={styles.fieldLabel}>Mô tả yêu cầu</Text>
           <TextInput
-            style={[styles.formInput, styles.descriptionInput]}
+            style={[styles.formInput, styles.descriptionInput, descriptionError && !description.trim() ? styles.inputError : null]}
             value={description}
             onChangeText={handleDescriptionChange}
-            placeholder="Nhập mô tả yêu cầu của bạn..."
+            placeholder="Mô tả chi tiết yêu cầu của bạn (màu sắc, phong cách, ngân sách, v.v.)"
+            placeholderTextColor="#94A3B8"
             multiline
           />
           {descriptionError ? <Text style={styles.errorText}>{descriptionError}</Text> : null}
@@ -727,9 +740,9 @@ const NewDesignScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Delivery Address</Text>
+              <Text style={styles.modalTitle}>Chọn địa chỉ</Text>
               <TouchableOpacity onPress={() => setShowAddressModal(false)}>
-                <Icon name="close" size={24} color="#333" />
+                <Icon name="close" size={24} color="#475569" />
               </TouchableOpacity>
             </View>
 
@@ -737,11 +750,11 @@ const NewDesignScreen = ({ navigation }) => {
               style={styles.addNewAddressButton}
               onPress={handleOpenNewAddressModal}>
               <Icon name="plus" size={20} color="#fff" />
-              <Text style={styles.addNewAddressText}>Add New Address</Text>
+              <Text style={styles.addNewAddressText}>Thêm địa chỉ mới</Text>
             </TouchableOpacity>
 
             {loadingAddresses ? (
-              <ActivityIndicator size="large" color="#007AFF" style={styles.loadingIndicator} />
+              <ActivityIndicator size="large" color="#0EA5E9" style={styles.loadingIndicator} />
             ) : addressList.length > 0 ? (
               <FlatList
                 data={addressList}
@@ -752,8 +765,8 @@ const NewDesignScreen = ({ navigation }) => {
             ) : (
               <View style={styles.noAddressContainer}>
                 <Icon name="map-marker-off" size={50} color="#ccc" />
-                <Text style={styles.noAddressText}>No Addresses Found</Text>
-                <Text style={styles.noAddressSubText}>Please add a new delivery address.</Text>
+                <Text style={styles.noAddressText}>Không có địa chỉ nào</Text>
+                <Text style={styles.noAddressSubText}>Vui lòng thêm địa chỉ mới</Text>
               </View>
             )}
           </View>
@@ -771,44 +784,44 @@ const NewDesignScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.newAddressModalContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add New Address</Text>
+              <Text style={styles.modalTitle}>Thêm địa chỉ mới</Text>
               <TouchableOpacity onPress={() => setShowNewAddressModal(false)}>
-                <Icon name="close" size={24} color="#333" />
+                <Icon name="close" size={24} color="#475569" />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.newAddressForm}>
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Full Name</Text>
+                <Text style={styles.formLabel}>Họ và tên</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholder="Enter full name"
+                  placeholder="Nhập họ và tên"
                   value={newAddressName}
                   onChangeText={setNewAddressName}
                 />
               </View>
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Phone Number</Text>
+                <Text style={styles.formLabel}>Số điện thoại</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholder="Enter phone number"
+                  placeholder="Nhập số điện thoại"
                   value={newAddressPhone}
                   onChangeText={setNewAddressPhone}
                   keyboardType="phone-pad"
                 />
               </View>
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Street Address, House Number</Text>
+                <Text style={styles.formLabel}>Tên đường, số nhà</Text>
                 <TextInput
                   style={[styles.formInput, streetError ? styles.inputError : null]}
-                  placeholder="Enter street address, house number"
+                  placeholder="Nhập tên đường, số nhà"
                   value={newAddressStreet}
                   onChangeText={setNewAddressStreet}
                 />
                 {streetError ? <Text style={styles.errorText}>{streetError}</Text> : null}
               </View>
               <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Address Details</Text>
+                <Text style={styles.formLabel}>Địa chỉ</Text>
                 <Address onAddressChange={handleAddressChange} initialAddress={{}} />
               </View>
               <TouchableOpacity
@@ -818,7 +831,7 @@ const NewDesignScreen = ({ navigation }) => {
                 {savingAddress ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.submitButtonText}>Save Address</Text>
+                  <Text style={styles.submitButtonText}>Lưu địa chỉ</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>
@@ -858,10 +871,12 @@ const NewDesignScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModalContainer}>
             <View style={styles.modalIconContainer}>
-              <Icon name="alert-circle-outline" size={48} color="#FFA500" />
+              <Icon name="alert-circle-outline" size={40} color="#F59E0B" />
             </View>
-            <Text style={styles.modalTitle}>Xác nhận gửi yêu cầu thiết kế</Text>
-            <Text style={styles.modalSubtitle}>Bạn có chắc chắn muốn gửi yêu cầu này?</Text>
+            <Text style={styles.modalTitle}>Xác nhận gửi yêu cầu</Text>
+            <Text style={styles.modalSubtitle}>
+              Bạn có chắc chắn muốn gửi yêu cầu thiết kế này?
+            </Text>
             <View style={styles.modalButtonContainer}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
@@ -890,7 +905,7 @@ const NewDesignScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.successModalContainer}>
             <View style={styles.successIconContainer}>
-              <Icon name="check-circle" size={32} color="#4CAF50" />
+              <Icon name="check-circle" size={36} color="#4ADE80" />
             </View>
             <Text style={styles.successTitle}>Thành công</Text>
             <Text style={styles.successMessage}>

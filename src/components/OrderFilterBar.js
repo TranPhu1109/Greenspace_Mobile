@@ -34,7 +34,7 @@ const ALL_STATUSES = [
   { id: 'redesign', name: 'Thiết kế lại', value: 'redesign' },
   { id: 'waitdeposit', name: 'Chờ đặt cọc', value: 'waitdeposit' },
   { id: 'donedeterminingdesignprice', name: 'Hoàn thành tư vấn & phác thảo', value: 'donedeterminingdesignprice' },
-  { id: 'donedeterminingmaterialprice', name: 'Hoàn thành xác định giá vật liệu', value: 'donedeterminingmaterialprice' },
+  { id: 'donedeterminingmaterialprice', name: 'Chọn bản thiết kế', value: 'donedeterminingmaterialprice' },
   { id: 'redeterminingdesignprice', name: 'Xác định lại giá thiết kế', value: 'redeterminingdesignprice' },
   { id: 'exchangeprodcut', name: 'Đổi sản phẩm', value: 'exchangeprodcut' },
   { id: 'waitforscheduling', name: 'Chờ lên lịch', value: 'waitforscheduling' },

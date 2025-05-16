@@ -582,7 +582,7 @@ const OrderScreen = ({navigation, route}) => {
         designPrice: designData.designPrice,
         materialPrice: calculatedMaterialPrice,
         totalCost: calculatedTotalCost,
-        description: `Order for design: ${designData.name}`,
+        description: `Đơn hàng cho thiết kế: ${designData.name}`,
         image: {
           imageUrl: '',
           image2: '',

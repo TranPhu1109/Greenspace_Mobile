@@ -188,12 +188,13 @@ const LoginScreen = ({navigation, route}) => {
         <Icon name="chevron-left" size={28} color="#000" />
       </TouchableOpacity>
 
-      <Text style={styles.title}>Login</Text>
+      <Text style={styles.title}>Đăng nhập</Text>
 
       <View style={styles.inputContainer}>
         <TextInput
           style={[styles.input, emailError ? styles.inputError : null]}
           placeholder="Email"
+          placeholderTextColor="rgba(0, 0, 0, 0.3)"
           value={email}
           onChangeText={(text) => {
             setEmail(text);
@@ -210,6 +211,7 @@ const LoginScreen = ({navigation, route}) => {
         <TextInput
           style={[styles.input, passwordError ? styles.inputError : null]}
           placeholder="Password"
+          placeholderTextColor="rgba(0, 0, 0, 0.3)"
           value={password}
           onChangeText={(text) => {
             setPassword(text);
@@ -224,17 +226,17 @@ const LoginScreen = ({navigation, route}) => {
       {authError ? <Text style={styles.authErrorText}>{authError}</Text> : null}
 
       <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-        <Text style={styles.loginButtonText}>Log In</Text>
+        <Text style={styles.loginButtonText}>Đăng nhập</Text>
       </TouchableOpacity>
 
       <View>
         <Text style={styles.signUpText}>
-          Don't have an account?
+          Không có tài khoản?
           <Text
             style={styles.signUpLink}
             onPress={() => navigation.navigate('SignUp')}>
             {' '}
-            Sign Up
+            Đăng ký
           </Text>
         </Text>
       </View>

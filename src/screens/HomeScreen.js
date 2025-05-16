@@ -61,7 +61,7 @@ const HomeScreen = () => {
             resizeMode="cover"
           />
         </View>
-        <Text style={styles.text}>Welcome to the Home Screen!</Text>
+        {/* <Text style={styles.text}>Welcome to the Home Screen!</Text>
         <TouchableOpacity
           style={styles.button}
           onPress={() => {
@@ -83,7 +83,7 @@ const HomeScreen = () => {
             <Text style={styles.buttonText}>Logout</Text>
           </TouchableOpacity>
           </View>
-        )}
+        )} */}
         
       </ScrollView>
         

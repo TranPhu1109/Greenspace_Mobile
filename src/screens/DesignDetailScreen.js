@@ -162,7 +162,7 @@ const DesignDetailScreen = ({ navigation, route }) => {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading design details...</Text>
+        <Text style={styles.loadingText}>Đang tải thông tin thiết kế...</Text>
       </View>
     );
   }
@@ -172,12 +172,12 @@ const DesignDetailScreen = ({ navigation, route }) => {
     return (
       <View style={styles.centerContainer}>
         <Icon name="alert-circle-outline" size={60} color="#ff3b30" />
-        <Text style={styles.errorText}>{error || 'Failed to load design details'}</Text>
+        <Text style={styles.errorText}>{error || 'Không thể tải thông tin thiết kế'}</Text>
         <TouchableOpacity 
           style={styles.retryButton} 
           onPress={fetchDesignDetails}
         >
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>Thử lại</Text>
         </TouchableOpacity>
       </View>
     );
@@ -318,7 +318,7 @@ const DesignDetailScreen = ({ navigation, route }) => {
               })}
             </View>
           ) : (
-            <Text style={styles.noMaterialsText}>No materials available</Text>
+            <Text style={styles.noMaterialsText}>Không có vật liệu</Text>
           )}
         </View>
 

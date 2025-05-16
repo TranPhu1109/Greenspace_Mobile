@@ -242,7 +242,7 @@ const ServiceOrderNoUsingScreen = ({ navigation }) => {
       case 'donedeterminingdesignprice':
         return { text: 'Hoàn thành tư vấn & phác thảo', color: '#34C759', icon: 'check-outline' };
       case 'donedeterminingmaterialprice':
-        return { text: 'Hoàn thành xác định giá vật liệu', color: '#34C759', icon: 'check-outline' };
+        return { text: 'Chọn bản thiết kế', color: '#34C759', icon: 'check-outline' };
       case 'redeterminingdesignprice':
         return { text: 'Xác định lại giá thiết kế', color: '#5AC8FA', icon: 'calculator-variant-outline' };
       case 'exchangeprodcut':

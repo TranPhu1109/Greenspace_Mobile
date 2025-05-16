@@ -152,7 +152,7 @@ const ShoppingScreen = () => {
       />
 
       {selectedCategory && (
-        <Text style={[styles.sectionTitle, styles.productsTitle]}>{selectedCategory.name} Products</Text>
+        <Text style={[styles.sectionTitle, styles.productsTitle]}>{selectedCategory.name}</Text>
       )}
     </>
   );

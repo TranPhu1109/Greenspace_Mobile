@@ -2067,6 +2067,13 @@
     prompts "^2.4.2"
     semver "^7.5.2"
 
+"@react-native-community/datetimepicker@^8.3.0":
+  version "8.3.0"
+  resolved "https://registry.npmjs.org/@react-native-community/datetimepicker/-/datetimepicker-8.3.0.tgz"
+  integrity sha512-K/KgaJbLtjMpx4PaG4efrVIcSe6+DbLufeX1lwPB5YY8i3sq9dOh6WcAcMTLbaRTUpurebQTkl7puHPFm9GalA==
+  dependencies:
+    invariant "^2.2.4"
+
 "@react-native-firebase/app@^21.12.3", "@react-native-firebase/app@21.12.3":
   version "21.12.3"
   resolved "https://registry.npmjs.org/@react-native-firebase/app/-/app-21.12.3.tgz"
@@ -6628,10 +6635,10 @@ react-native-inappbrowser-reborn@^3.7.0:
     invariant "^2.2.4"
     opencollective-postinstall "^2.0.3"
 
-react-native-pager-view@^6.7.0, "react-native-pager-view@>= 6.0.0":
-  version "6.7.0"
-  resolved "https://registry.npmjs.org/react-native-pager-view/-/react-native-pager-view-6.7.0.tgz"
-  integrity sha512-sutxKiMqBuQrEyt4mLaLNzy8taIC7IuYpxfcwQBXfSYBSSpAa0qE9G1FXlP/iXqTSlFgBXyK7BESsl9umOjECQ==
+react-native-pager-view@^6.7.1, "react-native-pager-view@>= 6.0.0":
+  version "6.7.1"
+  resolved "https://registry.npmjs.org/react-native-pager-view/-/react-native-pager-view-6.7.1.tgz"
+  integrity sha512-cBSr6xw4g5N7Kd3VGWcf+kmaH7iBWb0DXAf2bVo3bXkzBcBbTOmYSvc0LVLHhUPW8nEq5WjT9LCIYAzgF++EXw==
 
 react-native-paper@^5.14.0:
   version "5.14.0"

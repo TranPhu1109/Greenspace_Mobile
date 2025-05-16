@@ -3,6 +3,75 @@ import { StyleSheet, Dimensions } from 'react-native';
 const { width, height } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
+  // Financial Information Styles for Contract Modal
+  financialInfoContainer: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  financialInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  financialInfoLabel: {
+    fontSize: 14,
+    color: '#495057',
+    flex: 1,
+  },
+  financialInfoValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#212529',
+    textAlign: 'right',
+  },
+  highlightedAmount: {
+    color: '#007AFF',
+    fontWeight: '700',
+  },
+  sufficientBalance: {
+    color: '#34C759',
+  },
+  insufficientBalance: {
+    color: '#FF3B30',
+  },
+  balanceWarningBox: {
+    backgroundColor: '#FFF3F2',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+  },
+  balanceWarningRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  warningIcon: {
+    marginRight: 8,
+    marginTop: 2,
+  },
+  insufficientBalanceText: {
+    color: '#FF3B30',
+    fontSize: 14,
+    flex: 1,
+  },
+  balanceWarningTopUpButton: {
+    backgroundColor: '#FF3B30',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-end',
+  },
+  balanceWarningTopUpButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
@@ -80,11 +149,15 @@ export const styles = StyleSheet.create({
   section: {
     margin: 10,
     borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    backgroundColor: '#fff',
+    // More subtle, modern shadow
+    elevation: 1,
+    shadowColor: 'rgba(0,0,0,0.15)',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   sectionTitle: {
     fontSize: 18,
@@ -862,11 +935,12 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    // Refined shadow
+    elevation: 1,
+    shadowColor: 'rgba(0,0,0,0.2)',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   confirmButtonContent: {
     flexDirection: 'row',
@@ -1037,7 +1111,6 @@ export const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     marginTop: 16,
     paddingTop: 12,
-    borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
   },
   materialTotalLabel: {
@@ -1055,7 +1128,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#FF9500',
     borderRadius: 10,
     paddingVertical: 6,
@@ -1063,10 +1136,11 @@ export const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 8,
     backgroundColor: '#FFF9F2',
-    shadowColor: '#FF9500',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
+    // Very subtle or no shadow for outlined buttons
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
   resketchOutlinedButtonText: {
     color: '#FF9500',
@@ -1144,11 +1218,12 @@ export const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 24,
     width: '100%',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    // Subtle shadow
+    elevation: 1,
+    shadowColor: 'rgba(230, 30, 20, 0.3)',
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 2,
   },
   cancelServiceText: {
     color: '#FFFFFF',
@@ -1185,5 +1260,48 @@ export const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 2,
     textAlign: 'right',
+  },
+  // Add new styles for wallet balance display
+  sufficientBalance: {
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  insufficientBalance: {
+    color: '#FF3B30',
+    fontWeight: '600',
+  },
+  balanceWarningBox: {
+    backgroundColor: '#FFF0F0',
+    borderRadius: 10,
+    padding: 14,
+    marginTop: 16,
+    marginBottom: 8,
+    alignItems: 'stretch',
+  },
+  balanceWarningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  warningIcon: {
+    marginRight: 8,
+  },
+  insufficientBalanceText: {
+    flex: 1,
+    color: '#FF3B30',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  balanceWarningTopUpButton: {
+    backgroundColor: '#34C759',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  balanceWarningTopUpButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 
