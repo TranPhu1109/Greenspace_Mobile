@@ -13,7 +13,7 @@ import {useAuth} from '../context/AuthContext'; // Import useAuth
 import axios from 'axios'; // Import axios
 import {useFocusEffect} from '@react-navigation/native'; // Import useFocusEffect
 
-const API_URL = 'http://10.0.2.2:8080/api'; // Adjust if needed
+const API_URL = 'http://192.168.1.2:8080/api'; // Adjust if needed
 
 const MaterialOrderScreen = ({navigation}) => {
   const [orders, setOrders] = useState([]);

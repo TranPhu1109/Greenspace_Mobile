@@ -21,11 +21,10 @@ import {
 import SuccessModal from '../components/SuccessModal';
 import {useWallet} from '../context/WalletContext';
 import {useAuth} from '../context/AuthContext';
-import axios from 'axios';
+import { api } from '../api/api';
 import Address from '../components/Address';
 
 const {width} = Dimensions.get('window');
-const API_URL = 'http://10.0.2.2:8080/api';
 
 const OrderScreen = ({navigation, route}) => {
   const {designData: initialDesignData} = route.params;
@@ -139,20 +138,15 @@ const OrderScreen = ({navigation, route}) => {
     setLoadingMaterials(true);
     try {
       const materialsPromises = productDetails.map(async detail => {
-        const response = await axios.get(
-          `${API_URL}/product/${detail.productId}`,
-          {
-            headers: {
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-            },
-          },
-        );
+        const response = await api.get(`/product/${detail.productId}`, {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        });
         // Ensure price and quantity are numbers
-        const price = Number(detail.price || response.data.price || 0);
+        const price = Number(detail.price || response.price || 0);
         const quantity = Number(detail.quantity || 1);
         return {
-          ...response.data, // Includes id, name, image, category etc.
+          ...response, // Includes id, name, image, category etc.
           quantity: quantity,
           price: price, // This might be total price initially, calculate unit price if needed
         };
@@ -203,36 +197,15 @@ const OrderScreen = ({navigation, route}) => {
           }
         : null;
 
-      // First try the localhost API (for emulator)
-      let response;
-      try {
-        response = await axios.get(
-          `http://localhost:8080/api/address/user/${user.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${user.backendToken}`,
-            },
-            timeout: 3000, // 3 second timeout
-          },
-        );
-      } catch (err) {
-        // If localhost fails, try the 10.0.2.2 address (Android emulator)
-        response = await axios.get(
-          `http://10.0.2.2:8080/api/address/user/${user.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${user.backendToken}`,
-            },
-          },
-        );
-      }
+      const response = await api.get(`/address/user/${user.id}`, {
+        'Authorization': `Bearer ${user.backendToken}`
+      });
 
-
-      if (response.status === 200) {
-        let apiAddresses = response.data || [];
+      if (response) {
+        let apiAddresses = response || [];
         // If it's wrapped in a data property, extract it
-        if (response.data.data) {
-          apiAddresses = response.data.data;
+        if (response.data) {
+          apiAddresses = response.data;
         }
 
         let addresses = [];
@@ -325,36 +298,12 @@ const OrderScreen = ({navigation, route}) => {
         userAddress: userAddress,
       };
 
+      const response = await api.post('/address', requestBody, {
+        'Authorization': `Bearer ${user.backendToken}`,
+        'Content-Type': 'application/json'
+      });
 
-      // Try localhost first, then fallback to 10.0.2.2
-      let response;
-      try {
-        response = await axios.post(
-          'http://localhost:8080/api/address',
-          requestBody,
-          {
-            headers: {
-              Authorization: `Bearer ${user.backendToken}`,
-              'Content-Type': 'application/json',
-            },
-            timeout: 3000,
-          },
-        );
-      } catch (err) {
-        response = await axios.post(
-          'http://10.0.2.2:8080/api/address',
-          requestBody,
-          {
-            headers: {
-              Authorization: `Bearer ${user.backendToken}`,
-              'Content-Type': 'application/json',
-            },
-          },
-        );
-      }
-
-
-      if (response.status === 200 || response.status === 201) {
+      if (response) {
         // Clear form
         setNewAddressStreet('');
         setAddressDetails({});
@@ -561,7 +510,6 @@ const OrderScreen = ({navigation, route}) => {
     setSavingAddress(true); // Use savingAddress state for loading indication
 
     try {
-
       // 1. Prepare Service Order Request Body
       const addressToUse =
         selectedAddress?.userAddress || user?.address || 'N/A';
@@ -591,43 +539,17 @@ const OrderScreen = ({navigation, route}) => {
         products: productsPayload,
       };
 
-     
+      // 2. Create Service Order
+      const orderResponse = await api.post('/serviceorder', orderRequestBody, {
+        'Authorization': `Bearer ${user.backendToken}`,
+        'Content-Type': 'application/json'
+      });
 
-      // 2. Create Service Order (Try localhost, then 10.0.2.2)
-      let orderResponse;
-      try {
-        orderResponse = await axios.post(
-          'http://localhost:8080/api/serviceorder',
-          orderRequestBody,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${user.backendToken}`,
-            },
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        orderResponse = await axios.post(
-          'http://10.0.2.2:8080/api/serviceorder',
-          orderRequestBody,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${user.backendToken}`,
-            },
-          },
-        );
+      if (!orderResponse) {
+        throw new Error('Order creation failed');
       }
 
-
-      if (orderResponse.status !== 200 && orderResponse.status !== 201) {
-        throw new Error(
-          `Order creation failed with status: ${orderResponse.status}`,
-        );
-      }
-
-      const createdOrder = orderResponse.data.data; // Assuming response contains the created order with ID
+      const createdOrder = orderResponse.data || orderResponse; // Handle both response formats
       const serviceOrderId = createdOrder.id;
 
       // 3. Prepare Bill Request Body
@@ -639,89 +561,78 @@ const OrderScreen = ({navigation, route}) => {
         description: 'Thanh toán đơn dịch vụ',
       };
 
-      
+      // 4. Create Bill
+      const billResponse = await api.post('/bill', billRequestBody, {
+        'Authorization': `Bearer ${user.backendToken}`,
+        'Content-Type': 'application/json'
+      });
 
-      // 4. Create Bill (Try 10.0.2.2 first as per user request)
-      const billResponse = await axios.post(
-        'http://10.0.2.2:8080/api/bill',
-        billRequestBody,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${user.backendToken}`, // Assuming bill creation also needs auth
-          },
-        },
-      );
-
-
-      if (billResponse.status !== 200 && billResponse.status !== 201) {
-        // Handle bill creation failure (order was already created)
-        // Consider logging this or showing a specific error to the user
-        throw new Error(
-          `Bill creation failed with status: ${billResponse.status}`,
-        );
+      if (!billResponse) {
+        throw new Error('Bill creation failed');
       }
-
 
       // --- START: Update Product Stock --- 
       const stockUpdatePromises = materials.map(async (material) => {
         try {
-          // 1. Fetch current product details
-          const productResponse = await axios.get(`${API_URL}/product/${material.id}`, {
-             headers: { Authorization: `Bearer ${user.backendToken}` }
+          // 1. Get current product details
+          const productResponse = await api.get(`/product/${material.id}`, {
+            'Authorization': `Bearer ${user.backendToken}`
           });
-          const currentProduct = productResponse.data; 
-          
+
           // 2. Calculate new stock
-          const currentStock = currentProduct.stock || 0;
+          const currentStock = productResponse.stock || 0;
           const orderedQuantity = material.quantity || 0;
-          const newStock = Math.max(0, currentStock - orderedQuantity); // Prevent negative stock
+          const newStock = Math.max(0, currentStock - orderedQuantity);
 
-          if (newStock === currentStock) {
-            return { status: 'skipped', productId: material.id };
-          }
-
-          // 3. Prepare PUT request body (using all fetched fields)
+          // 3. Prepare update payload
           const updatePayload = {
-            ...currentProduct, // Spread all existing fields
-            stock: newStock,   // Update only the stock field
-            // Ensure fields match the API expectation, remove if not needed or add defaults
-            name: currentProduct.name || "",
-            categoryId: currentProduct.categoryId || null, 
-            price: currentProduct.price || 0,
-            description: currentProduct.description || "",
-            designImage1URL: currentProduct.designImage1URL || null,
-            size: currentProduct.size || 1,
+            name: productResponse.name,
+            categoryId: productResponse.categoryId,
+            price: productResponse.price,
+            stock: newStock,
+            description: productResponse.description,
+            designImage1URL: productResponse.designImage1URL,
+            size: productResponse.size,
             image: {
-              imageUrl: currentProduct.image?.imageUrl || "",
-              image2: currentProduct.image?.image2 || null,
-              image3: currentProduct.image?.image3 || null
+              imageUrl: productResponse.image?.imageUrl || '',
+              image2: productResponse.image?.image2 || '',
+              image3: productResponse.image?.image3 || ''
             }
           };
-          // Remove id from payload if backend doesn't expect it in PUT body
-          // delete updatePayload.id; 
 
-
-          // 4. Send PUT request
-          await axios.put(`${API_URL}/product/${material.id}`, updatePayload, {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${user.backendToken}`,
-            }
+          // 4. Update product stock
+          await api.put(`/product/${material.id}`, updatePayload, {
+            'Authorization': `Bearer ${user.backendToken}`,
+            'Content-Type': 'application/json'
           });
-          return { status: 'fulfilled', productId: material.id };
-        } catch (productUpdateError) {
-          console.error(`Failed to update stock for product ${material.id} (${material.name}):`, productUpdateError.response?.data || productUpdateError.message);
-          // Don't throw error here, just log it and let the order process continue
-          return { status: 'rejected', productId: material.id, reason: productUpdateError.message };
+
+          return { status: 'success', productId: material.id };
+        } catch (error) {
+          
+          return { status: 'failed', productId: material.id, error: error.message };
         }
       });
 
-      // Wait for all updates to settle
+      // Wait for all updates to complete
       const results = await Promise.allSettled(stockUpdatePromises);
+      
+      // Check for any failed updates
+      // const failedUpdates = results.filter(result => 
+      //   result.status === 'rejected' || 
+      //   (result.status === 'fulfilled' && result.value.status === 'failed')
+      // );
+
+      // if (failedUpdates.length > 0) {
+      //   Alert.alert(
+      //     'Warning',
+      //     'Some product stock updates failed. Please contact support.',
+      //     [{ text: 'OK' }]
+      //   );
+      // }
+
       // --- END: Update Product Stock ---
 
-      // 5. Update Wallet Balance & Add Transaction (ONLY after both succeed)
+      // 5. Update Wallet Balance & Add Transaction
       updateBalance(-calculatedTotalCost);
       addTransaction({
         type: 'payment',
@@ -739,7 +650,6 @@ const OrderScreen = ({navigation, route}) => {
         stack: error.stack,
       });
 
-      // Show a generic error alert
       Alert.alert(
         'Lỗi',
         `Đã xảy ra lỗi trong quá trình thanh toán: ${
@@ -747,9 +657,8 @@ const OrderScreen = ({navigation, route}) => {
         }`,
         [{text: 'OK'}],
       );
-      // IMPORTANT: No balance refund needed here because balance is only deducted after success
     } finally {
-      setSavingAddress(false); // Turn off loading indicator
+      setSavingAddress(false);
     }
   };
 
@@ -762,17 +671,8 @@ const OrderScreen = ({navigation, route}) => {
 
     setLoadingAllProducts(true);
     try {
-      // Try localhost first, then fallback
-      let response;
-      try {
-        response = await axios.get('http://localhost:8080/api/product', {
-          timeout: 5000,
-        });
-      } catch (err) {
-        response = await axios.get(`${API_URL}/product`);
-      }
-
-      const fetchedProducts = response.data?.data || response.data || []; // Handle potential data wrapping
+      const response = await api.get('/product');
+      const fetchedProducts = response; // Handle potential data wrapping
       setAllProducts(fetchedProducts);
       return fetchedProducts;
     } catch (error) {
@@ -1429,8 +1329,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+
   },
   totalRow: {
     borderBottomWidth: 0,

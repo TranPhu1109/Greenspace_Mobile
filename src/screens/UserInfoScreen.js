@@ -93,7 +93,7 @@ const UserInfoScreen = ({ navigation }) => {
         <ScrollView>
           <View style={styles.profileHeader}>
             <Image
-              source={require('../assets/images/avatar.jpg')}
+              source={{ uri: user?.avatarUrl }}
               style={styles.avatar}
               defaultSource={require('../assets/images/avatar.jpg')}
             />

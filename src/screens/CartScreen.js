@@ -18,6 +18,7 @@ const CartScreen = ({ navigation, route }) => {
     selectAllItems,    // Get select all function
     deselectAllItems, // Get deselect all function
   } = useCart();
+  
   const { isAuthenticated } = useAuth();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);

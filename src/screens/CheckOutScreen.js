@@ -22,6 +22,8 @@ import {CommonActions} from '@react-navigation/native';
 import Address from '../components/Address';
 import axios from 'axios';
 
+const API_URL = 'http://192.168.1.2:8080/api';    
+
 const CheckOutScreen = ({navigation, route}) => {
   const {cartItems, totalPrice, clearCart, serverCartId} = useCart();
   const {balance, updateBalance, addTransaction} = useWallet();
@@ -121,7 +123,7 @@ const CheckOutScreen = ({navigation, route}) => {
       });
 
       const response = await fetch(
-        'http://10.0.2.2:8080/api/shipping/calculate-fee',
+        `${API_URL}/shipping/calculate-fee`,
         {
           method: 'POST',
           headers: {
@@ -262,7 +264,7 @@ const CheckOutScreen = ({navigation, route}) => {
       console.log('Creating order with:', JSON.stringify(orderProducts));
 
       const orderResponse = await axios.post(
-        'http://10.0.2.2:8080/api/orderproducts',
+        `${API_URL}/orderproducts`,
         orderProducts,
         {
           headers: {
@@ -297,7 +299,7 @@ const CheckOutScreen = ({navigation, route}) => {
       } else {
         console.log('Fetching wallet ID for user:', user.id);
         const walletResponse = await axios.get(
-          `http://10.0.2.2:8080/api/wallets/user${user.id}`,
+          `${API_URL}/wallets/user${user.id}`,
           {
             headers: {
               Authorization: `Bearer ${user.backendToken}`,
@@ -325,7 +327,7 @@ const CheckOutScreen = ({navigation, route}) => {
       console.log('Creating bill with:', JSON.stringify(billData));
 
       const billResponse = await axios.post(
-        'http://10.0.2.2:8080/api/bill',
+        `${API_URL}/bill`,
         billData,
         {
           headers: {

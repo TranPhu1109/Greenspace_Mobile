@@ -1,11 +1,84 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useAuth } from '../context/AuthContext';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { uploadImageToCloudinary } from '../hooks/UploadToCloud';
+import { api } from '../api/api';
 
 const EditProfileScreen = ({ navigation }) => {
-  const [name, setName] = useState('John Doe');
-  const [email, setEmail] = useState('john.doe@example.com');
-  const [phone, setPhone] = useState('+1 234 567 890');
+  const { user, login } = useAuth();
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [address, setAddress] = useState(user?.address || '');
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleChangePhoto = () => {
+    launchImageLibrary({
+      mediaType: 'photo',
+      quality: 0.7,
+      maxWidth: 1200,
+      maxHeight: 1200,
+      includeBase64: false,
+    }, async (response) => {
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.errorCode) {
+        Alert.alert('Error', 'An error occurred while picking the image');
+      } else if (response.assets && response.assets.length > 0) {
+        try {
+          setIsLoading(true);
+          const imageUrl = await uploadImageToCloudinary(response.assets[0]);
+          setAvatarUrl(imageUrl);
+        } catch (error) {
+          Alert.alert('Error', 'Failed to upload image');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    });
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('Error', 'Please enter your name');
+      return;
+    }
+
+    if (!phone.trim()) {
+      Alert.alert('Error', 'Please enter your phone number');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await api.put(`/users/${user.id}`, {
+        name: name.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        avatarUrl: avatarUrl
+      });
+
+      // Update the user context with new information
+      const updatedUser = {
+        ...user,
+        name: name.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        avatarUrl: avatarUrl
+      };
+      login(updatedUser);
+
+      Alert.alert('Success', 'Profile updated successfully');
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update profile');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -18,23 +91,26 @@ const EditProfileScreen = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
         <TouchableOpacity 
-          onPress={() => {
-            navigation.goBack();
-          }}
+          onPress={handleSave}
           style={styles.saveButton}
+          disabled={isLoading}
         >
-          <Text style={styles.saveButtonText}>Save</Text>
+          <Text style={styles.saveButtonText}>{isLoading ? 'Saving...' : 'Save'}</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} removeClippedSubviews={false}>
         <View style={styles.avatarContainer}>
           <Image
-            source={require('../assets/images/avatar.jpg')}
+            source={avatarUrl && avatarUrl !== 'string' ? { uri: avatarUrl } : require('../assets/images/avatar.jpg')}
             style={styles.avatar}
             defaultSource={require('../assets/images/avatar.jpg')}
           />
-          <TouchableOpacity style={styles.changePhotoButton}>
+          <TouchableOpacity 
+            style={styles.changePhotoButton}
+            onPress={handleChangePhoto}
+            disabled={isLoading}
+          >
             <Text style={styles.changePhotoText}>Change Photo</Text>
           </TouchableOpacity>
         </View>
@@ -47,18 +123,19 @@ const EditProfileScreen = ({ navigation }) => {
               value={name}
               onChangeText={setName}
               placeholder="Enter your full name"
+              editable={!isLoading}
             />
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: '#f0f0f0' }]}
               value={email}
-              onChangeText={setEmail}
               placeholder="Enter your email"
               keyboardType="email-address"
               autoCapitalize="none"
+              editable={false}
             />
           </View>
 
@@ -70,7 +147,21 @@ const EditProfileScreen = ({ navigation }) => {
               onChangeText={setPhone}
               placeholder="Enter your phone number"
               keyboardType="phone-pad"
+              editable={!isLoading}
             />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Address</Text>
+            <TouchableOpacity 
+              style={[styles.input, styles.addressInput]}
+              onPress={() => navigation.navigate('ShippingAddress')}
+            >
+              <Text style={address ? styles.addressText : styles.addressPlaceholder}>
+                {address || 'Select your address'}
+              </Text>
+              <Icon name="chevron-right" size={24} color="#8E8E93" />
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -146,6 +237,21 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     color: '#000',
+  },
+  addressInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  addressText: {
+    fontSize: 16,
+    color: '#000',
+    flex: 1,
+  },
+  addressPlaceholder: {
+    fontSize: 16,
+    color: '#999',
+    flex: 1,
   },
 });
 

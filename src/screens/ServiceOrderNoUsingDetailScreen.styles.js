@@ -343,10 +343,11 @@ export const styles = StyleSheet.create({
   confirmModalContent: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 20,
-    width: width * 0.85,
-    maxWidth: 400,
-    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    width: width * 0.9,
+    maxWidth: 450,
+    alignItems: 'stretch',
   },
   confirmModalHeader: {
     alignItems: 'center',
@@ -806,7 +807,7 @@ export const styles = StyleSheet.create({
     padding: 0,
     width: width * 0.9,
     maxWidth: 500,
-    maxHeight: height * 0.8,
+    maxHeight: height * 0.9,
   },
   paymentModalHeader: {
     flexDirection: 'row',
@@ -893,8 +894,8 @@ export const styles = StyleSheet.create({
     fontWeight: '500',
   },
   confirmPaymentButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
     borderRadius: 8,
     backgroundColor: '#34C759',
     width: '55%',
@@ -1234,32 +1235,41 @@ export const styles = StyleSheet.create({
     marginRight: 10,
   },
   // Financial information styles
-  financialInfoContainer: {
-    width: '100%',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 15,
+  financialInfoModalContainer: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: '#E2E8F0',
+    width: '100%',
   },
-  financialInfoRow: {
+  financialInfoModalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
+    width: '100%',
   },
-  financialInfoLabel: {
+  financialInfoModalLabel: {
     fontSize: 14,
-    color: '#4A4A4A',
-    flex: 3,
+    color: '#64748B',
+    flexShrink: 1,
+    marginRight: 10,
   },
-  financialInfoValue: {
+  financialInfoModalValue: {
     fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-    flex: 2,
+    fontWeight: '600',
+    color: '#334155',
     textAlign: 'right',
+    flexShrink: 0,
+  },
+  financialInfoModalDivider: {
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    marginTop: 8,
+    paddingTop: 12,
   },
   // Add new styles for wallet balance display
   sufficientBalance: {

@@ -1,13 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, ActivityIndicator, Modal } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { api } from '../api/api';
 
 const { width } = Dimensions.get('window');
-
-const API_URL = 'http://10.0.2.2:8080/api';
 
 const DesignDetailScreen = ({ navigation, route }) => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -25,17 +23,13 @@ const DesignDetailScreen = ({ navigation, route }) => {
   // Use useFocusEffect to check authentication status when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      // Check if we are returning from login with returnTo parameter
       if (isAuthenticated && route.params?.fromLogin) {
-        // Continue with purchase flow
         handleBuyDesign();
-        // Clear the fromLogin parameter
         navigation.setParams({ fromLogin: undefined });
       }
     }, [isAuthenticated, route.params?.fromLogin])
   );
 
-  // Fetch design details
   useEffect(() => {
     fetchDesignDetails();
   }, [designId]);
@@ -45,18 +39,17 @@ const DesignDetailScreen = ({ navigation, route }) => {
     setError(null);
     try {
       console.log(`Fetching design details for ID: ${designId}`);
-      const response = await axios.get(`${API_URL}/designidea/${designId}`, {
+      const response = await api.get(`/designidea/${designId}`, {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         }
       });
-      console.log('Design details fetched successfully');
-      setDesignData(response.data);
+      console.log('Design details fetched successfully + response:', response);
+      setDesignData(response);
       
-      // If we have product details, fetch the materials
-      if (response.data.productDetails && response.data.productDetails.length > 0) {
-        fetchMaterials(response.data.productDetails);
+      if (response.productDetails && response.productDetails.length > 0) {
+        fetchMaterials(response.productDetails);
       }
     } catch (err) {
       console.error('Error fetching design details:', err);
@@ -67,28 +60,25 @@ const DesignDetailScreen = ({ navigation, route }) => {
   };
 
   const fetchMaterials = async (productDetails) => {
+    
     if (!productDetails || productDetails.length === 0) return;
     
     setLoadingMaterials(true);
     try {
       const materialsPromises = productDetails.map(async (detail) => {
-        const response = await axios.get(`${API_URL}/product/${detail.productId}`, {
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          }
-        });
+        const response = await api.get(`/product/${detail.productId}`);
         return {
-          ...response.data,
+          ...response,
           quantity: detail.quantity
         };
       });
 
       const materialsData = await Promise.all(materialsPromises);
+      console.log("materialsData trong fetchMaterials:", materialsData);
+      
       setMaterials(materialsData);
     } catch (err) {
       console.error('Error fetching materials:', err);
-      // We don't set the main error state here to still show the design
     } finally {
       setLoadingMaterials(false);
     }

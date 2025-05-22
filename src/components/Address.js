@@ -12,10 +12,7 @@ import {
   TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import axios from 'axios';
-
-// Use the appropriate API URL for your setup
-const API_URL = 'http://10.0.2.2:8080/api'; // Android Emulator
+import { api } from '../api/api';
 
 const Address = ({ onAddressChange, initialAddress = {} }) => {
   const [provinces, setProvinces] = useState([]);
@@ -47,8 +44,8 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
   const fetchProvinces = useCallback(async () => {
     setLoadingProvinces(true);
     try {
-      const response = await axios.get(`${API_URL}/shipping/provinces`);
-      const fetchedProvinces = response.data?.data || [];
+      const response = await api.get('/shipping/provinces');
+      const fetchedProvinces = response?.data || [];
       setProvinces(fetchedProvinces);
       setFilteredProvinces(fetchedProvinces);
 
@@ -157,14 +154,14 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
     setLoadingDistricts(true);
     
     try {
-      const response = await axios.get(`${API_URL}/shipping/districts?provinceId=${provinceId}`);
-      const fetchedDistricts = response.data?.data || [];
+      const response = await api.get(`/shipping/districts?provinceId=${provinceId}`);
+      const fetchedDistricts = response?.data || [];
       console.log("Fetched Districts:", fetchedDistricts)
       setDistricts(fetchedDistricts);
       setFilteredDistricts(fetchedDistricts);
 
       // Auto-select district based on initialAddress name if it's a first load
-      if (initialAddress.districtName && fetchedDistricts.length > 0 /*&& !selectedDistrictId*/) { // Temporarily remove !selectedDistrictId check for debugging, check seems correct though
+      if (initialAddress.districtName && fetchedDistricts.length > 0) {
         console.log(`Comparing initial district "${initialAddress.districtName}" with fetched districts...`);
         const initialDist = fetchedDistricts.find(d => d.districtName === initialAddress.districtName);
         if (initialDist) {
@@ -189,14 +186,14 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
     setLoadingWards(true);
     
     try {
-      const response = await axios.get(`${API_URL}/shipping/wards?districtId=${districtId}`);
-      const fetchedWards = response.data?.data || [];
+      const response = await api.get(`/shipping/wards?districtId=${districtId}`);
+      const fetchedWards = response?.data || [];
       console.log("Fetched Wards:", fetchedWards);
       setWards(fetchedWards);
       setFilteredWards(fetchedWards);
 
       // Auto-select ward based on initialAddress name if it's a first load
-      if (initialAddress.wardName && fetchedWards.length > 0 /*&& !selectedWardId*/) { // Temporarily remove !selectedWardId check
+      if (initialAddress.wardName && fetchedWards.length > 0) {
         console.log(`Comparing initial ward "${initialAddress.wardName}" with fetched wards...`);
         const initialWard = fetchedWards.find(w => w.wardName === initialAddress.wardName);
         if (initialWard) {

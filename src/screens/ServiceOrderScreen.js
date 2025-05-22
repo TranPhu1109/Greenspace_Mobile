@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
-
-const API_BASE_URL_LOCALHOST = 'http://localhost:8080/api';
-const API_BASE_URL_EMULATOR = 'http://10.0.2.2:8080/api';
+import { api } from '../api/api';
 
 // Helper function to format date
 const formatDate = (dateString) => {
@@ -22,7 +19,7 @@ const formatDate = (dateString) => {
     });
   } catch (error) {
     console.error("Error formatting date:", error);
-    return dateString; // Return original string if formatting fails
+    return dateString;
   }
 };
 
@@ -57,30 +54,15 @@ const ServiceOrderScreen = ({ navigation }) => {
       setError(null);
       
       const userId = user.id;
-      const urlPath = `/serviceorder/userid-usingidea/${userId}`;
-      let response;
-
-      try {
-        console.log(`Fetching orders from: ${API_BASE_URL_LOCALHOST}${urlPath}`);
-        response = await axios.get(`${API_BASE_URL_LOCALHOST}${urlPath}`, {
-            headers: { 'Authorization': `Bearer ${user.backendToken}` },
-            timeout: 5000
-        });
-      } catch (err) {
-        console.warn("Localhost fetch failed, trying emulator URL...");
-        console.log(`Fetching orders from: ${API_BASE_URL_EMULATOR}${urlPath}`);
-        response = await axios.get(`${API_BASE_URL_EMULATOR}${urlPath}`, {
-            headers: { 'Authorization': `Bearer ${user.backendToken}` }
-        });
-      }
-
-      const fetchedOrders = response.data?.data || response.data || [];
+      const response = await api.get(`/serviceorder/userid-usingidea/${userId}`);
+      const fetchedOrders = response.data || response;
+      
       setOrders(fetchedOrders);
       console.log(`Fetched ${fetchedOrders.length} orders.`);
       
     } catch (err) {
       console.error('Error fetching orders:', err);
-      setError('Failed to load orders. Please try again later.');
+      setError('Bạn chưa có đơn hàng nào!');
       setOrders([]);
     } finally {
       setLoading(false);
@@ -187,10 +169,10 @@ const ServiceOrderScreen = ({ navigation }) => {
       <View style={styles.errorContainer}>
           <Icon name="alert-circle-outline" size={60} color="#ff3b30" style={{ marginBottom: 15 }}/>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchOrders}>
+        {/* <TouchableOpacity style={styles.retryButton} onPress={fetchOrders}>
             <Icon name="refresh" size={18} color="#fff" style={{ marginRight: 8 }}/>
           <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     );
   }

@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 
-const API_URL = 'http://10.0.2.2:8080/api';
+const API_URL = 'http://192.168.1.2:8080/api';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -52,6 +52,7 @@ export const CartProvider = ({ children }) => {
     const checkAuth = async () => {
       try {
         const userJson = await AsyncStorage.getItem('user');
+        console.log('userJson', userJson);
       } catch (error) {
         console.error('Error checking auth:', error);
       }

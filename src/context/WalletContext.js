@@ -1,42 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import { useAuth } from './AuthContext';
-
-// Base URL for the API
-const API_URL = 'http://10.0.2.2:8080/api';
-
-// Create axios instance with default config
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add request interceptor to include token
-api.interceptors.request.use(
-  async (config) => {
-    try {
-      const userJson = await AsyncStorage.getItem('user');
-      
-      if (userJson) {
-        const user = JSON.parse(userJson);
-        if (user.backendToken) {
-          config.headers.Authorization = `Bearer ${user.backendToken}`;
-        }
-      }
-    } catch (error) {
-      console.error('Lỗi khi thêm token vào yêu cầu API Ví:', error);
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-const WalletContext = createContext();
+import { api } from '../api/api';
 
 // Helper function to process wallet logs into formatted transactions
 const processWalletLogs = (logs) => {
@@ -136,6 +101,8 @@ const processWalletBills = (bills) => {
   });
 };
 
+const WalletContext = createContext();
+
 export const WalletProvider = ({ children }) => {
   const [balance, setBalance] = useState(0);
   const [purchaseTransactions, setPurchaseTransactions] = useState([]);
@@ -150,7 +117,7 @@ export const WalletProvider = ({ children }) => {
     try {
       // Set loading state but not if we're just doing a background refresh
       if (!forceRefresh) {
-      setIsLoading(true);
+        setIsLoading(true);
       }
       
       // Check if we need to fetch again or can use cached data
@@ -189,10 +156,10 @@ export const WalletProvider = ({ children }) => {
       ]);
 
       // Set Balance
-      setBalance(walletDetailsResponse.data.amount);
+      setBalance(walletDetailsResponse.amount);
       
       // Process Wallet Logs for Deposits and Refunds
-      const walletLogs = walletDetailsResponse.data.walletLogs || [];
+      const walletLogs = walletDetailsResponse.walletLogs || [];
 
       const depositLogs = walletLogs.filter(log => log.type === 'Deposit');
       const formattedDeposits = processWalletLogs(depositLogs);
@@ -203,11 +170,11 @@ export const WalletProvider = ({ children }) => {
       setRefundTransactions(formattedRefunds);
 
       // Process and Set Purchase Transactions
-      const formattedPurchases = processWalletBills(userWalletResponse.data.bills || []);
+      const formattedPurchases = processWalletBills(userWalletResponse.bills || []);
       setPurchaseTransactions(formattedPurchases);
       
       // Update userData cache with the main wallet details 
-      userData.wallet = walletDetailsResponse.data; 
+      userData.wallet = walletDetailsResponse; 
       await AsyncStorage.setItem('user', JSON.stringify(userData));
       
       // Update last fetch time
@@ -217,10 +184,6 @@ export const WalletProvider = ({ children }) => {
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu ví:', err);
       setError(err.message || 'Không thể tải dữ liệu ví');
-      // Clear sensitive data if unauthorized or error
-      if (err.response && err.response.status === 401) {
-        // Maybe trigger logout or clear specific data
-      }
     } finally {
       setIsLoading(false);
     }
@@ -271,26 +234,20 @@ export const WalletProvider = ({ children }) => {
       // Prepare the request body including only the amount
       const requestBody = {
           amount: numericAmount, 
-          // isMobile is now sent as a URL parameter
       };
 
       // Send the request body as JSON, with isMobile as a query parameter
-      const response = await api.post('/wallets/vn-pay?isMobile=true', amount, { 
-        headers: {
-          'Authorization': `Bearer ${user.backendToken}`,
-          'Content-Type': 'application/json'
-        }
-      }); 
-      console.log('Phản hồi API VNPay:', response.data);
+      const response = await api.post('/wallets/vn-pay?isMobile=true', amount);
+      console.log('Phản hồi API VNPay:', response);
       
-      if (response.data && typeof response.data === 'string') {
-        return response.data; // Expecting the URL string directly
+      if (response && typeof response === 'string') {
+        return response; // Expecting the URL string directly
       } else {
         throw new Error('Định dạng phản hồi từ API VNPay không hợp lệ');
       }
     } catch (err) {
-      console.error('Lỗi khi tạo giao dịch VNPay:', err.response ? err.response.data : err);
-      throw new Error(err.response?.data?.message || 'Không thể tạo liên kết thanh toán VNPay');
+      console.error('Lỗi khi tạo giao dịch VNPay:', err);
+      throw new Error(err.message || 'Không thể tạo liên kết thanh toán VNPay');
     }
   };
 
@@ -307,40 +264,22 @@ export const WalletProvider = ({ children }) => {
 
       console.log('Gửi yêu cầu GET đến backend:', apiUrl);
 
-      // Change to api.get and remove body/content-type header
-      const response = await api.get(apiUrl, {
-          headers: {
-            // Authorization header is still added by the interceptor
-            // No Content-Type needed for GET
-          }
-      });
-      console.log('Phản hồi API VNPay thành công:', response.data);
+      const response = await api.get(apiUrl);
+      console.log('Phản hồi API VNPay thành công:', response);
       
       // Assuming success means the balance is updated backend-side
       await fetchWalletData(true); // Force refresh wallet balance
 
       // Return the success message from the backend
-      return response.data; 
+      return response; 
 
     } catch (err) {
-      // Log more detailed error information
       console.error('--- Lỗi xử lý phản hồi VNPay ---');
-      console.error('Mã trạng thái:', err.response?.status);
-      console.error('Dữ liệu phản hồi:', JSON.stringify(err.response?.data, null, 2)); // Stringify for better object logging
       console.error('Thông báo lỗi:', err.message);
-      console.error('URL yêu cầu:', err.config?.url);
       console.error('Đối tượng lỗi đầy đủ:', err);
       console.error('--- Kết thúc chi tiết lỗi ---');
 
-      // Try to extract a meaningful error message from backend response
-      const backendError = err.response?.data;
-      let errorMessage = 'Không thể xử lý phản hồi VNPay.';
-      if (typeof backendError === 'string') {
-        errorMessage = backendError;
-      } else if (backendError?.title) { // Handle ASP.NET Core validation error format
-        errorMessage = backendError.title;
-      }
-      throw new Error(errorMessage);
+      throw new Error(err.message || 'Không thể xử lý phản hồi VNPay.');
     }
   };
 

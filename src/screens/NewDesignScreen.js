@@ -15,14 +15,12 @@ import {
   Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import Address from '../components/Address';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { uploadImageToCloudinary } from '../hooks/UploadToCloud';
 import { styles } from './NewDesignScreen.styles';
-
-const API_URL = 'http://10.0.2.2:8080/api';
+import { api } from '../api/api';
 
 const NewDesignScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -153,50 +151,22 @@ const NewDesignScreen = ({ navigation }) => {
       };
 
       // Make API call
-      let response;
-      try {
-        response = await axios.post(
-          'http://localhost:8080/api/serviceorder/nousing',
-          requestBody,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${user.backendToken}`
-            },
-            timeout: 3000,
-          }
-        );
-      } catch (err) {
-        // Fallback to alternative URL if localhost fails
-        response = await axios.post(
-          'http://10.0.2.2:8080/api/serviceorder/nousing',
-          requestBody,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${user.backendToken}`
-            }
-          }
-        );
-      }
+      const response = await api.post('/serviceorder/nousing', requestBody);
 
-      if (response.status === 200 || response.status === 201) {
-        setShowSuccessModal(true);
-        // Reset form
-        setLength('');
-        setWidth('');
-        setImages([]);
-        setDescription('');
-        setCustomerName(user?.name || '');
-        setCustomerPhone(user?.phone || '');
-      } else {
-        throw new Error('Failed to create order');
-      }
+      // If we get here, the request was successful
+      setShowSuccessModal(true);
+      // Reset form
+      setLength('');
+      setWidth('');
+      setImages([]);
+      setDescription('');
+      setCustomerName(user?.name || '');
+      setCustomerPhone(user?.phone || '');
     } catch (error) {
       console.error('Error submitting request:', error);
       Alert.alert(
         "Lỗi", 
-        error.response?.data?.message || "Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại."
+        error.data?.message || error.message || "Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại."
       );
     } finally {
       setIsUploading(false);
@@ -254,67 +224,49 @@ const NewDesignScreen = ({ navigation }) => {
           }
         : null;
 
-      let response;
-      try {
-        response = await axios.get(
-          `http://localhost:8080/api/address/user/${user.id}`,
-          {
-            headers: { Authorization: `Bearer ${user.backendToken}` },
-            timeout: 3000,
-          },
-        );
-      } catch (err) {
-        response = await axios.get(
-          `http://10.0.2.2:8080/api/address/user/${user.id}`,
-          { headers: { Authorization: `Bearer ${user.backendToken}` } },
-        );
-      }
+      const response = await api.get(`/address/user/${user.id}`);
+      const apiAddresses = response.data || response;
+      let addresses = [];
+      let foundContextMatch = false;
 
-      if (response.status === 200) {
-        let apiAddresses = response.data?.data || response.data || [];
-        let addresses = [];
-        let foundContextMatch = false;
-
-        if (apiAddresses.length > 0) {
-          apiAddresses.forEach(addr => {
-            const addressCopy = { ...addr };
-            if (contextAddress && addressCopy.userAddress === contextAddress.userAddress) {
-              addressCopy.isDefault = true;
-              foundContextMatch = true;
-            }
-            addresses.push(addressCopy);
-          });
-          if (contextAddress && !foundContextMatch) {
-            addresses.unshift(contextAddress);
+      if (apiAddresses.length > 0) {
+        apiAddresses.forEach(addr => {
+          const addressCopy = { ...addr };
+          if (contextAddress && addressCopy.userAddress === contextAddress.userAddress) {
+            addressCopy.isDefault = true;
+            foundContextMatch = true;
           }
-        } else if (contextAddress) {
-          addresses.push(contextAddress);
+          addresses.push(addressCopy);
+        });
+        if (contextAddress && !foundContextMatch) {
+          addresses.unshift(contextAddress);
         }
-        setAddressList(addresses);
-        // If no address is currently selected, set the default/first one
-        if (!selectedAddress && addresses.length > 0) {
-           const defaultAddr = addresses.find(addr => addr.isDefault) || addresses[0];
-           setSelectedAddress(defaultAddr);
-           // Optionally update name/phone fields if needed here, but maybe not for this screen
-        }
+      } else if (contextAddress) {
+        addresses.push(contextAddress);
+      }
+      setAddressList(addresses);
+      // If no address is currently selected, set the default/first one
+      if (!selectedAddress && addresses.length > 0) {
+         const defaultAddr = addresses.find(addr => addr.isDefault) || addresses[0];
+         setSelectedAddress(defaultAddr);
       }
     } catch (error) {
       console.error('Error fetching addresses:', error);
       Alert.alert('Error', 'Could not load addresses. Please try again.');
-       if (user?.address && addressList.length === 0) { // Fallback if API failed but context address exists
-         const contextAddress = {
-            id: 'context-address',
-            userId: user.id,
-            name: user.name || '',
-            phone: user.phone || '',
-            userAddress: user.address,
-            isDefault: true,
-          };
-          setAddressList([contextAddress]);
-          if (!selectedAddress) {
-             setSelectedAddress(contextAddress);
-          }
-       }
+      if (user?.address && addressList.length === 0) {
+        const contextAddress = {
+          id: 'context-address',
+          userId: user.id,
+          name: user.name || '',
+          phone: user.phone || '',
+          userAddress: user.address,
+          isDefault: true,
+        };
+        setAddressList([contextAddress]);
+        if (!selectedAddress) {
+          setSelectedAddress(contextAddress);
+        }
+      }
     } finally {
       setLoadingAddresses(false);
     }
@@ -347,9 +299,9 @@ const NewDesignScreen = ({ navigation }) => {
 
   const handleAddNewAddress = async () => {
     if (!validateNewAddress() || !user || !user.id || !user.backendToken) {
-       if (!user || !user.id || !user.backendToken) {
-         Alert.alert("Error", "User information is missing. Cannot save address.");
-       }
+      if (!user || !user.id || !user.backendToken) {
+        Alert.alert("Error", "User information is missing. Cannot save address.");
+      }
       return;
     }
     setSavingAddress(true);
@@ -362,38 +314,14 @@ const NewDesignScreen = ({ navigation }) => {
         userAddress: userAddress,
       };
 
-      let response;
-      try {
-        response = await axios.post(
-          'http://localhost:8080/api/address',
-          requestBody,
-          {
-            headers: {
-              Authorization: `Bearer ${user.backendToken}`,
-              'Content-Type': 'application/json',
-            },
-            timeout: 3000,
-          },
-        );
-      } catch (err) {
-        response = await axios.post(
-          'http://10.0.2.2:8080/api/address',
-          requestBody,
-          {
-            headers: {
-              Authorization: `Bearer ${user.backendToken}`,
-              'Content-Type': 'application/json',
-            },
-          },
-        );
-      }
+      const response = await api.post('/address', requestBody);
 
       if (response.status === 200 || response.status === 201) {
         setNewAddressStreet('');
         setAddressDetails({});
         setShowNewAddressModal(false);
         setTimeout(() => {
-          fetchAddresses(); // Refetch addresses
+          fetchAddresses();
         }, 500);
         Alert.alert('Success', 'Address added successfully');
       }

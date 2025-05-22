@@ -26,17 +26,17 @@ import {uploadImageToCloudinary} from '../hooks/UploadToCloud';
 import StatusTrackingMaterial from '../components/StatusTrackingMaterial';
 import {useWallet} from '../context/WalletContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { api } from '../api/api';
 
-const API_BASE_URL_LOCALHOST = 'http://localhost:8080/api';
-const API_BASE_URL_EMULATOR = 'http://10.0.2.2:8080/api';
 const {width, height} = Dimensions.get('window');
 
 const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
   const {orderId} = route.params;
   const {user} = useAuth();
   const {balance, refreshWallet} = useWallet();
-  console.log('balance', balance);
   const [order, setOrder] = useState(null);
+
+
 
   const [recordSketches, setRecordSketches] = useState([]);
   const [recordDesigns, setRecordDesigns] = useState([]);
@@ -52,7 +52,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
   const [contractLoading, setContractLoading] = useState(false);
   const [contractError, setContractError] = useState(null);
   const [contractModalVisible, setContractModalVisible] = useState(false);
-  const [contractStep, setContractStep] = useState(1);
   const [signatureImage, setSignatureImage] = useState(null);
   const [showSignatureOptions, setShowSignatureOptions] = useState(false);
   const [showGuidance, setShowGuidance] = useState(false);
@@ -126,7 +125,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
 
   const showDesignPhaseStatuses = [
     'AssignToDesigner', // 4
-    'DeterminingMaterialPrice', // 5
     'DoneDesign', // 6
     'DoneDeterminingMaterialPrice', // 23
     'PaymentSuccess', // 7
@@ -158,6 +156,13 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
     'Warning', // 15
     'ReDesign', // 20
   ];
+
+  const statusDontShowdepositField = [
+    "Pending",
+      "ConsultingAndSketching",
+      'DeterminingDesignPrice',
+       "WaitDeposit"
+  ]
 
   // Handle pull-to-refresh
   const onRefresh = useCallback(() => {
@@ -206,24 +211,13 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       setLoading(true);
       setError(null);
 
-      const urlPath = `/serviceorder/${orderId}`;
-      let response;
+      const response = await api.get(`/serviceorder/${orderId}`);
+      const orderData = response
 
-      try {
-        // console.log(`Fetching order details from: ${API_BASE_URL_LOCALHOST}${urlPath}`);
-        response = await axios.get(`${API_BASE_URL_LOCALHOST}${urlPath}`, {
-          headers: {Authorization: `Bearer ${user.backendToken}`},
-          timeout: 5000,
-        });
-      } catch (err) {
-        // console.warn("Localhost fetch failed, trying emulator URL...");
-        // console.log(`Fetching order details from: ${API_BASE_URL_EMULATOR}${urlPath}`);
-        response = await axios.get(`${API_BASE_URL_EMULATOR}${urlPath}`, {
-          headers: {Authorization: `Bearer ${user.backendToken}`},
-        });
+      if (!orderData) {
+        throw new Error("Order data not found in response.");
       }
 
-      const orderData = response.data;
       setOrder(orderData);
 
       // Check if we need to fetch record sketches
@@ -249,8 +243,9 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         }
       }
     } catch (err) {
-      // console.error('Error fetching order details:', err);
-      setError('Không thể tải thông tin đơn hàng. Vui lòng thử lại sau.');
+      console.error('Error fetching order details:', err);
+      setError('Không thể tải chi tiết đơn hàng.');
+      setOrder(null);
     } finally {
       setLoading(false);
     }
@@ -258,24 +253,9 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
 
   const fetchRecordSketches = async orderId => {
     try {
-      const urlPath = `/recordsketch/${orderId}/orderservice`;
-      let response;
-
-      try {
-        // console.log(`Fetching record sketches from: ${API_BASE_URL_LOCALHOST}${urlPath}`);
-        response = await axios.get(`${API_BASE_URL_LOCALHOST}${urlPath}`, {
-          headers: {Authorization: `Bearer ${user.backendToken}`},
-          timeout: 5000,
-        });
-      } catch (err) {
-        // console.warn("Localhost fetch failed, trying emulator URL...");
-        // console.log(`Fetching record sketches from: ${API_BASE_URL_EMULATOR}${urlPath}`);
-        response = await axios.get(`${API_BASE_URL_EMULATOR}${urlPath}`, {
-          headers: {Authorization: `Bearer ${user.backendToken}`},
-        });
-      }
-
-      const sketches = response.data || [];
+      const response = await api.get(`/recordsketch/${orderId}/orderservice`);
+      
+      const sketches = response
       setRecordSketches(sketches);
 
       // Calculate maximum phase from sketches
@@ -286,40 +266,24 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         setMaxPhase(prev => Math.max(prev, maxSketchPhase));
       }
     } catch (err) {
-      // console.error('Error fetching record sketches:', err);
       // We don't set error state here to avoid blocking the entire screen
+      //console.error('Error fetching record sketches:', err);
     }
   };
 
   const fetchRecordDesigns = async orderId => {
     try {
-      const urlPath = `/recorddesign/${orderId}/orderservice`;
-      let response;
-
-      try {
-        // console.log(`Fetching record designs from: ${API_BASE_URL_LOCALHOST}${urlPath}`);
-        response = await axios.get(`${API_BASE_URL_LOCALHOST}${urlPath}`, {
-          headers: {Authorization: `Bearer ${user.backendToken}`},
-          timeout: 5000,
-        });
-      } catch (err) {
-        // console.warn("Localhost fetch failed, trying emulator URL...");
-        // console.log(`Fetching record designs from: ${API_BASE_URL_EMULATOR}${urlPath}`);
-        response = await axios.get(`${API_BASE_URL_EMULATOR}${urlPath}`, {
-          headers: {Authorization: `Bearer ${user.backendToken}`},
-        });
-      }
-
-      const designs = response.data || [];
-
+      const response = await api.get(`/recorddesign/${orderId}/orderservice`);
+      const designs = response
       setRecordDesigns(designs);
+      
       if (designs.length > 0) {
         const maxDesignPhase = Math.max(...designs.map(design => design.phase));
         setMaxPhaseDesign(prev => Math.max(prev, maxDesignPhase));
       }
     } catch (err) {
-      // console.error('Error fetching record designs:', err);
       // We don't set error state here to avoid blocking the entire screen
+      //console.error('Error fetching record designs:', err);
     }
   };
 
@@ -346,61 +310,15 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
 
       // Step 1: Confirm the record sketch
       const recordSketchUrl = `/recordsketch/${selectedRecordId}`;
-      let response;
-
-      try {
-        // console.log(`Confirming sketch at: ${API_BASE_URL_LOCALHOST}${recordSketchUrl}`);
-        response = await axios.put(
-          `${API_BASE_URL_LOCALHOST}${recordSketchUrl}`,
-          {
-            isSelected: true,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        // console.warn("Localhost request failed, trying emulator URL...");
-        // console.log(`Confirming sketch at: ${API_BASE_URL_EMULATOR}${recordSketchUrl}`);
-        response = await axios.put(
-          `${API_BASE_URL_EMULATOR}${recordSketchUrl}`,
-          {
-            isSelected: true,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-          },
-        );
-      }
+      await api.put(recordSketchUrl, {
+        isSelected: true,
+      });
 
       // Step 2: Update the order status
       const updateStatusUrl = `/serviceorder/status/${orderId}`;
-      try {
-        // console.log(`Updating order status at: ${API_BASE_URL_LOCALHOST}${updateStatusUrl}`);
-        await axios.put(
-          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
-          {
-            status: 21,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        // console.warn("Localhost request failed, trying emulator URL...");
-        // console.log(`Updating order status at: ${API_BASE_URL_EMULATOR}${updateStatusUrl}`);
-        await axios.put(
-          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
-          {
-            status: 21,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-          },
-        );
-      }
+      await api.put(updateStatusUrl, {
+        status: 21,
+      });
 
       // Close confirmation modal and show success modal
       setConfirmModalVisible(false);
@@ -409,7 +327,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       // Refresh data
       fetchOrderDetails();
     } catch (err) {
-      // console.error('Error confirming sketch:', err);
+      console.error('Error confirming sketch:', err);
       Alert.alert(
         'Lỗi',
         'Không thể xác nhận bản phác thảo. Vui lòng thử lại sau.',
@@ -429,37 +347,17 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       let existingContract = null;
 
       try {
-        // console.log(`Fetching contract from: ${API_BASE_URL_LOCALHOST}${contractFetchUrl}`);
-        const response = await axios.get(
-          `${API_BASE_URL_LOCALHOST}${contractFetchUrl}`,
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-        existingContract =
-          response.data && response.data.length > 0 ? response.data[0] : null;
+        const response = await api.get(contractFetchUrl);
+        console.log("response contract", response);
+        
+        existingContract = response && response.length > 0 ? response[0] : null;
       } catch (fetchErr) {
-        // console.warn("Localhost fetch failed, trying emulator URL...");
-        try {
-          // console.log(`Fetching contract from: ${API_BASE_URL_EMULATOR}${contractFetchUrl}`);
-          const response = await axios.get(
-            `${API_BASE_URL_EMULATOR}${contractFetchUrl}`,
-            {
-              headers: {Authorization: `Bearer ${user.backendToken}`},
-            },
-          );
-          existingContract =
-            response.data && response.data.length > 0 ? response.data[0] : null;
-        } catch (emulatorFetchErr) {
-          // console.error("Failed to fetch contract from both URLs", emulatorFetchErr);
-        }
+        console.error("Failed to fetch contract:", fetchErr); 
       }
 
       if (existingContract) {
         // Contract already exists, just set it
         setContract(existingContract);
-        // console.log("Existing contract found:", existingContract);
       } else {
         // Need to create a new contract
         const contractData = {
@@ -472,72 +370,23 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           designPrice: orderData.designPrice || 0,
         };
 
-        // console.log("Creating new contract with data:", contractData);
-
         // Create the contract
         const contractCreateUrl = `/contract`;
-        let createResponse;
-
         try {
-          // console.log(`Creating contract at: ${API_BASE_URL_LOCALHOST}${contractCreateUrl}`);
-          createResponse = await axios.post(
-            `${API_BASE_URL_LOCALHOST}${contractCreateUrl}`,
-            contractData,
-            {
-              headers: {Authorization: `Bearer ${user.backendToken}`},
-              timeout: 10000, // Longer timeout for contract creation
-            },
-          );
+          await api.post(contractCreateUrl, contractData);
+
+          // Fetch the newly created contract
+          const fetchResponse = await api.get(contractFetchUrl);
+          if (fetchResponse && fetchResponse.length > 0) {
+            setContract(fetchResponse[0]);
+          }
         } catch (createErr) {
-          // console.warn("Localhost contract creation failed, trying emulator URL...");
-          // console.log(`Creating contract at: ${API_BASE_URL_EMULATOR}${contractCreateUrl}`);
-          createResponse = await axios.post(
-            `${API_BASE_URL_EMULATOR}${contractCreateUrl}`,
-            contractData,
-            {
-              headers: {Authorization: `Bearer ${user.backendToken}`},
-            },
-          );
-        }
-
-        // Fetch the newly created contract
-        try {
-          // console.log(`Fetching created contract from: ${API_BASE_URL_LOCALHOST}${contractFetchUrl}`);
-          const fetchResponse = await axios.get(
-            `${API_BASE_URL_LOCALHOST}${contractFetchUrl}`,
-            {
-              headers: {Authorization: `Bearer ${user.backendToken}`},
-              timeout: 5000,
-            },
-          );
-
-          if (fetchResponse.data && fetchResponse.data.length > 0) {
-            setContract(fetchResponse.data[0]);
-            // console.log("New contract created and fetched:", fetchResponse.data[0]);
-          }
-        } catch (fetchNewErr) {
-          // console.warn("Localhost fetch failed, trying emulator URL...");
-          try {
-            // console.log(`Fetching created contract from: ${API_BASE_URL_EMULATOR}${contractFetchUrl}`);
-            const fetchResponse = await axios.get(
-              `${API_BASE_URL_EMULATOR}${contractFetchUrl}`,
-              {
-                headers: {Authorization: `Bearer ${user.backendToken}`},
-              },
-            );
-
-            if (fetchResponse.data && fetchResponse.data.length > 0) {
-              setContract(fetchResponse.data[0]);
-              // console.log("New contract created and fetched:", fetchResponse.data[0]);
-            }
-          } catch (emulatorFetchNewErr) {
-            // console.error("Failed to fetch new contract", emulatorFetchNewErr);
-            setContractError('Không thể tải hợp đồng. Vui lòng thử lại sau.');
-          }
+          console.error("Failed to create or fetch new contract:", createErr);
+          setContractError('Không thể tải hợp đồng. Vui lòng thử lại sau.');
         }
       }
     } catch (err) {
-      // console.error('Error handling contract:', err);
+      console.error('Error handling contract:', err);
       setContractError(
         'Không thể tạo hoặc tải hợp đồng. Vui lòng thử lại sau.',
       );
@@ -753,54 +602,19 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           throw new Error('Không thể tải lên chữ ký. Vui lòng thử lại.');
         }
       } catch (uploadError) {
-        // If signature upload fails, abort the entire process
         throw new Error(`Lỗi khi tải lên chữ ký: ${uploadError.message}`);
       }
 
       // Step 2: Call API to sign contract
       const contractId = contract.id;
-      let signContractResponse;
-
-      try {
-        signContractResponse = await axios.put(
-          `${API_BASE_URL_LOCALHOST}/contract/${contractId}`,
-          {signatureUrl: signatureUrl},
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        signContractResponse = await axios.put(
-          `${API_BASE_URL_EMULATOR}/contract/${contractId}`,
-          {signatureUrl: signatureUrl},
-          {headers: {Authorization: `Bearer ${user.backendToken}`}},
-        );
-      }
+      await api.put(`/contract/${contractId}`, {signatureUrl: signatureUrl});
 
       // Step 3: Get deposit payment percentage
-      let percentageResponse;
-
-      try {
-        percentageResponse = await axios.get(
-          `${API_BASE_URL_LOCALHOST}/percentage`,
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        percentageResponse = await axios.get(
-          `${API_BASE_URL_EMULATOR}/percentage`,
-          {headers: {Authorization: `Bearer ${user.backendToken}`}},
-        );
-      }
-
-      const depositPercentage = percentageResponse.data.depositPercentage;
+      const percentageResponse = await api.get('/percentage');
+      const depositPercentage = percentageResponse.depositPercentage;
 
       // Step 4: Process payment
-      const amount = Math.round((order.designPrice * depositPercentage) / 100); // Ensure amount is a whole number
-
+      const amount = Math.round((order.designPrice * depositPercentage) / 100);
       const paymentDescription = `Pay ${depositPercentage}% design fee for order ${order.id}`;
 
       // Create payment payload
@@ -811,80 +625,22 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         description: paymentDescription,
       };
 
-      let paymentResponse;
-      try {
-        paymentResponse = await axios.post(
-          `${API_BASE_URL_LOCALHOST}/bill`,
-          paymentPayload,
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 8000, // Extend timeout for payment processing
-          },
-        );
-      } catch (err) {
-        // Try emulator URL
-        paymentResponse = await axios.post(
-          `${API_BASE_URL_EMULATOR}/bill`,
-          paymentPayload,
-          {headers: {Authorization: `Bearer ${user.backendToken}`}},
-        );
-      }
+      await api.post('/bill', paymentPayload);
 
       // Step 5: Update order status
-      let updateOrderResponse;
-
-      try {
-        updateOrderResponse = await axios.put(
-          `${API_BASE_URL_LOCALHOST}/serviceorder/status/${order.id}`,
-          {status: 3},
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        updateOrderResponse = await axios.put(
-          `${API_BASE_URL_EMULATOR}/serviceorder/status/${order.id}`,
-          {status: 3},
-          {headers: {Authorization: `Bearer ${user.backendToken}`}},
-        );
-      }
+      await api.put(`/serviceorder/status/${order.id}`, {status: 3});
 
       // Step 6: Update task order if workTasks exists
       if (order.workTasks && order.workTasks.length > 0) {
         const taskId = order.workTasks[0].id;
-        let updateTaskResponse;
-
-        try {
-          updateTaskResponse = await axios.put(
-            `${API_BASE_URL_LOCALHOST}/worktask/${taskId}`,
-            {
-              serviceOrderId: order.id,
-              userId: user.id,
-              dateAppointment: order.workTasks[0].dateAppointment,
-              timeAppointment: order.workTasks[0].timeAppointment,
-              status: 2,
-              note: 'Đã thanh toán cọc và ký hợp đồng',
-            },
-            {
-              headers: {Authorization: `Bearer ${user.backendToken}`},
-              timeout: 5000,
-            },
-          );
-        } catch (err) {
-          updateTaskResponse = await axios.put(
-            `${API_BASE_URL_EMULATOR}/worktask/${taskId}`,
-            {
-              serviceOrderId: order.id,
-              userId: user.id,
-              dateAppointment: order.workTasks[0].dateAppointment,
-              timeAppointment: order.workTasks[0].timeAppointment,
-              status: 2,
-              note: 'Đã thanh toán cọc và ký hợp đồng',
-            },
-            {headers: {Authorization: `Bearer ${user.backendToken}`}},
-          );
-        }
+        await api.put(`/worktask/${taskId}`, {
+          serviceOrderId: order.id,
+          userId: user.id,
+          dateAppointment: order.workTasks[0].dateAppointment,
+          timeAppointment: order.workTasks[0].timeAppointment,
+          status: 2,
+          note: 'Đã thanh toán cọc và ký hợp đồng',
+        });
       }
 
       // Step 7: Refresh data and close modal
@@ -947,7 +703,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                   alignItems: 'center',
                   marginBottom: 16,
                 }}>
-                <Icon name="check" size={32} color="#007AFF" />
+                <Icon name="file-document-outline" size={32} color="#007AFF" />
               </View>
               <Text
                 style={{
@@ -962,65 +718,37 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
 
             {/* Financial Information Section */}
             <View
-              style={{
-                backgroundColor: '#F8FAFC',
-                borderRadius: 10,
-                padding: 16,
-                marginBottom: 20,
-                borderWidth: 1,
-                borderColor: '#E2E8F0',
-              }}>
+              style={styles.financialInfoModalContainer}>
               <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  paddingVertical: 8,
-                }}>
-                <Text style={{fontSize: 14, color: '#64748B'}}>
+                style={styles.financialInfoModalRow}>
+                <Text style={styles.financialInfoModalLabel}>
                   Tổng chi phí thiết kế:
                 </Text>
                 <Text
-                  style={{fontSize: 14, fontWeight: '500', color: '#334155'}}>
+                  style={styles.financialInfoModalValue}>
                   {formatCurrency(totalDesignCost)}
                 </Text>
               </View>
               <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  paddingVertical: 8,
-                }}>
-                <Text style={{fontSize: 14, color: '#64748B'}}>
+                style={styles.financialInfoModalRow}>
+                <Text style={styles.financialInfoModalLabel}>
                   Tiền cọc (50%):
                 </Text>
                 <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: '#007AFF',
-                  }}>
+                  style={[styles.financialInfoModalValue, { color: '#007AFF' }]}>
                   {formatCurrency(depositAmount)}
                 </Text>
               </View>
               <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  paddingVertical: 8,
-                  borderTopWidth: 1,
-                  borderTopColor: '#E2E8F0',
-                  marginTop: 4,
-                  paddingTop: 12,
-                }}>
-                <Text style={{fontSize: 14, color: '#64748B'}}>
+                style={[styles.financialInfoModalRow, styles.financialInfoModalDivider]}>
+                <Text style={styles.financialInfoModalLabel}>
                   Số dư ví hiện tại:
                 </Text>
                 <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: hasEnoughBalance ? '#10B981' : '#EF4444',
-                  }}>
+                  style={[
+                    styles.financialInfoModalValue,
+                    hasEnoughBalance ? styles.sufficientBalance : styles.insufficientBalance,
+                  ]}>
                   {formatCurrency(walletBalance)}
                 </Text>
               </View>
@@ -1181,70 +909,14 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
   const confirmDesign = async () => {
     try {
       // Confirm the record design
-      const recordDesignUrl = `/recorddesign/${selectedRecordId}`;
-      let response;
+      await api.put(`/recorddesign/${selectedRecordId}`, {
+        isSelected: true,
+      });
 
-      try {
-        console.log(
-          `Confirming design at: ${API_BASE_URL_LOCALHOST}${recordDesignUrl}`,
-        );
-        response = await axios.put(
-          `${API_BASE_URL_LOCALHOST}${recordDesignUrl}`,
-          {
-            isSelected: true,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        console.warn('Localhost request failed, trying emulator URL...');
-        console.log(
-          `Confirming design at: ${API_BASE_URL_EMULATOR}${recordDesignUrl}`,
-        );
-        response = await axios.put(
-          `${API_BASE_URL_EMULATOR}${recordDesignUrl}`,
-          {
-            isSelected: true,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-          },
-        );
-      }
-
-      // Step 2: Update the order status to 6 (DoneDesign)
-      const updateStatusUrl = `/serviceorder/status/${orderId}`;
-      try {
-        console.log(
-          `Updating order status at: ${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
-        );
-        await axios.put(
-          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
-          {
-            status: 6,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        console.warn('Localhost request failed, trying emulator URL...');
-        console.log(
-          `Updating order status at: ${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
-        );
-        await axios.put(
-          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
-          {
-            status: 6,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-          },
-        );
-      }
+      // Update the order status to 6 (DoneDesign)
+      await api.put(`/serviceorder/status/${orderId}`, {
+        status: 6,
+      });
 
       // Close confirmation modal and show success modal
       setConfirmModalVisible(false);
@@ -1293,51 +965,11 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
 
       console.log('Payment payload:', JSON.stringify(paymentPayload));
 
-      let paymentResponse;
-      try {
-        paymentResponse = await axios.post(
-          `${API_BASE_URL_LOCALHOST}/bill`,
-          paymentPayload,
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 8000,
-          },
-        );
-      } catch (err) {
-        console.warn(
-          'Localhost payment request failed, trying emulator URL...',
-        );
-        console.log(
-          'Payment error details:',
-          err.response?.data || err.message,
-        );
-
-        paymentResponse = await axios.post(
-          `${API_BASE_URL_EMULATOR}/bill`,
-          paymentPayload,
-          {headers: {Authorization: `Bearer ${user.backendToken}`}},
-        );
-      }
+      // Process payment
+      await api.post('/bill', paymentPayload);
 
       // Update order status to "PaymentSuccess" (7)
-      const updateStatusUrl = `/serviceorder/status/${order.id}`;
-      try {
-        await axios.put(
-          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
-          {status: 7},
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        console.warn('Localhost request failed, trying emulator URL...');
-        await axios.put(
-          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
-          {status: 7},
-          {headers: {Authorization: `Bearer ${user.backendToken}`}},
-        );
-      }
+      await api.put(`/serviceorder/status/${order.id}`, {status: 7});
 
       // Close payment modal
       setPaymentModalVisible(false);
@@ -1358,7 +990,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       );
     } catch (error) {
       console.log('error', error);
-
       Alert.alert(
         `${error.response?.data.error} `,
         'Lỗi thanh toán',
@@ -1668,67 +1299,21 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       setRedraftLoading(true);
 
       // Step 1: Update order status to 19 (reconsultingandsketching)
-      const updateStatusUrl = `/serviceorder/status/${orderId}`;
-      try {
-        await axios.put(
-          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
-          {
-            status: 19,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        await axios.put(
-          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
-          {
-            status: 19,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-          },
-        );
-      }
+      await api.put(`/serviceorder/status/${orderId}`, {
+        status: 19,
+      });
 
       // Step 2: Update work task if available
       if (order.workTasks && order.workTasks.length > 0) {
         const taskId = order.workTasks[0].id;
-        const updateWorkTaskUrl = `/worktask/${taskId}`;
-
-        try {
-          await axios.put(
-            `${API_BASE_URL_LOCALHOST}${updateWorkTaskUrl}`,
-            {
-              serviceOrderId: order.id,
-              userId: user.id,
-              dateAppointment: order.workTasks[0].dateAppointment,
-              timeAppointment: order.workTasks[0].timeAppointment,
-              status: 0,
-              note: redraftReason,
-            },
-            {
-              headers: {Authorization: `Bearer ${user.backendToken}`},
-              timeout: 5000,
-            },
-          );
-        } catch (err) {
-          await axios.put(
-            `${API_BASE_URL_EMULATOR}${updateWorkTaskUrl}`,
-            {
-              serviceOrderId: order.id,
-              userId: user.id,
-              dateAppointment: order.workTasks[0].dateAppointment,
-              timeAppointment: order.workTasks[0].timeAppointment,
-              status: 0,
-              note: redraftReason,
-            },
-            {
-              headers: {Authorization: `Bearer ${user.backendToken}`},
-            },
-          );
-        }
+        await api.put(`/worktask/${taskId}`, {
+          serviceOrderId: order.id,
+          userId: user.id,
+          dateAppointment: order.workTasks[0].dateAppointment,
+          timeAppointment: order.workTasks[0].timeAppointment,
+          status: 0,
+          note: redraftReason,
+        });
       }
 
       // Close modal and refresh data
@@ -1782,59 +1367,19 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       setRedesignLoading(true);
 
       // Step 1: Update order status to 19 (reconsultingandsketching)
-      const updateStatusUrl = `/serviceorder/customer/${orderId}`;
-      try {
-        await axios.put(
-          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
-          payload,
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        await axios.put(`${API_BASE_URL_EMULATOR}${updateStatusUrl}`, payload, {
-          headers: {Authorization: `Bearer ${user.backendToken}`},
-        });
-      }
+      await api.put(`/serviceorder/customer/${orderId}`, payload);
 
       // Step 2: Update work task if available
       if (order.workTasks && order.workTasks.length > 0) {
         const taskId = order.workTasks[0].id;
-        const updateWorkTaskUrl = `/worktask/${taskId}`;
-
-        try {
-          await axios.put(
-            `${API_BASE_URL_LOCALHOST}${updateWorkTaskUrl}`,
-            {
-              serviceOrderId: order.id,
-              userId: user.id,
-              dateAppointment: order.workTasks[0].dateAppointment,
-              timeAppointment: order.workTasks[0].timeAppointment,
-              status: 2,
-              note: redesignReason,
-            },
-            {
-              headers: {Authorization: `Bearer ${user.backendToken}`},
-              timeout: 5000,
-            },
-          );
-        } catch (err) {
-          await axios.put(
-            `${API_BASE_URL_EMULATOR}${updateWorkTaskUrl}`,
-            {
-              serviceOrderId: order.id,
-              userId: user.id,
-              dateAppointment: order.workTasks[0].dateAppointment,
-              timeAppointment: order.workTasks[0].timeAppointment,
-              status: 2,
-              note: redesignReason,
-            },
-            {
-              headers: {Authorization: `Bearer ${user.backendToken}`},
-            },
-          );
-        }
+        await api.put(`/worktask/${taskId}`, {
+          serviceOrderId: order.id,
+          userId: user.id,
+          dateAppointment: order.workTasks[0].dateAppointment,
+          timeAppointment: order.workTasks[0].timeAppointment,
+          status: 2,
+          note: redesignReason,
+        });
       }
 
       // Close modal and refresh data
@@ -1868,21 +1413,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         return materialProducts[productId]; // Return cached product if already fetched
       }
 
-      const urlPath = `/product/${productId}`;
-      let response;
-
-      try {
-        response = await axios.get(`${API_BASE_URL_LOCALHOST}${urlPath}`, {
-          headers: {Authorization: `Bearer ${user.backendToken}`},
-          timeout: 5000,
-        });
-      } catch (err) {
-        response = await axios.get(`${API_BASE_URL_EMULATOR}${urlPath}`, {
-          headers: {Authorization: `Bearer ${user.backendToken}`},
-        });
-      }
-
-      const productData = response.data;
+      const productData = await api.get(`/product/${productId}`);
 
       // Update state with the new product
       setMaterialProducts(prev => ({
@@ -1903,29 +1434,9 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       setCancelLoading(true);
 
       // API call to update order status to 18 (stopService)
-      const updateStatusUrl = `/serviceorder/status/${orderId}`;
-      try {
-        await axios.put(
-          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
-          {
-            status: 18,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        await axios.put(
-          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
-          {
-            status: 18,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-          },
-        );
-      }
+      await api.put(`/serviceorder/status/${orderId}`, {
+        status: 18,
+      });
 
       // Hide modal and show success message
       setCancelModalVisible(false);
@@ -1948,55 +1459,12 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       setCancelLoading(true);
 
       // Step 1: Call refund API
-      try {
-        console.log('1');
-        // First API call: Refund 10% of design deposit
-        await axios.post(
-          `${API_BASE_URL_LOCALHOST}/wallets/refund?id=${orderId}`,
-          {}, // Empty request body or add body data if needed
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 8000,
-          },
-        );
-      } catch (err) {
-        console.log('err', err);
-
-        console.log('2');
-        // Try emulator URL if localhost fails
-        await axios.post(
-          `${API_BASE_URL_EMULATOR}/wallets/refund?id=${orderId}`,
-          {}, // Empty request body or add body data if needed
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-          },
-        );
-      }
+      await api.post(`/wallets/refund?id=${orderId}`);
 
       // Step 2: Update order status to StopService (18)
-      const updateStatusUrl = `/serviceorder/status/${orderId}`;
-      try {
-        await axios.put(
-          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
-          {
-            status: 18,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        await axios.put(
-          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
-          {
-            status: 18,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-          },
-        );
-      }
+      await api.put(`/serviceorder/status/${orderId}`, {
+        status: 18,
+      });
 
       // Hide modal and show success message
       setCancelModalVisible(false);
@@ -2029,65 +1497,24 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
     try {
       setCancelLoading(true);
 
-      // Calculate payment amount - remaining 50% of design fee
-      const designFeeTotal = order.designPrice || 0;
-      const remainingDesignFee = designFeeTotal * 0.5; // 50% of design fee
+      // Step 1: Calculate refund amount (10% of design price)
+      const refundAmount = Math.round(order.designPrice * 0.1);
 
-      // Create payment payload
-      const paymentDescription = `Thanh toán phí thiết kế còn lại (50%) và hủy đơn hàng ${order.id}`;
+      // Step 2: Create payment payload
       const paymentPayload = {
         walletId: user.wallet?.id || user.id,
         serviceOrderId: order.id,
-        amount: remainingDesignFee,
-        description: paymentDescription,
+        amount: refundAmount,
+        description: `Thanh toán phí hủy dịch vụ (10% giá thiết kế) cho đơn hàng ${order.id}`,
       };
 
-      // Step 1: Process payment
-      let paymentResponse;
-      try {
-        paymentResponse = await axios.post(
-          `${API_BASE_URL_LOCALHOST}/bill`,
-          paymentPayload,
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 8000,
-          },
-        );
-      } catch (err) {
-        // Try emulator URL if localhost fails
-        paymentResponse = await axios.post(
-          `${API_BASE_URL_EMULATOR}/bill`,
-          paymentPayload,
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-          },
-        );
-      }
+      // Step 3: Process payment
+      await api.post('/bill', paymentPayload);
 
-      // Step 2: Update order status to StopService (18)
-      const updateStatusUrl = `/serviceorder/status/${orderId}`;
-      try {
-        await axios.put(
-          `${API_BASE_URL_LOCALHOST}${updateStatusUrl}`,
-          {
-            status: 18,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-            timeout: 5000,
-          },
-        );
-      } catch (err) {
-        await axios.put(
-          `${API_BASE_URL_EMULATOR}${updateStatusUrl}`,
-          {
-            status: 18,
-          },
-          {
-            headers: {Authorization: `Bearer ${user.backendToken}`},
-          },
-        );
-      }
+      // Step 4: Update order status to StopService (18)
+      await api.put(`/serviceorder/status/${orderId}`, {
+        status: 18,
+      });
 
       // Hide modal and show success message
       setCancelModalVisible(false);
@@ -2097,7 +1524,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
 
       Alert.alert(
         'Thành công',
-        'Đã thanh toán phí thiết kế còn lại và hủy dịch vụ thành công.',
+        'Dịch vụ đã được hủy thành công. Phí hủy dịch vụ đã được thanh toán.',
         [
           {
             text: 'OK',
@@ -2106,11 +1533,10 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         ],
       );
     } catch (err) {
+      console.log('err', err);
       setCancelModalVisible(false);
-      Alert.alert(
-        'Lỗi',
-        'Không thể thanh toán và hủy dịch vụ. Vui lòng thử lại sau.',
-      );
+
+      Alert.alert('Lỗi', 'Không thể hủy dịch vụ. Vui lòng thử lại sau.');
     } finally {
       setCancelLoading(false);
     }
@@ -2312,19 +1738,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       minute: '2-digit',
     });
   };
-
-  // Time options (example: 8:00, 9:00, ... 17:00)
-  const timeOptions = [
-    '08:00',
-    '09:00',
-    '10:00',
-    '11:00',
-    '13:00',
-    '14:00',
-    '15:00',
-    '16:00',
-    '17:00',
-  ];
 
   if (loading) {
     return (
@@ -2595,7 +2008,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                     style={{marginRight: 8}}
                   />
                   <Text
-                    style={{fontSize: 18, fontWeight: '600', color: '#222'}}>
+                    style={{fontSize: 16, fontWeight: '600', color: '#222'}}>
                     Lịch giao hàng đã đặt
                   </Text>
                 </View>
@@ -2876,40 +2289,42 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                     padding: 10,
                     backgroundColor: '#fff',
                   }}
-                  onPress={() => setShowTimePicker(true)}>
+                  onPress={() => setShowTimePicker(true)} // Show the time picker
+                >
                   <Text
                     style={{flex: 1, color: deliveryTime ? '#222' : '#888'}}>
-                    {deliveryTime ? deliveryTime : 'Chọn giờ'}
+                    {deliveryTime ? formatTimeForDisplay(deliveryTime) : 'Chọn giờ'} {/* Display formatted time */}
                   </Text>
                   <Icon name="clock-outline" size={20} color="#888" />
                 </TouchableOpacity>
+
+                {/* DateTimePicker for Time */}
                 {showTimePicker && (
-                  <View
-                    style={{
-                      backgroundColor: '#fff',
-                      borderRadius: 8,
-                      marginTop: 8,
-                      borderWidth: 1,
-                      borderColor: '#D1D5DB',
-                    }}>
-                    {timeOptions.map((t, idx) => (
-                      <TouchableOpacity
-                        key={t}
-                        style={{
-                          padding: 12,
-                          borderBottomWidth:
-                            idx !== timeOptions.length - 1 ? 1 : 0,
-                          borderBottomColor: '#EEE',
-                        }}
-                        onPress={() => {
-                          setDeliveryTime(t);
-                          setShowTimePicker(false);
-                        }}>
-                        <Text style={{fontSize: 16, color: '#222'}}>{t}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                  <DateTimePicker
+                    value={deliveryTime ? new Date(`2000-01-01T${deliveryTime}:00`) : new Date()} // Use current time or a default date with selected time
+                    mode="time"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowTimePicker(false);
+                      if (event.type === 'set') { // User confirmed selection
+                        const selectedHour = selectedDate.getHours();
+                        const selectedMinute = selectedDate.getMinutes();
+                        // Check if time is between 8 AM and 6 PM (18:00)
+                        if (selectedHour >= 8 && (selectedHour < 18 || (selectedHour === 18 && selectedMinute === 0))) {
+                          // Format time to HH:mm string
+                          const formattedTime = `${String(selectedHour).padStart(2, '0')}:${String(selectedMinute).padStart(2, '0')}`;
+                          setDeliveryTime(formattedTime);
+                        } else {
+                          Alert.alert(
+                            'Thời gian không hợp lệ',
+                            'Vui lòng chọn thời gian từ 8:00 đến 18:00.'
+                          );
+                        }
+                      }
+                    }}
+                  />
                 )}
+
               </View>
               {/* Confirm Button */}
               <TouchableOpacity
@@ -2955,30 +2370,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                     };
 
                     // Make API call
-                    let response;
-                    try {
-                      response = await axios.put(
-                        `${API_BASE_URL_LOCALHOST}/serviceorder/contructor/${order.id}`,
-                        payload,
-                        {
-                          headers: {
-                            Authorization: `Bearer ${user.backendToken}`,
-                          },
-                          timeout: 5000,
-                        },
-                      );
-                    } catch (err) {
-                      // Try emulator URL if localhost fails
-                      response = await axios.put(
-                        `${API_BASE_URL_EMULATOR}/serviceorder/contructor/${order.id}`,
-                        payload,
-                        {
-                          headers: {
-                            Authorization: `Bearer ${user.backendToken}`,
-                          },
-                        },
-                      );
-                    }
+                    await api.put(`/serviceorder/contructor/${order.id}`, payload);
 
                     // Clear edit mode if we were in it
                     if (isEditingDelivery) {
@@ -3469,104 +2861,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         </Card>
       )}
 
-      {/* Part 1: Customer Information */}
-      <Card style={styles.section}>
-        <Card.Title
-          title="Thông tin khách hàng"
-          titleStyle={styles.sectionTitle}
-          left={props => (
-            <Icon
-              {...props}
-              name="account-circle-outline"
-              size={24}
-              color="#007AFF"
-            />
-          )}
-        />
-        <Divider style={styles.divider} />
-        <Card.Content>
-          <View style={styles.infoRow}>
-            <Icon
-              name="account-outline"
-              size={20}
-              color="#666"
-              style={styles.infoIcon}
-            />
-            <Text style={styles.infoText}>{order.userName}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Icon
-              name="email-outline"
-              size={20}
-              color="#666"
-              style={styles.infoIcon}
-            />
-            <Text style={styles.infoText}>{order.email}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Icon
-              name="phone-outline"
-              size={20}
-              color="#666"
-              style={styles.infoIcon}
-            />
-            <Text style={styles.infoText}>{order.cusPhone}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Icon
-              name="map-marker-outline"
-              size={20}
-              color="#666"
-              style={styles.infoIcon}
-            />
-            <Text style={styles.infoText}>{order.address}</Text>
-          </View>
-
-          {order.workTasks && order.workTasks.length > 0 ? (
-            <>
-              <Text style={styles.appointmentLabel}>
-                Thời gian designer liên hệ:
-              </Text>
-              <View style={styles.appointmentRow}>
-                <Icon
-                  name="calendar"
-                  size={20}
-                  color="#666"
-                  style={styles.infoIcon}
-                />
-                <Text style={styles.infoText}>
-                  Ngày:{' '}
-                  {formatAppointmentDate(order.workTasks[0].dateAppointment)}
-                </Text>
-              </View>
-              <View style={styles.appointmentRow}>
-                <Icon
-                  name="clock-outline"
-                  size={20}
-                  color="#666"
-                  style={styles.infoIcon}
-                />
-                <Text style={styles.infoText}>
-                  Giờ:{' '}
-                  {formatAppointmentTime(order.workTasks[0].timeAppointment)}
-                </Text>
-              </View>
-            </>
-          ) : (
-            <View style={styles.infoRow}>
-              <Icon
-                name="calendar-clock"
-                size={20}
-                color="#666"
-                style={styles.infoIcon}
-              />
-              <Text style={styles.infoText}>
-                Thời gian designer liên hệ: Chờ xác nhận
-              </Text>
-            </View>
-          )}
-        </Card.Content>
-      </Card>
+      
 
       {/* Part 2: Design Information */}
       <Card style={styles.section}>
@@ -3618,9 +2913,30 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                 Chi phí thiết kế chi tiết:
               </Text>
               <Text style={styles.pricingValue}>
-                {formatCurrency(order.designPrice || 0)}
+                {order.status !== 'DeterminingDesignPrice' ?
+                formatCurrency(order.designPrice)
+                :
+                formatCurrency(0)
+              }
               </Text>
             </View>
+
+            {/* Deposit Paid Section (Conditionally displayed) */}
+            {!statusDontShowdepositField.map(s => s.toLowerCase()).includes(order.status?.toLowerCase()) && (
+              <View style={styles.pricingRow}>
+                <Icon
+                  name="currency-usd" // Changed icon to currency-usd
+                  size={22}
+                  color="#007AFF" // Changed color to blue
+                  style={styles.pricingIcon}
+                />
+                <Text style={styles.pricingLabel}>Đã đặt cọc (50%):</Text>
+                <Text style={[styles.pricingValue]} >
+                {/* Calculate and display 50% of design price */}
+                {formatCurrency((order.designPrice || 0) * 0.5)}
+                </Text>
+              </View>
+            )}
 
             <View style={styles.pricingRow}>
               <Icon
@@ -3644,9 +2960,14 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
               />
               <Text style={styles.totalPricingLabel}>Tổng chi phí:</Text>
               <Text style={styles.totalPricingValue}>
-                {formatCurrency(
+              {order.status !== 'DeterminingDesignPrice' ?
+                formatCurrency(
                   (order.designPrice || 0) + (order.materialPrice || 0),
-                )}
+                )
+                : formatCurrency(0)
+              }
+
+                
               </Text>
             </View>
           </View>
@@ -4594,6 +3915,105 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           </Card.Content>
         </Card>
       )}
+
+      {/* Part 1: Customer Information */}
+      <Card style={styles.section}>
+        <Card.Title
+          title="Thông tin khách hàng"
+          titleStyle={styles.sectionTitle}
+          left={props => (
+            <Icon
+              {...props}
+              name="account-circle-outline"
+              size={24}
+              color="#007AFF"
+            />
+          )}
+        />
+        <Divider style={styles.divider} />
+        <Card.Content>
+          <View style={styles.infoRow}>
+            <Icon
+              name="account-outline"
+              size={20}
+              color="#666"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.infoText}>{order.userName}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Icon
+              name="email-outline"
+              size={20}
+              color="#666"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.infoText}>{order.email}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Icon
+              name="phone-outline"
+              size={20}
+              color="#666"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.infoText}>{order.cusPhone}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Icon
+              name="map-marker-outline"
+              size={20}
+              color="#666"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.infoText}>{order.address}</Text>
+          </View>
+
+          {order.workTasks && order.workTasks.length > 0 ? (
+            <>
+              <Text style={styles.appointmentLabel}>
+                Thời gian designer liên hệ:
+              </Text>
+              <View style={styles.appointmentRow}>
+                <Icon
+                  name="calendar"
+                  size={20}
+                  color="#666"
+                  style={styles.infoIcon}
+                />
+                <Text style={styles.infoText}>
+                  Ngày:{' '}
+                  {formatAppointmentDate(order.workTasks[0].dateAppointment)}
+                </Text>
+              </View>
+              <View style={styles.appointmentRow}>
+                <Icon
+                  name="clock-outline"
+                  size={20}
+                  color="#666"
+                  style={styles.infoIcon}
+                />
+                <Text style={styles.infoText}>
+                  Giờ:{' '}
+                  {formatAppointmentTime(order.workTasks[0].timeAppointment)}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.infoRow}>
+              <Icon
+                name="calendar-clock"
+                size={20}
+                color="#666"
+                style={styles.infoIcon}
+              />
+              <Text style={styles.infoText}>
+                Thời gian designer liên hệ: Chờ xác nhận
+              </Text>
+            </View>
+          )}
+        </Card.Content>
+      </Card>
 
       <ImageModal />
       <ConfirmModal />

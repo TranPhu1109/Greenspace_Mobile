@@ -5,16 +5,20 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Image,
 } from 'react-native';
 import {useAuth} from '../context/AuthContext';
 import {useNavigation} from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
 import messaging from '@react-native-firebase/messaging';
 import {getApp, firebase}  from '@react-native-firebase/app';
-import axios from 'axios';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useLoading } from '../context/LoadingContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { api } from '../api/api';
+
+// Assuming logo.png is in the assets folder. Adjust the path if needed.
+import logo from '../assets/logo/logo.png';
 
 const LoginScreen = ({navigation, route}) => {
   const [email, setEmail] = useState('');
@@ -67,20 +71,12 @@ const LoginScreen = ({navigation, route}) => {
 
   const fetchWalletInfo = async (userId, token) => {
     try {
-      const response = await axios.get(`http://10.0.2.2:8080/api/wallets/user${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await api.get(`/wallets/user${userId}`, {
+        'Authorization': `Bearer ${token}`
       });
       
-      if (response.status === 200) {
-        const walletData = response.data;
-        console.log('Wallet data fetched:', walletData);
-        return walletData;
-      } else {
-        console.error('Failed to fetch wallet data');
-        return null;
-      }
+      console.log('Wallet data fetched:', response);
+      return response;
     } catch (error) {
       console.error('Error fetching wallet:', error);
       return null;
@@ -95,45 +91,34 @@ const LoginScreen = ({navigation, route}) => {
       
       const app = getApp();
       const userCredential = await auth().signInWithEmailAndPassword(email, password);
-      console.log('Firebase authentication successful');
       
       const idToken = await userCredential.user.getIdToken();
       console.log('ID Token:', idToken);
       
-
       const fcmToken = await messaging(app).getToken();
-      //console.log('FCM Token:', fcmToken);
+      console.log('FCM Token:', fcmToken);
 
-      const response = await axios.post('http://10.0.2.2:8080/api/auth', {
+      const response = await api.post('/auth', {
         token: idToken,
         fcmToken: fcmToken,
         role: 'string'
       });
+
       console.log("response", response);
-
-      if (response.status !== 200) {
-        throw new Error('Backend authentication failed');
-      }
-      console.log('Backend authentication successful');
-      const backendToken = response.data.token;
-      //console.log('Backend Token:', backendToken);
-
-      // Fetch wallet information
-      const walletInfo = await fetchWalletInfo(response.data.user.id, backendToken);
 
       // Create user object with all necessary data
       const userData = {
-        token: response.data.token,
+        token: response.token,
         fcmToken: fcmToken,
-        id: response.data.user.id,
-        email: response.data.user.email,
-        name: response.data.user.name,
-        roleName: response.data.user.roleName,
-        phone: response.data.user.phone,
-        address: response.data.user.address,
-        avatarUrl: response.data.user.avatarUrl,
-        backendToken: backendToken,
-        wallet: walletInfo // Add wallet information
+        id: response.user.id,
+        email: response.user.email,
+        name: response.user.name,
+        roleName: response.user.roleName,
+        phone: response.user.phone,
+        address: response.user.address,
+        avatarUrl: response.user.avatarUrl,
+        backendToken: response.token,
+        wallet: await fetchWalletInfo(response.user.id, response.token)
       };
 
       // Store user data in AsyncStorage
@@ -188,8 +173,10 @@ const LoginScreen = ({navigation, route}) => {
         <Icon name="chevron-left" size={28} color="#000" />
       </TouchableOpacity>
 
-      <Text style={styles.title}>Đăng nhập</Text>
+      <Image source={logo} style={styles.logo} resizeMode="contain" />
 
+      
+      <Text style={styles.welcomeText}>Chào mừng bạn quay trở lại với GreenSpace</Text>
       <View style={styles.inputContainer}>
         <TextInput
           style={[styles.input, emailError ? styles.inputError : null]}
@@ -231,12 +218,12 @@ const LoginScreen = ({navigation, route}) => {
 
       <View>
         <Text style={styles.signUpText}>
-          Không có tài khoản?
+          Bạn chưa có tài khoản?
           <Text
             style={styles.signUpLink}
             onPress={() => navigation.navigate('SignUp')}>
             {' '}
-            Đăng ký
+            Đăng ký ngay
           </Text>
         </Text>
       </View>
@@ -248,7 +235,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F9F5',
     justifyContent: 'center',
   },
   backButton: {
@@ -258,19 +245,23 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   title: {
-    fontSize: 24,
+    fontSize: 34,
     fontWeight: '600',
-    marginBottom: 30,
+    marginBottom: 10,
     textAlign: 'center',
+    color: '#2E5A27',
   },
   inputContainer: {
     marginBottom: 15,
   },
   input: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     padding: 15,
     fontSize: 16,
+    color: "#2E5A27",
+    borderWidth: 1,
+    borderColor: '#A8D5A3',
   },
   inputError: {
     borderColor: '#FF3B30',
@@ -289,25 +280,35 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   loginButton: {
-    backgroundColor: '#6200EE',
+    backgroundColor: '#4CAF50',
     borderRadius: 8,
     padding: 15,
     alignItems: 'center',
     marginBottom: 15,
   },
   loginButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
   signUpText: {
     textAlign: 'center',
-    color: '#666',
+    color: '#2E5A27',
     marginBottom: 20,
   },
   signUpLink: {
-    color: '#6200EE',
+    color: '#4CAF50',
     fontWeight: '600',
+  },
+  welcomeText: {
+    textAlign: 'center',
+    color: '#2E5A27',
+    marginBottom: 50,
+  },
+  logo: {
+    width: 200,
+    height: 100,
+    alignSelf: 'center',
   },
 });
 

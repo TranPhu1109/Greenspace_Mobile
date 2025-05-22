@@ -3,11 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIn
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import StatusTracking from '../components/StatusTracking';
 import StatusTrackingNoCustom from '../components/StatusTrackingNoCustom';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext'; // Import useAuth
-
-const API_BASE_URL_LOCALHOST = 'http://localhost:8080/api';
-const API_BASE_URL_EMULATOR = 'http://10.0.2.2:8080/api';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../api/api';
 
 // --- Helper Functions ---
 const formatDate = (dateString) => {
@@ -59,15 +56,15 @@ const getStatusInfo = (status) => {
 // --- End Helper Functions ---
 
 const ServiceOrderDetailScreen = ({ navigation, route }) => {
-  const { user } = useAuth(); // Get user
+  const { user } = useAuth();
   const { orderId } = route.params;
   const [orderDetails, setOrderDetails] = useState(null);
   console.log("orderDetails", orderDetails);
   
-  const [products, setProducts] = useState({}); // Map productId -> product details
+  const [products, setProducts] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [refreshing, setRefreshing] = useState(false); // Add refreshing state
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (orderId) {
@@ -81,58 +78,27 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
   const fetchProductDetails = async (productId) => {
     if (!productId) return null;
     try {
-      let response;
-      const urlPath = `/product/${productId}`;
-      // Try localhost first
-      try {
-        response = await axios.get(`${API_BASE_URL_LOCALHOST}${urlPath}`, {
-          // headers: { 'Authorization': `Bearer ${user.backendToken}` }, // Add if needed
-          timeout: 3000
-        });
-      } catch (err) {
-        // Fallback to emulator IP
-        response = await axios.get(`${API_BASE_URL_EMULATOR}${urlPath}`, {
-          // headers: { 'Authorization': `Bearer ${user.backendToken}` } // Add if needed
-        });
-      }
-      return response.data?.data || response.data; // Handle potential nesting
+      const response = await api.get(`/product/${productId}`);
+      return response.data || response;
     } catch (err) {
       console.error(`Error fetching product ${productId}:`, err);
-      return null; // Return null on error for this specific product
+      return null;
     }
   };
 
-  const fetchOrderDetails = async (isRefreshing = false) => { // Accept refresh flag
+  const fetchOrderDetails = async (isRefreshing = false) => {
     try {
-      if (!isRefreshing) setLoading(true); // Only set loading true if not refreshing
+      if (!isRefreshing) setLoading(true);
       setError(null);
       
-      let response;
-      const urlPath = `/serviceorder/${orderId}`;
+      const response = await api.get(`/serviceorder/${orderId}`);
+      const orderData = response.data || response;
 
-      // Try localhost first
-      try {
-        console.log(`Fetching order details from: ${API_BASE_URL_LOCALHOST}${urlPath}`);
-        response = await axios.get(`${API_BASE_URL_LOCALHOST}${urlPath}`, {
-            headers: { 'Authorization': `Bearer ${user.backendToken}` },
-            timeout: 5000
-        });
-      } catch (err) {
-        console.warn("Localhost fetch failed, trying emulator URL...");
-        // Fallback to emulator IP
-        console.log(`Fetching order details from: ${API_BASE_URL_EMULATOR}${urlPath}`);
-        response = await axios.get(`${API_BASE_URL_EMULATOR}${urlPath}`, {
-            headers: { 'Authorization': `Bearer ${user.backendToken}` }
-        });
-      }
-
-      const orderData = response.data?.data || response.data; // Handle potential nesting
       if (!orderData) {
         throw new Error("Order data not found in response.");
       }
       setOrderDetails(orderData);
       
-      // Fetch product details only if serviceOrderDetails exist
       if (orderData.serviceOrderDetails && orderData.serviceOrderDetails.length > 0) {
         const productPromises = orderData.serviceOrderDetails.map(detail => 
           fetchProductDetails(detail.productId)
@@ -141,23 +107,23 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
         
         const productMap = {};
         orderData.serviceOrderDetails.forEach((detail, index) => {
-          if (productResults[index]) { // Only add if fetch was successful
+          if (productResults[index]) {
             productMap[detail.productId] = productResults[index];
           }
         });
         setProducts(productMap);
         console.log("Fetched product details map:", productMap);
       } else {
-        setProducts({}); // Ensure products map is empty if no details
+        setProducts({});
       }
       
     } catch (err) {
       console.error('Error fetching order details:', err);
-      setError('Failed to load order details. Please try again later.');
-      setOrderDetails(null); // Clear details on error
+      setError('Bạn chưa có đơn hàng nào!');
+      setOrderDetails(null);
     } finally {
       if (!isRefreshing) setLoading(false);
-      setRefreshing(false); // Always set refreshing false
+      setRefreshing(false);
     }
   };
 
@@ -199,11 +165,11 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
         <Header navigation={navigation} title="Error" />
         <View style={styles.centeredContainer}> 
           <Icon name="alert-circle-outline" size={60} color="#FF3B30" style={{ marginBottom: 15 }}/>
-          <Text style={styles.errorText}>{error || 'Không thể tải đơn hàng.'}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchOrderDetails}>
+          <Text style={styles.errorText}>{error}</Text>
+          {/* <TouchableOpacity style={styles.retryButton} onPress={fetchOrderDetails}>
             <Icon name="refresh" size={18} color="#fff" style={{ marginRight: 8 }}/>
             <Text style={styles.retryButtonText}>Thử lại</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
     );

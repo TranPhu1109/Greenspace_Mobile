@@ -8,7 +8,7 @@ import { useCart } from '../context/CartContext';
 
 // Replace 'YOUR_IP_ADDRESS' with your computer's IP address
 // Example: const API_URL = 'http://192.168.1.5:8080/api';
-const API_URL = 'http://10.0.2.2:8080/api'; // Use this for Android Emulator
+const API_URL = 'http://192.168.1.2:8080/api'; // Use this for Android Emulator
 // const API_URL = 'http://localhost:8080/api'; // Use this for iOS Simulator
 
 const ShoppingScreen = () => {

@@ -2,10 +2,9 @@ import React, { useContext, useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator, Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useCart } from '../context/CartContext';
-import axios from 'axios';
 import CustomModal from '../components/Modal';
+import { api } from '../api/api';
 
-const API_URL = 'http://10.0.2.2:8080/api';
 const { width } = Dimensions.get('window');
 
 const ProductDetailScreen = ({ route, navigation }) => {
@@ -84,20 +83,20 @@ const ProductDetailScreen = ({ route, navigation }) => {
         setIsFeedbackLoading(true); // Start feedback loading
         
         // Fetch Product Details
-        const productResponse = await axios.get(`${API_URL}/product/${productId}`);
-        setProduct(productResponse.data);
+        const productResponse = await api.get(`/product/${productId}`);
+        setProduct(productResponse);
         
         // Fetch Feedback after product details are loaded
         try {
-          const feedbackResponse = await axios.get(`${API_URL}/productfeedback/${productId}/products`);
-          //console.log("Feedback Response:", feedbackResponse.data);
-          setFeedbacks(feedbackResponse.data || []); // Assuming API returns array directly
+          const feedbackResponse = await api.get(`/productfeedback/${productId}/products`);
+          //console.log("Feedback Response:", feedbackResponse);
+          setFeedbacks(feedbackResponse || []); // Assuming API returns array directly
           // Clear any previous error if fetch is successful
           setFeedbackError(null);
         } catch (feedbackErr) {
           //console.error('Error fetching feedback:', feedbackErr);
           // Check for the specific "no feedback found" error from the API
-          if (feedbackErr.response?.data?.error?.includes("No productFeedback found")) {
+          if (feedbackErr.message?.includes("No productFeedback found")) {
             //console.log("API indicated no feedback found for this product.");
             setFeedbacks([]); // Ensure feedbacks is empty
             setFeedbackError(null); // Treat as no data, not an error

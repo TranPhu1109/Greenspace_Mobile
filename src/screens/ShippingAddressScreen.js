@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import Address from '../components/Address';
+import { api } from '../api/api';
 
 const ShippingAddressScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -27,13 +27,8 @@ const ShippingAddressScreen = ({ navigation }) => {
     
     setLoading(true);
     try {
-      const response = await axios.get(`http://10.0.2.2:8080/api/address/user/${user.id}`, {
-        headers: {
-          'Authorization': `Bearer ${user.token}`
-        }
-      });
-      
-      setAddresses(response.data);
+      const response = await api.get(`/address/user/${user.id}`);
+      setAddresses(response.data || response);
     } catch (error) {
       console.error('Error fetching addresses:', error);
       Alert.alert('Lỗi', 'Không thể tải địa chỉ giao hàng.');
@@ -88,16 +83,11 @@ const ShippingAddressScreen = ({ navigation }) => {
       // Format address string as "Street|Ward|District|Province"
       const formattedAddress = `${streetAddress}|${addressDetails.wardName}|${addressDetails.districtName}|${addressDetails.provinceName}`;
       
-      await axios.post('http://10.0.2.2:8080/api/address', {
+      await api.post('/address', {
         userId: user.id,
         name: addressName,
         phone: phone,
         userAddress: formattedAddress
-      }, {
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json'
-        }
       });
       
       // Refresh address list

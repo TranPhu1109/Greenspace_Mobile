@@ -19,7 +19,7 @@ import axios from 'axios';
 import StatusTrackingMaterial from '../components/StatusTrackingMaterial';
 import {isContentSafe} from '../utils/isContentSafe';
 
-const API_URL = 'http://10.0.2.2:8080/api';
+const API_URL = 'http://192.168.1.2:8080/api';
 
 const MaterialOrderDetailScreen = ({navigation, route}) => {
   const {orderId} = route.params;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import axios from 'axios';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { api } from '../api/api';
 
 const DesignIdeaLibraryScreen = ({ navigation }) => {
   const [designIdeas, setDesignIdeas] = useState([]);
@@ -14,14 +14,12 @@ const DesignIdeaLibraryScreen = ({ navigation }) => {
 
   const fetchDesignIdeas = async () => {
     try {
-      const response = await axios.get('http://10.0.2.2:8080/api/designidea', {
-        timeout: 10000, // 10 second timeout
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        }
+      const response = await api.get('/designidea', {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
       });
-      setDesignIdeas(response.data);
+     
+      setDesignIdeas(response);
       setLoading(false);
     } catch (err) {
       console.log('Error details:', {
@@ -79,7 +77,7 @@ const DesignIdeaLibraryScreen = ({ navigation }) => {
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={fetchDesignIdeas}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>Thử lại</Text>
         </TouchableOpacity>
       </View>
     );
