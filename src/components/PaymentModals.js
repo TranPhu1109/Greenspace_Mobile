@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
     marginLeft: 8,
   },
   cancelButtonText: {

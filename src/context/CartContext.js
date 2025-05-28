@@ -52,7 +52,6 @@ export const CartProvider = ({ children }) => {
     const checkAuth = async () => {
       try {
         const userJson = await AsyncStorage.getItem('user');
-        console.log('userJson', userJson);
       } catch (error) {
         console.error('Error checking auth:', error);
       }

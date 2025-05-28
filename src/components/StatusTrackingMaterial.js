@@ -148,18 +148,19 @@ const StatusTrackingMaterial = ({currentStatus}) => {
 const styles = StyleSheet.create({
   container: {
     marginVertical: 20,
-
   },
   stepsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 0,
+    minHeight: 32,
   },
   stepItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    flex: 2,
+    minWidth: 0,
   },
   dot: {
     width: 24,
@@ -169,6 +170,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
+    backgroundColor: '#fff',
   },
   innerDot: {
     width: 10,
@@ -191,7 +193,8 @@ const styles = StyleSheet.create({
   },
   line: {
     height: 3,
-    flex: 1,
+    flex: 6,
+    marginHorizontal: -2,
   },
   completedLine: {
     backgroundColor: '#4CAF50',
@@ -202,14 +205,19 @@ const styles = StyleSheet.create({
   labelsContainer: {
     flexDirection: 'row',
     width: '100%',
+    marginTop: 4,
+    alignItems: 'flex-start',
   },
   labelWrapper: {
-    flex: 1,
+    flex: 2,
     paddingHorizontal: 2,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
   },
   stepLabel: {
     fontSize: 12,
     textAlign: 'center',
+    marginTop: 0,
   },
   completedLabel: {
     color: '#4CAF50',

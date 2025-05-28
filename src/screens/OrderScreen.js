@@ -912,66 +912,72 @@ const OrderScreen = ({navigation, route}) => {
                 const totalItemPrice = unitPrice * material.quantity;
 
                 return (
-                  <View key={material.id || index} style={styles.materialItem}>
+                  <View key={material.id || index} style={styles.materialItemCard}>
+                    {/* Image */}
                     {material.image?.imageUrl ? (
                       <Image
                         source={{uri: material.image.imageUrl}}
-                        style={styles.materialImage}
+                        style={styles.materialImageCard}
                         defaultSource={require('../assets/images/default_image.jpg')}
                       />
                     ) : (
-                      <View style={styles.materialImagePlaceholder} /> // Use placeholder style
+                      <View style={styles.materialImagePlaceholderCard} /> // Use placeholder style
                     )}
 
-                    <View style={styles.materialInfo}>
-                      {/* Replace Button */}
-                      <TouchableOpacity
-                        style={styles.replaceButton}
-                        onPress={() => handleOpenReplaceModal(material)}>
-                        <Icon
-                          name="swap-horizontal"
-                          size={12}
-                          color="#FF9500"
-                        />
-                        <Text style={styles.replaceButtonText}>Thay thế</Text>
-                      </TouchableOpacity>
-                      <Text style={styles.materialName} numberOfLines={2}>
-                        {material.name || `Sản phẩm ${index + 1}`}
-                      </Text>
+                    {/* Material Info Right Section */}
+                    <View style={styles.materialInfoCard}>
+                      {/* Top row: Name and Replace Button */}
+                      <View style={styles.materialInfoTopRow}>
+                         <Text style={styles.materialNameCard} numberOfLines={2}>
+                           {material.name || `Sản phẩm ${index + 1}`}
+                         </Text>
+                         {/* Replace Button */}
+                         <TouchableOpacity
+                           style={styles.replaceButtonCard}
+                           onPress={() => handleOpenReplaceModal(material)}>
+                            <Icon
+                            name="swap-horizontal"
+                            size={12}
+                            color='#4CAF50'
+                            />
+                           <Text style={styles.replaceButtonTextCard}>Thay thế</Text>
+                         </TouchableOpacity>
+                      </View>
 
                       {/* Unit Price Display */}
-                      <Text style={styles.unitPriceText}>
+                      <Text style={styles.unitPriceTextCard}>
                         {unitPrice.toLocaleString('vi-VN')} VND / sản phẩm
                       </Text>
 
-                      {/* Quantity Controls */}
-                      <View style={styles.quantityControlContainer}>
-                        <TouchableOpacity
-                          style={styles.quantityButton}
-                          onPress={() => handleDecreaseQuantity(material.id)}
-                          disabled={material.quantity <= 1}>
-                          <Icon
-                            name="minus"
-                            size={18}
-                            color={material.quantity <= 1 ? '#ccc' : '#007AFF'}
-                          />
-                        </TouchableOpacity>
-                        <Text style={styles.quantityText}>
-                          {material.quantity}
-                        </Text>
-                        <TouchableOpacity
-                          style={styles.quantityButton}
-                          onPress={() => handleIncreaseQuantity(material.id)}>
-                          <Icon name="plus" size={18} color="#007AFF" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
+                      {/* Bottom Row: Quantity and Total Price */}
+                      <View style={styles.materialInfoBottomRow}>
+                        {/* Quantity Controls */}
+                        <View style={styles.quantityControlContainerCard}>
+                          <TouchableOpacity
+                            style={styles.quantityButtonCard}
+                            onPress={() => handleDecreaseQuantity(material.id)}
+                            disabled={material.quantity <= 1}>
+                            <Icon
+                              name="minus"
+                              size={16}
+                              color={material.quantity <= 1 ? '#ccc' : '#000'}
+                            />
+                          </TouchableOpacity>
+                          <Text style={styles.quantityTextCard}>
+                            {material.quantity}
+                          </Text>
+                          <TouchableOpacity
+                            style={styles.quantityButtonCard}
+                            onPress={() => handleIncreaseQuantity(material.id)}>
+                            <Icon name="plus" size={16} color="#000" />
+                          </TouchableOpacity>
+                        </View>
 
-                    {/* Total Price Tag */}
-                    <View style={styles.materialPriceTag}>
-                      <Text style={styles.materialPriceText}>
-                        {totalItemPrice.toLocaleString('vi-VN')} VND
-                      </Text>
+                        {/* Total Price Tag */}
+                        <Text style={styles.materialPriceTextCard}>
+                          {totalItemPrice.toLocaleString('vi-VN')} VND
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 );
@@ -1358,7 +1364,7 @@ const styles = StyleSheet.create({
     color: '#007AFF',
   },
   submitButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -1414,7 +1420,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   changeAddressText: {
-    color: '#007AFF',
+    color: '#4CAF50',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -1588,100 +1594,98 @@ const styles = StyleSheet.create({
   },
 
   // Material List Styles
-  materialItem: {
+  materialItemCard: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    paddingVertical: 12,
-  },
-  materialImage: {
-    width: 70,
-    height: 70,
+    backgroundColor: '#fff',
     borderRadius: 8,
-    backgroundColor: '#F5F5F5',
-  },
-  materialImagePlaceholder: {
-    width: 70,
-    height: 70,
-    borderRadius: 8,
-    backgroundColor: '#F0F0F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  materialInfo: {
-    flex: 1,
-    marginLeft: 12,
-    position: 'relative',
-  },
-  materialName: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 6,
-  },
-  unitPriceText: {
-    fontSize: 12,
-    color: '#888',
-    marginBottom: 8,
-  },
-  quantityControlContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'absolute',
-    left: 0,
-    bottom: 0,
-  },
-  quantityButton: {
+    padding: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 4,
-    padding: 4,
-    marginHorizontal: 5,
+    borderColor: '#E5E5EA',
   },
-  quantityText: {
-    fontSize: 14,
+  materialImageCard: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 12,
+    resizeMode: 'cover',
+  },
+  materialImagePlaceholderCard: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#EFEFEF',
+  },
+  materialInfoCard: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  materialInfoTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  materialNameCard: {
+    fontSize: 15,
     fontWeight: '600',
     color: '#333',
-    minWidth: 20, // Ensure space for quantity
-    textAlign: 'center',
+    flex: 1,
+    marginRight: 8,
   },
-  replaceButton: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
+  replaceButtonCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF3E0',
+    backgroundColor: '#FFFAE5', // Light orange background
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  replaceButtonText: {
+  replaceButtonTextCard: {
     marginLeft: 4,
     fontSize: 12,
-    color: '#FF9500',
+    color: '#4CAF50', // Orange text color
     fontWeight: '500',
   },
-  materialPriceTag: {
-    // Removed absolute positioning
-    alignSelf: 'flex-end', // Align to the end of the row
-    marginTop: 'auto', // Push to bottom
-    backgroundColor: '#F0F8FF',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  materialPriceText: {
+  unitPriceTextCard: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#007AFF',
+    color: '#888', // Grey color
+    marginBottom: 8,
   },
-  noMaterialsText: {
-    fontSize: 14,
-    color: '#999',
+  materialInfoBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  quantityControlContainerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  quantityButtonCard: {
+    borderWidth: 1,
+    borderColor: '#ccc', // Light grey border
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginHorizontal: 4,
+  },
+  quantityTextCard: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#000', // Black text
+    minWidth: 20,
     textAlign: 'center',
-    padding: 20,
-    fontStyle: 'italic',
+  },
+  materialPriceTextCard: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#007AFF', // Blue color
   },
   // Wallet Balance Display
   balanceContainer: {

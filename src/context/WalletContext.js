@@ -41,11 +41,11 @@ const processRefundLogs = (logs) => {
       const orderId = orderIdMatch ? orderIdMatch[1] : '';
       
       if (percentage && orderId) {
-        description = `Hoàn tiền ${percentage}% cho đơn dịch vụ ${orderId}`;
+        description = `Hoàn tiền ${percentage}% cho đơn dịch vụ #${orderId}`;
       } else if (orderId) {
-        description = `Hoàn tiền cho đơn dịch vụ ${orderId}`;
+        description = `Hoàn tiền cho đơn dịch vụ #${orderId}`;
       } else {
-        description = `Hoàn tiền cho ${description}`;
+        description = `Hoàn tiền cho #${description}`;
       }
     } else if (!description) {
       description = 'Hoàn tiền';
@@ -88,7 +88,7 @@ const processWalletBills = (bills) => {
         description = `Thanh toán phí thiết kế cho đơn hàng ${bill.orderId || ''}`;
       }
     } else if (description === "Thanh toán đơn hàng") {
-      description = `Thanh toán đơn hàng #${orderId}`;
+      description = `Thanh toán đơn hàng #${bill.orderId}`;
     }
     
     return {

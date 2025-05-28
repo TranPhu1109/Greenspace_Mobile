@@ -7,6 +7,58 @@ import { api } from '../api/api';
 
 const { width } = Dimensions.get('window');
 
+// Utility function to format HTML content
+const formatDescription = (htmlContent) => {
+  if (!htmlContent) return '';
+  
+  // Remove HTML tags and decode HTML entities
+  let formattedText = htmlContent
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+    .replace(/&amp;/g, '&') // Replace &amp; with &
+    .replace(/&lt;/g, '<') // Replace &lt; with <
+    .replace(/&gt;/g, '>') // Replace &gt; with >
+    .replace(/&quot;/g, '"') // Replace &quot; with "
+    .replace(/&#39;/g, "'") // Replace &#39; with '
+    .replace(/&ocirc;/g, 'ô') // Replace &ocirc; with ô
+    .replace(/&agrave;/g, 'à') // Replace &agrave; with à
+    .replace(/&egrave;/g, 'è') // Replace &egrave; with è
+    .replace(/&eacute;/g, 'é') // Replace &eacute; with é
+    .replace(/&ugrave;/g, 'ù') // Replace &ugrave; with ù
+    .replace(/&ldquo;/g, '"') // Replace &ldquo; with "
+    .replace(/&rdquo;/g, '"') // Replace &rdquo; with "
+    // Add more specific Vietnamese characters
+    .replace(/&acirc;/g, 'â') // Replace &acirc; with â
+    .replace(/&oacute;/g, 'ó') // Replace &oacute; with ó
+    .replace(/&aacute;/g, 'á') // Replace &aacute; with á
+    .replace(/&atilde;/g, 'ã') // Replace &atilde; with ã
+    .replace(/&ecirc;/g, 'ê') // Replace &ecirc; with ê
+    .replace(/&ograve;/g, 'ò') // Replace &ograve; with ò
+    .replace(/&iacute;/g, 'í') // Replace &iacute; with í
+    .replace(/&uacute;/g, 'ú') // Replace &uacute; with ú
+    .replace(/&amp;#7853;/g, 'ậ')
+    .replace(/&amp;#7863;/g, 'ặ')
+    .replace(/&amp;#7879;/g, 'ễ')
+    .replace(/&amp;#7885;/g, 'ị')
+    .replace(/&amp;#7889;/g, 'ọ')
+    .replace(/&amp;#7891;/g, 'ỏ')
+    .replace(/&amp;#7893;/g, 'õ')
+    .replace(/&amp;#7897;/g, 'ụ')
+    .replace(/&amp;#7899;/g, 'ủ')
+    .replace(/&amp;#7901;/g, 'ũ')
+    .replace(/&amp;#7905;/g, 'ự')
+    .replace(/&amp;#7907;/g, 'ử')
+    .replace(/&amp;#7909;/g, 'ữ')
+    
+    .replace(/\r\n/g, '\n') // Replace \r\n with \n
+    .trim();
+
+  // Split into paragraphs and clean up
+  const paragraphs = formattedText.split('\n').filter(p => p.trim());
+  
+  return paragraphs.join('\n\n');
+};
+
 const DesignDetailScreen = ({ navigation, route }) => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [designData, setDesignData] = useState(null);
@@ -123,7 +175,7 @@ const DesignDetailScreen = ({ navigation, route }) => {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <Icon name="account-lock-outline" size={60} color="#007AFF" style={styles.modalIcon} />
+          <Icon name="account-lock-outline" size={60} color="#4CAF50" style={styles.modalIcon} />
           <Text style={styles.modalTitle}>Đăng nhập yêu cầu</Text>
           <Text style={styles.modalMessage}>
             Bạn cần đăng nhập để tiếp tục mua thiết kế này
@@ -238,7 +290,7 @@ const DesignDetailScreen = ({ navigation, route }) => {
             )}
           </View>
           
-          <Text style={styles.description}>{designData.description}</Text>
+          <Text style={styles.description}>{formatDescription(designData.description)}</Text>
           
           {/* Price Summary Cards */}
           <View style={styles.priceCardsContainer}>
@@ -333,7 +385,6 @@ const DesignDetailScreen = ({ navigation, route }) => {
               <Text style={styles.priceInfoValue}>{designData.materialPrice?.toLocaleString('vi-VN')} ₫</Text>
             </View>
             
-            <View style={styles.separator} />
             
             <View style={styles.totalRow}>
               <Text style={styles.totalPriceLabel}>Tổng cộng</Text>
@@ -611,7 +662,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   buyButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -777,7 +828,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f2f6',
   },
   modalLoginButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
   },
   modalCancelButtonText: {
     color: '#666',

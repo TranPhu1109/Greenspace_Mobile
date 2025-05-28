@@ -89,13 +89,13 @@ const EditProfileScreen = ({ navigation }) => {
         >
           <Icon name="chevron-left" size={28} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <Text style={styles.headerTitle}>Cá nhân</Text>
         <TouchableOpacity 
           onPress={handleSave}
           style={styles.saveButton}
           disabled={isLoading}
         >
-          <Text style={styles.saveButtonText}>{isLoading ? 'Saving...' : 'Save'}</Text>
+          <Text style={styles.saveButtonText}>{isLoading ? 'Đang lưu...' : 'Lưu'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -111,18 +111,18 @@ const EditProfileScreen = ({ navigation }) => {
             onPress={handleChangePhoto}
             disabled={isLoading}
           >
-            <Text style={styles.changePhotoText}>Change Photo</Text>
+            <Text style={styles.changePhotoText}>Đổi ảnh</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Full Name</Text>
+            <Text style={styles.label}>Họ và tên</Text>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder="Enter your full name"
+              placeholder="Nhập họ và tên"
               editable={!isLoading}
             />
           </View>
@@ -132,7 +132,7 @@ const EditProfileScreen = ({ navigation }) => {
             <TextInput
               style={[styles.input, { backgroundColor: '#f0f0f0' }]}
               value={email}
-              placeholder="Enter your email"
+              placeholder="Nhập email"
               keyboardType="email-address"
               autoCapitalize="none"
               editable={false}
@@ -140,25 +140,25 @@ const EditProfileScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Phone Number</Text>
+            <Text style={styles.label}>Số điện thoại</Text>
             <TextInput
               style={styles.input}
               value={phone}
               onChangeText={setPhone}
-              placeholder="Enter your phone number"
+              placeholder="Nhập số điện thoại"
               keyboardType="phone-pad"
               editable={!isLoading}
             />
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Address</Text>
+            <Text style={styles.label}>Địa chỉ</Text>
             <TouchableOpacity 
               style={[styles.input, styles.addressInput]}
               onPress={() => navigation.navigate('ShippingAddress')}
             >
               <Text style={address ? styles.addressText : styles.addressPlaceholder}>
-                {address || 'Select your address'}
+                {address || 'Chọn địa chỉ'}
               </Text>
               <Icon name="chevron-right" size={24} color="#8E8E93" />
             </TouchableOpacity>

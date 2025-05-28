@@ -37,6 +37,13 @@ const CheckOutScreen = ({navigation, route}) => {
   const [editablePhone, setEditablePhone] = useState(user?.phone || '');
   const [shippingFee, setShippingFee] = useState(0);
   const [isLoadingShippingFee, setIsLoadingShippingFee] = useState(false);
+
+  const formatCurrency = amount => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(amount);
+  };
   
   // --- Get selected items from route params --- 
   const selectedItems = route.params?.selectedItems || []; // Default to empty array if not passed
@@ -415,7 +422,7 @@ const CheckOutScreen = ({navigation, route}) => {
           {item.name}
         </Text>
         <Text style={styles.orderItemPrice}>
-          {item.price.toLocaleString('vi-VN')} VNĐ
+        {formatCurrency(item?.price)}
         </Text>
       </View>
       <View style={styles.orderItemQuantityContainer}>
@@ -439,11 +446,7 @@ const CheckOutScreen = ({navigation, route}) => {
             <Text style={styles.infoValue}>{user?.name || '...'}</Text>
           </View>
 
-          {/* Email Field (Readonly) */}
-          <View style={styles.infoFieldContainer}>
-            <Text style={styles.label}>Email</Text>
-            <Text style={styles.infoValue}>{user?.email || '...'}</Text>
-          </View>
+          
 
           {/* Phone Field (Editable) */}
           <View style={styles.infoFieldContainer}>
@@ -524,7 +527,7 @@ const CheckOutScreen = ({navigation, route}) => {
           {/* Display current balance first */}
           <View style={styles.balanceDisplayRow}>
              <Text style={styles.balanceLabel}>Số dư ví hiện tại:</Text>
-             <Text style={styles.balanceValue}>{balance.toLocaleString('vi-VN')} VND</Text>
+             <Text style={styles.balanceValue}>{formatCurrency(balance)}</Text>
           </View>
 
           <View style={styles.paymentDetails}>
@@ -532,7 +535,7 @@ const CheckOutScreen = ({navigation, route}) => {
               <Text style={styles.paymentLabel}>Tổng tiền hàng</Text>
               <Text style={styles.paymentValue}>
                 {/* Display total calculated from SELECTED items */} 
-                {itemTotal.toLocaleString('vi-VN')} VND 
+                {formatCurrency(itemTotal)}
               </Text>
             </View>
 
@@ -542,14 +545,14 @@ const CheckOutScreen = ({navigation, route}) => {
                 <ActivityIndicator size="small" color="#007AFF" />
               ) : (
                 <Text style={styles.paymentValue}>
-                  {shippingFee.toLocaleString('vi-VN')} VND
+                  {formatCurrency(shippingFee)}
                 </Text>
               )}
             </View>
             <View style={[styles.paymentRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>Tổng thanh toán</Text>
               <Text style={styles.totalValue}>
-                {finalTotal.toLocaleString('vi-VN')} VND
+                {formatCurrency(finalTotal)}
               </Text>
             </View>
           </View>
@@ -595,16 +598,16 @@ const CheckOutScreen = ({navigation, route}) => {
         onClose={() => setIsModalVisible(false)}
         height="auto">
         <View style={styles.modalContent}>
-          <Icon name="check-circle-outline" size={60} color="#007AFF" />
+          <Icon name="check-circle-outline" size={60} color="#4CAF50" />
           <Text style={styles.modalTitle}>Xác nhận đơn hàng</Text>
           <Text style={styles.modalText}>
             Xác nhận thanh toán đơn hàng với số tiền{' '}
             {/* Use finalTotal in modal confirmation */} 
-            {finalTotal.toLocaleString('vi-VN')} VND?
+            {formatCurrency(finalTotal)}?
           </Text>
           <Text style={styles.modalBalance}>
             Số dư sau thanh toán:{' '}
-            {(balance - finalTotal).toLocaleString('vi-VN')} VND
+            {formatCurrency(balance - finalTotal)}
           </Text>
           <View style={styles.modalButtons}>
             <TouchableOpacity
@@ -746,7 +749,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f8',
   },
   modalButtonConfirm: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
   },
   modalButtonTextCancel: {
     color: '#333',
@@ -993,7 +996,7 @@ const styles = StyleSheet.create({
   balanceValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2980b9', // Different blue for balance
+    color: '#666', // Different blue for balance
   },
 });
 

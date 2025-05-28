@@ -131,20 +131,20 @@ const CartScreen = ({ navigation, route }) => {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <Icon name="account-lock-outline" size={60} color="#e74c3c" style={styles.modalIcon} />
+          <Icon name="account-lock-outline" size={60} color="#4CAF50" style={styles.modalIcon} />
           <Text style={styles.modalTitle}>Vui lòng đăng nhập</Text>
           <Text style={styles.modalMessage}>
             Bạn cần đăng nhập để tiếp tục đặt hàng
           </Text>
           <View style={styles.modalButtonRow}>
             <TouchableOpacity 
-              style={[styles.modalButton, styles.modalCancelButton]} 
+              style={[styles.modalCancelButton]} 
               onPress={() => setShowLoginModal(false)}
             >
               <Text style={styles.modalCancelButtonText}>Hủy bỏ</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.modalButton, styles.modalLoginButton]} 
+              style={[styles.modalLoginButton]} 
               onPress={navigateToLogin}
             >
               <Text style={styles.modalLoginButtonText}>Đăng nhập</Text>
@@ -169,7 +169,7 @@ const CartScreen = ({ navigation, route }) => {
           <Icon 
             name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
             size={26}
-            color={isSelected ? '#e74c3c' : '#bdc3c7'}
+            color={isSelected ? '#4CAF50' : '#bdc3c7'}
           />
         </View>
         <View style={[styles.cartItem, isSelected ? {} : styles.cartItemUnselected]}>
@@ -240,7 +240,7 @@ const CartScreen = ({ navigation, route }) => {
           <Icon 
             name={areAllItemsSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
             size={24}
-            color={areAllItemsSelected ? '#e74c3c' : '#7f8c8d'} 
+            color={areAllItemsSelected ? '#4CAF50' : '#7f8c8d'} 
           />
           <Text style={styles.selectAllText}> 
             {areAllItemsSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả'} ({cartItems.length} sản phẩm)
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   },
   checkoutButton: {
     flexDirection: 'row',
-    backgroundColor: '#e74c3c',
+    backgroundColor: '#4CAF50',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -549,9 +549,21 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     backgroundColor: '#f1f2f6',
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 5,
   },
   modalLoginButton: {
-    backgroundColor: '#e74c3c',
+    backgroundColor: '#4CAF50',
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 5,
   },
   modalCancelButtonText: {
     color: '#7f8c8d',

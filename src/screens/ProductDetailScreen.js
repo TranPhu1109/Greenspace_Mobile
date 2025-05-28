@@ -89,20 +89,16 @@ const ProductDetailScreen = ({ route, navigation }) => {
         // Fetch Feedback after product details are loaded
         try {
           const feedbackResponse = await api.get(`/productfeedback/${productId}/products`);
-          //console.log("Feedback Response:", feedbackResponse);
           setFeedbacks(feedbackResponse || []); // Assuming API returns array directly
-          // Clear any previous error if fetch is successful
           setFeedbackError(null);
         } catch (feedbackErr) {
-          //console.error('Error fetching feedback:', feedbackErr);
-          // Check for the specific "no feedback found" error from the API
+          
           if (feedbackErr.message?.includes("No productFeedback found")) {
-            //console.log("API indicated no feedback found for this product.");
-            setFeedbacks([]); // Ensure feedbacks is empty
+            setFeedbacks([]); 
             setFeedbackError(null); // Treat as no data, not an error
           } else {
             // Handle other types of errors (network, server, etc.)
-            setFeedbackError('Không thể tải đánh giá.');
+            setFeedbackError('Chưa có đánh giá nào cho sản phẩm này');
             setFeedbacks([]); // Ensure feedbacks is empty on general error
           }
         } finally {
@@ -538,7 +534,7 @@ const styles = StyleSheet.create({
   },
   cartButton: {
     flexDirection: 'row',
-    backgroundColor: '#e74c3c',
+    backgroundColor: '#4CAF50',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',

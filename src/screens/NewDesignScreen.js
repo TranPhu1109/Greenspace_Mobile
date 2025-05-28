@@ -514,9 +514,17 @@ const NewDesignScreen = ({ navigation }) => {
   return (
     <ScrollView style={styles.scrollViewContainer}>
       <LoginModal />
-      <Text style={styles.title}>Gửi thông tin nhận tư vấn thiết kế</Text>
+      <View style={styles.headerContainer}>
+        <Icon name="leaf" size={24} color="#4CAF50" style={styles.headerIcon} />
+        <Text style={styles.title}>Tạo Thiết Kế Mới</Text>
+      </View>
+      <View style={styles.guideTextContainer}>
+        <Text style={styles.guideText}>Để tạo thiết kế mới với ý tưởng của bạn vui lòng cung cấp cho chúng tôi một số thông tin sau.</Text>
+      </View>
       <View style={styles.container}>
-        <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
+        <Text style={styles.sectionTitle}>
+          <Icon name="account-outline" size={20} color="#2C5530" /> Thông tin khách hàng
+        </Text>
         
         <View style={styles.formSection}>
           <Text style={styles.fieldLabel}>Họ và tên</Text>
@@ -557,7 +565,9 @@ const NewDesignScreen = ({ navigation }) => {
           {customerInfoError ? <Text style={styles.errorText}>{customerInfoError}</Text> : null}
         </View>
 
-        <Text style={styles.sectionTitle}>Thông tin không gian</Text>
+        <Text style={styles.sectionTitle}>
+          <Icon name="ruler-square" size={20} color="#2C5530" /> Thông tin không gian
+        </Text>
         <View style={styles.formSection}>
           <View style={styles.spaceInputRow}>
             <View style={styles.spaceInputGroup}>
@@ -593,7 +603,9 @@ const NewDesignScreen = ({ navigation }) => {
           {spatialInfoError ? <Text style={styles.errorText}>{spatialInfoError}</Text> : null}
         </View>
 
-        <Text style={styles.sectionTitle}>Hình ảnh và Mô tả</Text>
+        <Text style={styles.sectionTitle}>
+          <Icon name="image-multiple-outline" size={20} color="#2C5530" /> Hình ảnh và Mô tả
+        </Text>
         <View style={styles.formSection}>
           <View style={styles.imageUploadSection}>
             <View style={styles.uploadHeader}>
@@ -605,7 +617,7 @@ const NewDesignScreen = ({ navigation }) => {
               onPress={choosePhoto}
               disabled={images.length >= 3}
             >
-              <Icon name="image-plus" size={24} color="#0EA5E9" />
+              <Icon name="image-plus" size={24} color="#2C5530" />
               <Text style={styles.uploadButtonText}>
                 {images.length === 0 ? 'Tải lên hình ảnh không gian' : 'Thêm hình ảnh'}
               </Text>
@@ -639,7 +651,7 @@ const NewDesignScreen = ({ navigation }) => {
             style={[styles.formInput, styles.descriptionInput, descriptionError && !description.trim() ? styles.inputError : null]}
             value={description}
             onChangeText={handleDescriptionChange}
-            placeholder="Mô tả chi tiết yêu cầu của bạn (màu sắc, phong cách, ngân sách, v.v.)"
+            placeholder="Mô tả chi tiết yêu cầu của bạn (loại cây, phong cách vườn, ngân sách, v.v.)"
             placeholderTextColor="#94A3B8"
             multiline
           />
@@ -654,7 +666,10 @@ const NewDesignScreen = ({ navigation }) => {
           {isUploading ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.submitButtonText}>Gửi yêu cầu</Text>
+            <>
+              <Icon name="leaf" size={20} color="#FFFFFF" style={styles.submitButtonIcon} />
+              <Text style={styles.submitButtonText}>Đặt thiết kế</Text>
+            </>
           )}
         </TouchableOpacity>
       </View>

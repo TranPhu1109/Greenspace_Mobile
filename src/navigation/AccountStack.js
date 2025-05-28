@@ -124,7 +124,7 @@ const AccountStack = ({ navigation }) => {
           name="ServiceOrdersTab"
           component={ServiceStack}
           options={{
-            tabBarLabel: 'Đơn đặt dịch vụ',
+            tabBarLabel: 'Đơn mua thiết kế mẫu',
           }}
         />
         <Tab.Screen

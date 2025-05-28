@@ -4,7 +4,26 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const TransactionDetailScreen = ({ navigation, route }) => {
     const transaction = route.params?.transaction;
-console.log("Transaction:", transaction);
+    console.log("Transaction:", transaction);
+
+    // Format date and time
+    const formatDateTime = (dateString) => {
+        const date = new Date(dateString);
+        const formattedDate = date.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        }).replace(/\//g, '/');
+        const formattedTime = date.toLocaleTimeString('en-US', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        return { formattedDate, formattedTime };
+    };
+
+    const { formattedDate, formattedTime } = formatDateTime(transaction?.date);
 
     return (
         <View style={styles.container}>
@@ -22,35 +41,28 @@ console.log("Transaction:", transaction);
 
             {/* Transaction Summary Card */}
             <View style={styles.summaryCard}>
-                <Text style={styles.transactionDescription}>
-                    {transaction?.description}
-                </Text>
+                <Text style={styles.transactionStatus}>Thanh toán thành công</Text>
                 <Text style={[
                     styles.transactionAmount,
-                    { color: transaction?.amount < 0 ? '#000' : '#4CAF50' }
+                    { color: transaction?.amount < 0 ? '#000' : 'red' }
                 ]}>
-                    {transaction?.amount?.toLocaleString()}đ
+                    -{transaction?.amount?.toLocaleString()}đ
                 </Text>
-                <Text style={styles.transactionStatus}>Thành công</Text>
             </View>
 
             {/* Transaction Details */}
             <View style={styles.detailsCard}>
                 <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Mã giao dịch</Text>
-                    <Text style={styles.detailValue}>{transaction?.id}</Text>
-                </View>
-                <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Thời gian giao dịch</Text>
-                    <Text style={styles.detailValue}>{transaction?.date} {transaction?.time}</Text>
+                    <Text style={styles.detailValue}>{formattedDate}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Mã đơn hàng</Text>
-                    <Text style={styles.detailValue}>DH{transaction?.id}</Text>
+                    <Text style={styles.detailLabel}>Nội dung giao dịch</Text>
+                    <Text style={styles.descriptionValue}>{transaction?.description}</Text>
                 </View>
                 <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Phương thức thanh toán</Text>
-                    <Text style={styles.detailValue}>Ví</Text>
+                    <Text style={styles.detailValue}>Ví cá nhân</Text>
                 </View>
             </View>
         </View>
@@ -97,7 +109,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     transactionStatus: {
-        fontSize: 14,
+        fontSize: 16,
         color: '#4CAF50',
     },
     detailsCard: {
@@ -122,6 +134,12 @@ const styles = StyleSheet.create({
         color: '#000',
         fontWeight: '500',
     },
+    descriptionValue: {
+        fontSize: 14,
+        color: '#000',
+        fontWeight: '500',
+        width: 200
+    }
 });
 
 export default TransactionDetailScreen; 

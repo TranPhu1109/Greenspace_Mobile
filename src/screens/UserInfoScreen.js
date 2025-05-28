@@ -60,7 +60,7 @@ const UserInfoScreen = ({ navigation }) => {
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <Icon name="account-lock-outline" size={60} color="#007AFF" style={styles.modalIcon} />
+          <Icon name="account-lock-outline" size={60} color="#4CAF50" style={styles.modalIcon} />
           <Text style={styles.modalTitle}>Vui lòng đăng nhập</Text>
           <Text style={styles.modalMessage}>
             Bạn cần đăng nhập để xem thông tin tài khoản
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f2f6',
   },
   modalLoginButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
   },
   modalCancelButtonText: {
     color: '#7f8c8d',

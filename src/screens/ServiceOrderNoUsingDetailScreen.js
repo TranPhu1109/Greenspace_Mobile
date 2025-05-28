@@ -161,7 +161,14 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
     "Pending",
       "ConsultingAndSketching",
       'DeterminingDesignPrice',
-       "WaitDeposit"
+       "WaitDeposit",
+       "DoneDeterminingDesignPrice",   
+       "ReConsultingAndSketching",  
+       "StopService"
+  ]
+
+  const statusShowTotalPayment = [
+    "PaymentSuccess", "Processing", "Installing", "DoneInstalling", "Successfully"
   ]
 
   // Handle pull-to-refresh
@@ -352,7 +359,9 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         
         existingContract = response && response.length > 0 ? response[0] : null;
       } catch (fetchErr) {
-        console.error("Failed to fetch contract:", fetchErr); 
+        //console.error("Failed to fetch contract:", fetchErr); 
+        console.log("Không có hợp đồng sẵn có, đang thực hiện tạo mới", fetchErr);
+        
       }
 
       if (existingContract) {
@@ -500,7 +509,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           <Text style={styles.successModalText}>
             {isDesignConfirmation
               ? 'Bản vẽ chi tiết đã được xác nhận thành công.'
-              : 'Bản phác thảo đã được xác nhận thành công.'}
+              : 'Bản phác thảo đã được xác nhận thành công. Tiếp theo bạn sẽ tới bước ký hợp đồng, vui lòng đọc kỹ nội dung và thực hiện ký hợp đồng'}
           </Text>
           <TouchableOpacity
             style={styles.successModalButton}
@@ -1186,6 +1195,15 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
     }, [visible, initialValue]);
 
     const handleSubmit = () => {
+      if (!localInputValue.trim()) {
+        Alert.alert(
+          'Lỗi',
+          'Vui lòng nhập lý do yêu cầu thiết kế lại.',
+          [{ text: 'OK' }],
+          { cancelable: false }
+        );
+        return;
+      }
       onSubmit(localInputValue);
     };
 
@@ -1247,13 +1265,84 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
 
   // Use the separated component
   const handleRedraftConfirmWithValue = value => {
+    // Validate reason
+    if (!value.trim()) {
+      Alert.alert(
+        'Lỗi',
+        'Vui lòng nhập lý do yêu cầu thiết kế lại.',
+        [{ text: 'OK' }],
+        { cancelable: false }
+      );
+      return;
+    }
+
     setRedraftReason(value);
-    handleRedraftConfirm();
+    handleRedraftConfirm(value);
   };
 
   const handleRedesignConfirmWithValue = value => {
+    // Validate reason
+    if (!value.trim()) {
+      Alert.alert(
+        'Lỗi',
+        'Vui lòng nhập lý do yêu cầu thiết kế lại.',
+        [{ text: 'OK' }],
+        { cancelable: false }
+      );
+      return;
+    }
+
     setRedesignReason(value);
-    handleRedesignConfirm();
+    handleRedesignConfirm(value);
+  };
+
+  const handleRedesignConfirm = async (reason = redesignReason) => {
+    try {
+      setRedesignLoading(true);
+
+      // Step 1: Update order status to 20 (redesigning)
+      await api.put(`/serviceorder/status/${orderId}`, {
+        status: 20,
+      });
+
+      // Step 2: Update work task if available
+      if (order.workTasks && order.workTasks.length > 0) {
+        const taskId = order.workTasks[0].id;
+        await api.put(`/worktask/${taskId}`, {
+          serviceOrderId: order.id,
+          userId: user.id,
+          dateAppointment: order.workTasks[0].dateAppointment,
+          timeAppointment: order.workTasks[0].timeAppointment,
+          status: 0,
+          note: reason,
+        });
+      }
+
+      // Close modal and refresh data
+      setRedesignModalVisible(false);
+
+      // Show success message
+      Alert.alert(
+        'Thành công',
+        'Yêu cầu thiết kế lại đã được gửi thành công.',
+        [
+          {
+            text: 'OK',
+            onPress: () => fetchOrderDetails(),
+          },
+        ],
+        { cancelable: false }
+      );
+    } catch (err) {
+      Alert.alert(
+        'Lỗi',
+        'Không thể gửi yêu cầu thiết kế lại. Vui lòng thử lại sau.',
+        [{ text: 'OK' }],
+        { cancelable: false }
+      );
+    } finally {
+      setRedesignLoading(false);
+    }
   };
 
   // Replace RedraftModal and RedesignModal with the InputModal component
@@ -1283,18 +1372,11 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
 
   // Add new function to handle re-draft button press
   const handleRedraftPress = () => {
-    setRedraftReason('');
     setRedraftModalVisible(true);
   };
 
   // Add new function to handle re-draft confirmation
-  const handleRedraftConfirm = async () => {
-    // Validate reason
-    if (!redraftReason.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập lý do yêu cầu phác thảo lại.');
-      return;
-    }
-
+  const handleRedraftConfirm = async (reason = redraftReason) => {
     try {
       setRedraftLoading(true);
 
@@ -1312,7 +1394,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           dateAppointment: order.workTasks[0].dateAppointment,
           timeAppointment: order.workTasks[0].timeAppointment,
           status: 0,
-          note: redraftReason,
+          note: reason,
         });
       }
 
@@ -1329,11 +1411,14 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
             onPress: () => fetchOrderDetails(),
           },
         ],
+        { cancelable: false }
       );
     } catch (err) {
       Alert.alert(
         'Lỗi',
         'Không thể gửi yêu cầu phác thảo lại. Vui lòng thử lại sau.',
+        [{ text: 'OK' }],
+        { cancelable: false }
       );
     } finally {
       setRedraftLoading(false);
@@ -1343,67 +1428,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
   const handleRedesignPress = () => {
     setRedesignReason('');
     setRedesignModalVisible(true);
-  };
-
-  // Add new function to handle re-draft confirmation
-  const handleRedesignConfirm = async () => {
-    // Validate reason
-    if (!redesignReason.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập lý do yêu cầu thiết kế lại.');
-      return;
-    }
-    const payload = {
-      serviceType: 1,
-      designPrice: order?.designPrice,
-      description: order?.description,
-      status: 20, // ReDesign
-      report: order?.report, // Add note to report field
-      reportManger: order?.reportManager,
-      reportAccoutant: order?.reportAccoutant,
-      skecthReport: order?.skecthReport,
-    };
-
-    try {
-      setRedesignLoading(true);
-
-      // Step 1: Update order status to 19 (reconsultingandsketching)
-      await api.put(`/serviceorder/customer/${orderId}`, payload);
-
-      // Step 2: Update work task if available
-      if (order.workTasks && order.workTasks.length > 0) {
-        const taskId = order.workTasks[0].id;
-        await api.put(`/worktask/${taskId}`, {
-          serviceOrderId: order.id,
-          userId: user.id,
-          dateAppointment: order.workTasks[0].dateAppointment,
-          timeAppointment: order.workTasks[0].timeAppointment,
-          status: 2,
-          note: redesignReason,
-        });
-      }
-
-      // Close modal and refresh data
-      setRedesignModalVisible(false);
-
-      // Show success message
-      Alert.alert(
-        'Thành công',
-        'Yêu cầu thiết kế lại đã được gửi thành công.',
-        [
-          {
-            text: 'OK',
-            onPress: () => fetchOrderDetails(),
-          },
-        ],
-      );
-    } catch (err) {
-      Alert.alert(
-        'Lỗi',
-        'Không thể gửi yêu cầu thiết kế lại. Vui lòng thử lại sau.',
-      );
-    } finally {
-      setRedesignLoading(false);
-    }
   };
 
   // Add this new function after other existing fetch functions
@@ -1739,6 +1763,62 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
     });
   };
 
+  // Add this function at the beginning of the component
+  const decodeHtmlEntities = (text) => {
+    if (!text) return '';
+    // First decode HTML entities
+    const decodedText = text
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&aacute;/g, 'á')
+      .replace(/&agrave;/g, 'à')
+      .replace(/&atilde;/g, 'ã')
+      .replace(/&acirc;/g, 'â')
+      .replace(/&eacute;/g, 'é')
+      .replace(/&egrave;/g, 'è')
+      .replace(/&ecirc;/g, 'ê')
+      .replace(/&iacute;/g, 'í')
+      .replace(/&igrave;/g, 'ì')
+      .replace(/&oacute;/g, 'ó')
+      .replace(/&ograve;/g, 'ò')
+      .replace(/&otilde;/g, 'õ')
+      .replace(/&ocirc;/g, 'ô')
+      .replace(/&uacute;/g, 'ú')
+      .replace(/&ugrave;/g, 'ù')
+      .replace(/&ucirc;/g, 'û')
+      .replace(/&yacute;/g, 'ý')
+      .replace(/&ygrave;/g, 'ỳ')
+      .replace(/&ycirc;/g, 'ŷ')
+      .replace(/&yuml;/g, 'ÿ')
+      .replace(/&Aacute;/g, 'Á')
+      .replace(/&Agrave;/g, 'À')
+      .replace(/&Atilde;/g, 'Ã')
+      .replace(/&Acirc;/g, 'Â')
+      .replace(/&Eacute;/g, 'É')
+      .replace(/&Egrave;/g, 'È')
+      .replace(/&Ecirc;/g, 'Ê')
+      .replace(/&Iacute;/g, 'Í')
+      .replace(/&Igrave;/g, 'Ì')
+      .replace(/&Oacute;/g, 'Ó')
+      .replace(/&Ograve;/g, 'Ò')
+      .replace(/&Otilde;/g, 'Õ')
+      .replace(/&Ocirc;/g, 'Ô')
+      .replace(/&Uacute;/g, 'Ú')
+      .replace(/&Ugrave;/g, 'Ù')
+      .replace(/&Ucirc;/g, 'Û')
+      .replace(/&Yacute;/g, 'Ý')
+      .replace(/&Ygrave;/g, 'Ỳ')
+      .replace(/&Ycirc;/g, 'Ŷ')
+      .replace(/&Yuml;/g, 'Ÿ');
+    
+    // Then remove HTML tags
+    return decodedText.replace(/<[^>]*>/g, '');
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -1932,7 +2012,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
 
             <View
               style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={{
                   backgroundColor: '#F44336',
                   borderRadius: 8,
@@ -1955,7 +2035,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                 <Text style={{color: '#fff', fontSize: 14, fontWeight: '600'}}>
                   Yêu cầu lắp đặt lại
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
 
               <TouchableOpacity
                 style={{
@@ -2882,7 +2962,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           <View style={styles.infoRow}>
             <Icon name="ruler" size={20} color="#666" style={styles.infoIcon} />
             <Text style={styles.infoText}>
-              Kích thước: {order.length}m x {order.width}m
+              Kích thước không gian: {order.length}m x {order.width}m
             </Text>
           </View>
           <View style={styles.infoRow}>
@@ -2921,23 +3001,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
               </Text>
             </View>
 
-            {/* Deposit Paid Section (Conditionally displayed) */}
-            {!statusDontShowdepositField.map(s => s.toLowerCase()).includes(order.status?.toLowerCase()) && (
-              <View style={styles.pricingRow}>
-                <Icon
-                  name="currency-usd" // Changed icon to currency-usd
-                  size={22}
-                  color="#007AFF" // Changed color to blue
-                  style={styles.pricingIcon}
-                />
-                <Text style={styles.pricingLabel}>Đã đặt cọc (50%):</Text>
-                <Text style={[styles.pricingValue]} >
-                {/* Calculate and display 50% of design price */}
-                {formatCurrency((order.designPrice || 0) * 0.5)}
-                </Text>
-              </View>
-            )}
-
             <View style={styles.pricingRow}>
               <Icon
                 name="package-variant"
@@ -2960,16 +3023,66 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
               />
               <Text style={styles.totalPricingLabel}>Tổng chi phí:</Text>
               <Text style={styles.totalPricingValue}>
-              {order.status !== 'DeterminingDesignPrice' ?
-                formatCurrency(
-                  (order.designPrice || 0) + (order.materialPrice || 0),
-                )
-                : formatCurrency(0)
-              }
-
-                
+                {order.status !== 'DeterminingDesignPrice' ?
+                  formatCurrency(
+                    (order.designPrice || 0) + (order.materialPrice || 0),
+                  )
+                  : formatCurrency(0)
+                }
               </Text>
             </View>
+          </View>
+        </Card.Content>
+      </Card>
+
+      {/* Payment Information Section */}
+      <Card style={styles.section}>
+        <Card.Title
+          title="Thông tin thanh toán"
+          titleStyle={styles.sectionTitle}
+          left={props => (
+            <Icon
+              {...props}
+              name="cash-multiple"
+              size={24}
+              color="#007AFF"
+            />
+          )}
+        />
+        <Divider style={styles.divider} />
+        <Card.Content>
+          <View style={styles.pricingContainer}>
+            {/* Deposit Paid Section */}
+            {!statusDontShowdepositField.map(s => s.toLowerCase()).includes(order.status?.toLowerCase()) && (
+              <View style={styles.pricingRow}>
+                <Icon
+                  name="currency-usd"
+                  size={22}
+                  color="#007AFF"
+                  style={styles.pricingIcon}
+                />
+                <Text style={styles.pricingLabel}>Đã đặt cọc (50%):</Text>
+                <Text style={[styles.pricingValue]} >
+                  {formatCurrency((order.designPrice || 0) * 0.5)}
+                </Text>
+              </View>
+            )}
+
+            {/* Payment Status Section */}
+            {statusShowTotalPayment.map(s => s.toLowerCase()).includes(order.status?.toLowerCase()) && (
+              <View style={styles.pricingRow}>
+                <Icon
+                  name="check-circle"
+                  size={22}
+                  color="#34C759"
+                  style={styles.pricingIcon}
+                />
+                <Text style={styles.pricingLabel}>Đã thanh toán:</Text>
+                <Text style={[styles.pricingValue, { color: '#34C759' }]}>
+                  {formatCurrency((order.designPrice || 0) + (order.materialPrice || 0))}
+                </Text>
+              </View>
+            )}
           </View>
         </Card.Content>
       </Card>
@@ -2991,40 +3104,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         <Divider style={styles.divider} />
         <Card.Content>
           <Text style={styles.description}>{order.description}</Text>
-        </Card.Content>
-      </Card>
-
-      {/* Part 4: Consulting Content */}
-      <Card style={styles.section}>
-        <Card.Title
-          title="Nội dung tư vấn"
-          titleStyle={styles.sectionTitle}
-          left={props => (
-            <Icon
-              {...props}
-              name="message-text-outline"
-              size={24}
-              color="#007AFF"
-            />
-          )}
-        />
-        <Divider style={styles.divider} />
-        <Card.Content>
-          <View style={styles.consultingNote}>
-            {!order.skecthReport ? (
-              <Text style={styles.noteText}>
-                Designer của chúng tôi sẽ liên hệ với bạn để tư vấn và hỗ trợ
-                trong thời gian sớm nhất.
-              </Text>
-            ) : (
-              <Text style={styles.noteText}>
-                {order.skecthReport
-                  .replace(/<[^>]+>/g, '\n')
-                  .replace(/&nbsp;/g, ' ')
-                  .trim()}
-              </Text>
-            )}
-          </View>
         </Card.Content>
       </Card>
 
@@ -3124,6 +3203,10 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           </ScrollView>
         </Card.Content>
       </Card>
+
+      
+
+
 
       {/* First Sketch Images */}
       {recordSketches.some(sketch => sketch.phase === 1) &&
@@ -3225,7 +3308,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                         </Text>
                       </TouchableOpacity>
                     )}
-                  {maxPhase < 3 && (
+                  {maxPhase === 1 && (
                     <TouchableOpacity
                       style={styles.resketchOutlinedButton}
                       onPress={handleRedraftPress}>
@@ -3346,7 +3429,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                         </Text>
                       </TouchableOpacity>
                     )}
-                  {maxPhase < 3 && (
+                  {maxPhase === 2 && (
                     <TouchableOpacity
                       style={styles.resketchOutlinedButton}
                       onPress={handleRedraftPress}>
@@ -3467,7 +3550,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                         </Text>
                       </TouchableOpacity>
                     )}
-                  {maxPhase < 3 && (
+                  {maxPhase === 3 && (
                     <TouchableOpacity
                       style={styles.resketchOutlinedButton}
                       onPress={handleRedraftPress}>
@@ -3915,7 +3998,36 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           </Card.Content>
         </Card>
       )}
-
+{/* Part 4: Consulting Content */}
+<Card style={styles.section}>
+        <Card.Title
+          title="Nội dung tư vấn"
+          titleStyle={styles.sectionTitle}
+          left={props => (
+            <Icon
+              {...props}
+              name="message-text-outline"
+              size={24}
+              color="#007AFF"
+            />
+          )}
+        />
+        <Divider style={styles.divider} />
+        <Card.Content>
+          <View style={styles.consultingNote}>
+            {!order.skecthReport ? (
+              <Text style={styles.noteText}>
+                Designer của chúng tôi sẽ liên hệ với bạn để tư vấn và hỗ trợ
+                trong thời gian sớm nhất.
+              </Text>
+            ) : (
+              <Text style={styles.noteText}>
+                {decodeHtmlEntities(order.skecthReport)}
+              </Text>
+            )}
+          </View>
+        </Card.Content>
+      </Card>
       {/* Part 1: Customer Information */}
       <Card style={styles.section}>
         <Card.Title
@@ -4102,86 +4214,34 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                     if (order.workTasks && order.workTasks.length > 0) {
                       // Sort by creationDate in descending order (newest first)
                       const sortedTasks = [...order.workTasks].sort(
-                        (a, b) =>
-                          new Date(b.creationDate) - new Date(a.creationDate),
+                        (a, b) => new Date(b.creationDate) - new Date(a.creationDate),
                       );
                       latestTask = sortedTasks[0]; // Take the first one (most recent)
                     }
 
                     // 2. Update order status to Successfully (31)
                     const updateOrderUrl = `/serviceorder/status/${orderId}`;
-                    try {
-                      await axios.put(
-                        `${API_BASE_URL_LOCALHOST}${updateOrderUrl}`,
-                        {
-                          status: 31, // Successfully
-                          reportManger: '',
-                          reportAccoutant: '',
-                        },
-                        {
-                          headers: {
-                            Authorization: `Bearer ${user.backendToken}`,
-                          },
-                          timeout: 5000,
-                        },
-                      );
-                    } catch (err) {
-                      // Try emulator URL if localhost fails
-                      await axios.put(
-                        `${API_BASE_URL_EMULATOR}${updateOrderUrl}`,
-                        {
-                          status: 31, // Successfully
-                          reportManger: '',
-                          reportAccoutant: '',
-                        },
-                        {
-                          headers: {
-                            Authorization: `Bearer ${user.backendToken}`,
-                          },
-                        },
-                      );
-                    }
+                    await api.put(updateOrderUrl, {
+                      status: 31, // Successfully
+                      reportManger: '',
+                      reportAccoutant: '',
+                    }, {
+                      Authorization: `Bearer ${user.backendToken}`
+                    });
 
                     // 3. Update the latest work task to Completed (6)
                     if (latestTask) {
                       const updateTaskUrl = `/worktask/${latestTask.id}`;
-                      try {
-                        await axios.put(
-                          `${API_BASE_URL_LOCALHOST}${updateTaskUrl}`,
-                          {
-                            serviceOrderId: order.id,
-                            userId: user.id,
-                            dateAppointment: order.contructionDate,
-                            timeAppointment: order.contructionTime,
-                            status: 6, // Completed
-                            note: 'The customer has confirmed the completion of the installation and is satisfied with the product',
-                          },
-                          {
-                            headers: {
-                              Authorization: `Bearer ${user.backendToken}`,
-                            },
-                            timeout: 5000,
-                          },
-                        );
-                      } catch (err) {
-                        // Try emulator URL if localhost fails
-                        await axios.put(
-                          `${API_BASE_URL_EMULATOR}${updateTaskUrl}`,
-                          {
-                            serviceOrderId: order.id,
-                            userId: user.id,
-                            dateAppointment: order.contructionDate,
-                            timeAppointment: order.contructionTime,
-                            status: 6, // Completed
-                            note: 'The customer has confirmed the completion of the installation and is satisfied with the product',
-                          },
-                          {
-                            headers: {
-                              Authorization: `Bearer ${user.backendToken}`,
-                            },
-                          },
-                        );
-                      }
+                      await api.put(updateTaskUrl, {
+                        serviceOrderId: order.id,
+                        userId: user.id,
+                        dateAppointment: order.contructionDate,
+                        timeAppointment: order.contructionTime,
+                        status: 6, // Completed
+                        note: 'The customer has confirmed the completion of the installation and is satisfied with the product',
+                      }, {
+                        Authorization: `Bearer ${user.backendToken}`
+                      });
                     }
 
                     // Close modal and show success message
@@ -4197,10 +4257,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                       ],
                     );
                   } catch (error) {
-                    console.error(
-                      'Error confirming installation completion:',
-                      error,
-                    );
+                    console.error('Error confirming installation completion:', error);
                     Alert.alert(
                       'Lỗi',
                       'Không thể xác nhận hoàn thành đơn hàng. Vui lòng thử lại sau.',

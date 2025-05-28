@@ -31,7 +31,6 @@ const ShippingAddressScreen = ({ navigation }) => {
       setAddresses(response.data || response);
     } catch (error) {
       console.error('Error fetching addresses:', error);
-      Alert.alert('Lỗi', 'Không thể tải địa chỉ giao hàng.');
     } finally {
       setLoading(false);
     }

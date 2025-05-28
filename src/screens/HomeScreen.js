@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../api/api';
 import Icon from 'react-native-vector-icons/Ionicons';
 import logo from '../assets/logo/logo.png';
+import { setupFCMListeners } from '../utils/firebaseNotification';
 
 const { width } = Dimensions.get('window');
 
@@ -33,11 +34,12 @@ const HomeScreen = () => {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [errorProducts, setErrorProducts] = useState(null);
 
+
+
   useEffect(() => {
     const fetchData = async () => {
       setLoadingDesignIdeas(true);
       setErrorDesignIdeas(null);
-      console.log('Attempting to fetch design ideas...');
       try {
         const response = await api.get('/designidea', {
           params: {
@@ -45,9 +47,7 @@ const HomeScreen = () => {
             pageSize: 4,
           },
         });
-        console.log('Design ideas API response:', response);
         if (response && response && Array.isArray(response)) {
-          console.log('Successfully fetched design ideas:', response.length, 'items');
           setDesignIdeas(response);
         } else {
           setDesignIdeas([]);
@@ -59,12 +59,10 @@ const HomeScreen = () => {
         setErrorDesignIdeas(`Failed to load design ideas: ${error.message || error}. Please check your connection.`);
       } finally {
         setLoadingDesignIdeas(false);
-        console.log('Design ideas fetch attempt finished.');
       }
 
       setLoadingProducts(true);
       setErrorProducts(null);
-      console.log('Attempting to fetch products...');
       try {
         const response = await api.get('/product', {
           params: {
@@ -72,9 +70,7 @@ const HomeScreen = () => {
             pageSize: 4,
           },
         });
-        console.log('Products API response:', response);
         if (response && response && Array.isArray(response)) {
-          console.log('Successfully fetched products:', response.length, 'items');
           setProducts(response);
         } else {
           setProducts([]);
@@ -86,7 +82,6 @@ const HomeScreen = () => {
         setErrorProducts(`Failed to load products: ${error.message || error}. Please check your connection.`);
       } finally {
         setLoadingProducts(false);
-        console.log('Products fetch attempt finished.');
       }
     };
 

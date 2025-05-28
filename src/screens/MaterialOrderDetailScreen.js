@@ -44,6 +44,15 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
+  const formatCurrency = amount => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(amount);
+  };
+
   useEffect(() => {
     fetchOrderDetails();
   }, [orderId]);
@@ -359,98 +368,68 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
 
   // --- End Rating Functions ---
 
-  // --- Cancel Order Function ---
-  const handleCancelOrder = async () => {
-    // Confirmation Dialog
-    Alert.alert(
-      'Xác nhận hủy đơn hàng',
-      'Bạn có chắc chắn muốn hủy đơn hàng này không? Tiền sẽ được hoàn lại vào ví của bạn.',
-      [
+  // Move the actual cancel logic here
+  const actuallyCancelOrder = async () => {
+    setIsCancelling(true);
+    try {
+      // Step 1: Refund
+      const refundResponse = await axios.post(
+        `${API_URL}/wallets/refund-order?id=${orderId}`,
+        {},
         {
-          text: 'Không',
-          style: 'cancel',
+          headers: {
+            Authorization: `Bearer ${user.backendToken}`,
+          },
+          timeout: 10000,
+        },
+      );
+      if (refundResponse.data !== 'Refund successful.') {
+        throw new Error(refundResponse.data || 'Hoàn tiền không thành công.');
+      }
+      // Step 2: Update Order Status to Cancelled (3)
+      const updateResponse = await axios.put(
+        `${API_URL}/orderproducts/status/${orderId}`,
+        {
+          status: 3,
+          deliveryCode: orderDetails.deliveryCode || '',
         },
         {
-          text: 'Hủy đơn hàng',
-          style: 'destructive',
-          onPress: async () => {
-            setIsCancelling(true);
-            try {
-              // Step 1: Refund
-              const refundResponse = await axios.post(
-                `${API_URL}/wallets/refund-order?id=${orderId}`,
-                {},
-                {
-                  headers: {
-                    Authorization: `Bearer ${user.backendToken}`,
-                  },
-                  timeout: 10000,
-                },
-              );
-
-              if (refundResponse.data !== 'Refund successful.') {
-                throw new Error(
-                  refundResponse.data || 'Hoàn tiền không thành công.',
-                );
-              }
-
-              // Step 2: Update Order Status to Cancelled (3)
-              const updateResponse = await axios.put(
-                `${API_URL}/orderproducts/status/${orderId}`,
-                {
-                  status: 3,
-                  deliveryCode: orderDetails.deliveryCode || '',
-                },
-                {
-                  headers: {
-                    Authorization: `Bearer ${user.backendToken}`,
-                  },
-                },
-              );
-
-              if (updateResponse.data !== 'Update Successfully!') {
-                Alert.alert(
-                  'Cảnh báo',
-                  'Đã hoàn tiền thành công nhưng không thể cập nhật trạng thái đơn hàng. Vui lòng liên hệ hỗ trợ.',
-                );
-                // Refresh order details anyway
-                fetchOrderDetails();
-                // Also refresh wallet data even if order status failed to update
-                await refreshWallet();
-              } else {
-                // Both steps successful - Refresh Wallet Data HERE
-                console.log(
-                  'Order cancelled and refunded, refreshing wallet data...',
-                );
-                await refreshWallet(); // Call refreshWallet from context
-
-                // Show success message and refresh order details
-                Alert.alert(
-                  'Thành công',
-                  'Đã hủy đơn hàng thành công và hoàn tiền vào ví của bạn.',
-                  [{text: 'OK', onPress: () => fetchOrderDetails()}],
-                );
-              }
-            } catch (err) {
-              console.error(
-                'Error cancelling order:',
-                err.response?.data || err.message,
-              );
-              Alert.alert(
-                'Lỗi hủy đơn hàng',
-                err.response?.data?.message ||
-                  err.message ||
-                  'Đã xảy ra lỗi trong quá trình hủy đơn. Vui lòng thử lại.',
-              );
-            } finally {
-              setIsCancelling(false);
-            }
+          headers: {
+            Authorization: `Bearer ${user.backendToken}`,
           },
         },
-      ],
-    );
+      );
+      if (updateResponse.data !== 'Update Successfully!') {
+        Alert.alert(
+          'Cảnh báo',
+          'Đã hoàn tiền thành công nhưng không thể cập nhật trạng thái đơn hàng. Vui lòng liên hệ hỗ trợ.',
+        );
+        fetchOrderDetails();
+        await refreshWallet();
+      } else {
+        await refreshWallet();
+        Alert.alert(
+          'Thành công',
+          'Đã hủy đơn hàng thành công và hoàn tiền vào ví của bạn.',
+          [{text: 'OK', onPress: () => fetchOrderDetails()}],
+        );
+      }
+    } catch (err) {
+      Alert.alert(
+        'Lỗi hủy đơn hàng',
+        err.response?.data?.message ||
+          err.message ||
+          'Đã xảy ra lỗi trong quá trình hủy đơn. Vui lòng thử lại.',
+      );
+    } finally {
+      setIsCancelling(false);
+    }
   };
-  // --- End Cancel Order Function ---
+
+  // Replace Alert with modal trigger
+  const handleCancelOrder = () => {
+    setShowCancelModal(true);
+  };
 
   if (loading) {
     return (
@@ -496,31 +475,21 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
 
       <ScrollView style={styles.content} removeClippedSubviews={false}>
         <View style={styles.statusContainer}>
-          <Text
-            style={[
-              styles.statusText,
-              {color: getStatusColor(orderDetails.status)},
-            ]}>
-            {getStatusText(orderDetails.status)}
-          </Text>
-          <Text style={styles.orderNumber}>Mã đơn hàng: {orderDetails.id}</Text>
-
-          {/* Cancel Button - Only shows for Pending status */}
-          {orderDetails.status === '0' && (
-            <TouchableOpacity
+          <View style={[
+            styles.statusBadge,
+            { backgroundColor: getStatusColor(orderDetails.status) + '22' } // 22 for light background
+          ]}>
+            <Text
               style={[
-                styles.cancelButton,
-                isCancelling && styles.cancelButtonDisabled,
+                styles.statusText,
+                { color: getStatusColor(orderDetails.status) }
               ]}
-              onPress={handleCancelOrder}
-              disabled={isCancelling}>
-              {isCancelling ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.cancelButtonText}>Hủy đơn hàng</Text>
-              )}
-            </TouchableOpacity>
-          )}
+            >
+              {getStatusText(orderDetails.status)}
+            </Text>
+          </View>
+
+          
         </View>
 
         <View style={styles.trackingContainer}>
@@ -555,6 +524,23 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
                     Xác nhận đã nhận hàng
                   </Text>
                 </View>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {/* Cancel Button - Only shows for Pending status */}
+          {orderDetails.status === '0' && (
+            <TouchableOpacity
+              style={[
+                styles.cancelButton,
+                isCancelling && styles.cancelButtonDisabled,
+              ]}
+              onPress={handleCancelOrder}
+              disabled={isCancelling}>
+              {isCancelling ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.cancelButtonText}>Hủy đơn hàng</Text>
               )}
             </TouchableOpacity>
           )}
@@ -618,14 +604,14 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
                           onPress={() =>
                             handleOpenRatingModal(product, productInfo)
                           }>
-                          <Icon name="star-outline" size={16} color="#007AFF" />
+                          <Icon name="star-outline" size={16} color="#4CAF50" />
                           <Text style={styles.rateButtonText}>Đánh giá</Text>
                         </TouchableOpacity>
                       )}
                       {/* --- End Rating Button --- */}
                     </View>
                     <Text style={styles.productPrice}>
-                      {product.price?.toLocaleString('vi-VN')} VNĐ
+                      {formatCurrency(product.price)} 
                     </Text>
                   </View>
                 );
@@ -638,18 +624,17 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
           <View style={styles.paymentContainer}>
             <PaymentRow
               label="Tổng tiền hàng"
-              amount={`${(
-                orderDetails.totalAmount - orderDetails.shipPrice
-              )?.toLocaleString('vi-VN')} VNĐ`}
+              amount={formatCurrency(
+                orderDetails.totalAmount - orderDetails.shipPrice)}
             />
             <PaymentRow
               label="Phí vận chuyển"
-              amount={`${orderDetails.shipPrice?.toLocaleString('vi-VN')} VNĐ`}
+              amount={formatCurrency(orderDetails.shipPrice)}
             />
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Tổng thanh toán</Text>
               <Text style={styles.totalAmount}>
-                {orderDetails.totalAmount?.toLocaleString('vi-VN')} VNĐ
+                {formatCurrency(orderDetails.totalAmount)}
               </Text>
             </View>
           </View>
@@ -725,6 +710,65 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
         </Modal>
       )}
       {/* --- End Rating Modal --- */}
+
+      {/* Cancel Confirmation Modal */}
+      <Modal
+        visible={showCancelModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCancelModal(false)}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}>
+          <View style={{
+            backgroundColor: '#fff',
+            borderRadius: 12,
+            padding: 24,
+            width: '80%',
+            alignItems: 'center'
+          }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>Xác nhận hủy đơn hàng</Text>
+            <Text style={{ fontSize: 15, color: '#666', textAlign: 'center', marginBottom: 24 }}>
+              Bạn có chắc chắn muốn hủy đơn hàng này không? Tiền sẽ được hoàn lại vào ví của bạn.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f0f0f0',
+                  padding: 12,
+                  borderRadius: 8,
+                  marginRight: 8,
+                  alignItems: 'center'
+                }}
+                onPress={() => setShowCancelModal(false)}
+              >
+                <Text style={{ color: '#333', fontWeight: 'bold' }}>Không</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: '#E74C3C',
+                  padding: 12,
+                  borderRadius: 8,
+                  marginLeft: 8,
+                  alignItems: 'center'
+                }}
+                onPress={async () => {
+                  setShowCancelModal(false);
+                  await actuallyCancelOrder();
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Hủy đơn hàng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -772,15 +816,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusContainer: {
+    flexDirection: 'row', // horizontal layout
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
   },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 12,
+    marginBottom: 0,
+  },
   statusText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: 5,
+    // color will be set dynamically
   },
   orderNumber: {
     fontSize: 14,
@@ -980,7 +1033,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
-    backgroundColor: '#EAF2FF', // Light blue background
+    backgroundColor: '#E8F5E9', // Lighter green background
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 15,
@@ -988,7 +1041,7 @@ const styles = StyleSheet.create({
   },
   rateButtonText: {
     marginLeft: 4,
-    color: '#007AFF',
+    color: '#4CAF50',
     fontSize: 13,
     fontWeight: '500',
   },
@@ -1062,7 +1115,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
   },
   modalButtonSubmit: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
   },
   modalButtonDisabled: {
     backgroundColor: '#a0cfff',
@@ -1081,12 +1134,13 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#E74C3C', // Red color for cancellation
     borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingVertical: 8,         // Smaller vertical padding
+    paddingHorizontal: 24,      // Smaller horizontal padding
     marginTop: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 150, // Give it some width
+    alignSelf: 'center',        // Center the button horizontally
+    minWidth: 0,                // Remove minWidth or set to 0
   },
   cancelButtonDisabled: {
     backgroundColor: '#F5B7B1', // Lighter red when disabled

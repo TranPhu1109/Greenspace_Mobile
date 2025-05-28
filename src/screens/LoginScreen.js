@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  Alert
 } from 'react-native';
 import {useAuth} from '../context/AuthContext';
 import {useNavigation} from '@react-navigation/native';
@@ -42,6 +43,11 @@ const LoginScreen = ({navigation, route}) => {
     }
   }, [isAuthenticated, navigation, route.params]);
 
+
+  
+
+  
+
   const validateInputs = () => {
     let isValid = true;
     setEmailError('');
@@ -75,7 +81,6 @@ const LoginScreen = ({navigation, route}) => {
         'Authorization': `Bearer ${token}`
       });
       
-      console.log('Wallet data fetched:', response);
       return response;
     } catch (error) {
       console.error('Error fetching wallet:', error);
@@ -93,7 +98,7 @@ const LoginScreen = ({navigation, route}) => {
       const userCredential = await auth().signInWithEmailAndPassword(email, password);
       
       const idToken = await userCredential.user.getIdToken();
-      console.log('ID Token:', idToken);
+      console.log('firebase Token:', idToken);
       
       const fcmToken = await messaging(app).getToken();
       console.log('FCM Token:', fcmToken);
@@ -104,7 +109,7 @@ const LoginScreen = ({navigation, route}) => {
         role: 'string'
       });
 
-      console.log("response", response);
+      console.log("response auth", response);
 
       // Create user object with all necessary data
       const userData = {
@@ -123,13 +128,11 @@ const LoginScreen = ({navigation, route}) => {
 
       // Store user data in AsyncStorage
       await AsyncStorage.setItem('user', JSON.stringify(userData));
-      console.log('User data stored in AsyncStorage');
 
       // Update auth context
       login(userData);
 
       // Explicitly handle navigation here instead of relying solely on the useEffect
-      console.log('Login successful, redirecting...');
       if (route.params?.returnTo) {
         navigation.goBack();
       } else {

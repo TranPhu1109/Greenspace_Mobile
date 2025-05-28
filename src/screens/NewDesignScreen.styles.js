@@ -3,25 +3,26 @@ import { StyleSheet } from 'react-native';
 export const styles = StyleSheet.create({
   scrollViewContainer: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F0F7F4', // Light sage background
   },
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#fff',
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#1E293B',
-    marginTop: 20,
-    marginBottom: 16,
+    color: '#4CAF50', // Forest green
+    marginTop: 10,
+    marginBottom: 10,
     letterSpacing: -0.5,
+    textAlign: 'center',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#334155',
+    color: '#2C5530', // Forest green
     marginTop: 24,
     marginBottom: 12,
     letterSpacing: -0.3,
@@ -31,27 +32,29 @@ export const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#475569',
+    shadowColor: '#2C5530',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E8F3E8', // Light green border
   },
   fieldLabel: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#475569',
+    color: '#2C5530', // Forest green
     marginBottom: 8,
   },
   formInput: {
     height: 48,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F8FAF8', // Very light green
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#C8E6C9', // Light green border
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: '#334155',
+    color: '#2C5530', // Forest green
     marginBottom: 16,
   },
   addressSection: {
@@ -64,27 +67,27 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
   },
   changeButton: {
-    color: '#0EA5E9',
+    color: '#4CAF50', // Material green
     fontSize: 14,
     fontWeight: '600',
   },
   addressDisplay: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F1F8F1', // Light green background
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#C8E6C9', // Light green border
   },
   addressText: {
     fontSize: 15,
-    color: '#334155',
+    color: '#2C5530', // Forest green
     lineHeight: 22,
   },
   spaceInputRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    },
+  },
   spaceInputGroup: {
     flex: 1,
   },
@@ -95,22 +98,22 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#C8E6C9', // Light green border
     borderRadius: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F8FAF8', // Very light green
     height: 48,
     paddingHorizontal: 16,
   },
   spaceInput: {
     flex: 1,
     fontSize: 16,
-    color: '#334155',
+    color: '#2C5530', // Forest green
     height: '100%',
     padding: 0,
   },
   unitText: {
     fontSize: 15,
-    color: '#64748B',
+    color: '#4CAF50', // Material green
     marginLeft: 4,
     fontWeight: '500',
   },
@@ -125,73 +128,69 @@ export const styles = StyleSheet.create({
   },
   imageCountText: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#4CAF50', // Material green
     fontWeight: '500',
   },
   uploadButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#E8F5E9', // Light green background
     padding: 14,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#A5D6A7', // Medium green border
     borderStyle: 'dashed',
   },
   uploadButtonText: {
     marginLeft: 10,
     fontSize: 15,
-    color: '#0EA5E9',
+    color: '#2C5530', // Forest green
     fontWeight: '600',
   },
   imagePreviewContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
+    gap: 8,
+    marginTop: 12,
   },
   imagePreview: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
+    width: '31%',
+    aspectRatio: 1,
+    borderRadius: 8,
     overflow: 'hidden',
-    position: 'relative',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    position: 'relative',
   },
   previewImage: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
   },
   removeImageButton: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
-    padding: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 2,
+    top: 4,
+    right: 4,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 2,
   },
   descriptionInput: {
     height: 120,
     textAlignVertical: 'top',
     paddingTop: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F8FAF8', // Very light green
   },
   submitButton: {
-    backgroundColor: '#0EA5E9',
+    backgroundColor: '#4CAF50', // Material green
     borderRadius: 14,
     padding: 16,
     alignItems: 'center',
     marginTop: 24,
     marginBottom: 32,
-    shadowColor: '#0EA5E9',
+    shadowColor: '#4CAF50',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -203,13 +202,13 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
   },
   disabledButton: {
-    backgroundColor: '#94A3B8',
+    backgroundColor: '#A5D6A7', // Lighter green for disabled state
     shadowOpacity: 0,
     elevation: 0,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(44, 85, 48, 0.6)', // Forest green overlay
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -219,7 +218,7 @@ export const styles = StyleSheet.create({
     padding: 0,
     width: '90%',
     maxHeight: '80%',
-    shadowColor: '#000',
+    shadowColor: '#2C5530',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
@@ -233,17 +232,17 @@ export const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#E8F3E8', // Light green border
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#2C5530', // Forest green
     textAlign: 'center',
   },
   modalMessage: {
     fontSize: 16,
-    color: '#475569',
+    color: '#2C5530', // Forest green
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
@@ -266,15 +265,15 @@ export const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   modalCancelButton: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F1F8F1', // Light green background
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#C8E6C9', // Light green border
   },
   modalLoginButton: {
-    backgroundColor: '#0EA5E9',
+    backgroundColor: '#4CAF50', // Material green
   },
   modalCancelButtonText: {
-    color: '#475569',
+    color: '#2C5530', // Forest green
     textAlign: 'center',
     fontSize: 15,
     fontWeight: '600',
@@ -291,7 +290,7 @@ export const styles = StyleSheet.create({
     padding: 28,
     width: '85%',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#2C5530',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
@@ -301,14 +300,14 @@ export const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+    backgroundColor: 'rgba(76, 175, 80, 0.15)', // Light green background
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
   },
   modalSubtitle: {
     fontSize: 15,
-    color: '#64748B',
+    color: '#2C5530', // Forest green
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
@@ -320,15 +319,15 @@ export const styles = StyleSheet.create({
     marginTop: 8,
   },
   cancelButton: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F1F8F1', // Light green background
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#C8E6C9', // Light green border
   },
   confirmButton: {
-    backgroundColor: '#0EA5E9',
+    backgroundColor: '#4CAF50', // Material green
   },
   cancelButtonText: {
-    color: '#475569',
+    color: '#2C5530', // Forest green
     fontSize: 15,
     fontWeight: '600',
     textAlign: 'center',
@@ -345,7 +344,7 @@ export const styles = StyleSheet.create({
     padding: 28,
     width: '85%',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#2C5530',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
@@ -355,7 +354,7 @@ export const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: 'rgba(74, 222, 128, 0.15)',
+    backgroundColor: 'rgba(76, 175, 80, 0.15)', // Light green background
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -363,20 +362,20 @@ export const styles = StyleSheet.create({
   successTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#2C5530', // Forest green
     marginBottom: 12,
     textAlign: 'center',
   },
   successMessage: {
     fontSize: 15,
-    color: '#475569',
+    color: '#2C5530', // Forest green
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
     paddingHorizontal: 10,
   },
   successButton: {
-    backgroundColor: '#0EA5E9',
+    backgroundColor: '#4CAF50', // Material green
     width: '100%',
     height: 50,
     borderRadius: 12,
@@ -389,7 +388,7 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
   },
   viewOrderButton: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#E8F5E9', // Light green background
     width: '100%',
     height: 50,
     borderRadius: 12,
@@ -397,10 +396,10 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 16,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#A5D6A7', // Medium green border
   },
   viewOrderButtonText: {
-    color: '#0EA5E9',
+    color: '#2C5530', // Forest green
     fontSize: 16,
     fontWeight: '600',
   },
@@ -410,7 +409,7 @@ export const styles = StyleSheet.create({
     right: 20,
     zIndex: 10,
     padding: 10,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(44, 85, 48, 0.6)', // Forest green overlay
     borderRadius: 30,
   },
   fullScreenImage: {
@@ -430,8 +429,8 @@ export const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#64748B',
+    borderColor: '#C8E6C9', // Light green border
+    shadowColor: '#2C5530',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 5,
@@ -451,12 +450,12 @@ export const styles = StyleSheet.create({
   addressName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#334155',
+    color: '#2C5530', // Forest green
     marginRight: 8,
   },
   addressPhone: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#4CAF50', // Material green
     marginRight: 8,
   },
   checkCircle: {
@@ -464,16 +463,16 @@ export const styles = StyleSheet.create({
     height: 26,
     borderRadius: 13,
     borderWidth: 2,
-    borderColor: '#CBD5E1',
+    borderColor: '#C8E6C9', // Light green border
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkCircleSelected: {
-    backgroundColor: '#0EA5E9',
-    borderColor: '#0EA5E9',
+    backgroundColor: '#4CAF50', // Material green
+    borderColor: '#4CAF50',
   },
   defaultBadge: {
-    backgroundColor: '#0EA5E9',
+    backgroundColor: '#4CAF50', // Material green
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -486,13 +485,13 @@ export const styles = StyleSheet.create({
   },
   addNewAddressButton: {
     flexDirection: 'row',
-    backgroundColor: '#0EA5E9',
+    backgroundColor: '#4CAF50', // Material green
     borderRadius: 14,
     padding: 16,
     margin: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0EA5E9',
+    shadowColor: '#4CAF50',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -519,25 +518,25 @@ export const styles = StyleSheet.create({
   noAddressText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#334155',
+    color: '#2C5530', // Forest green
     marginTop: 16,
     textAlign: 'center',
   },
   noAddressSubText: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#4CAF50', // Material green
     textAlign: 'center',
     marginTop: 8,
   },
   errorText: {
-    color: '#EF4444',
+    color: '#D32F2F', // Material red
     fontSize: 14,
     marginTop: 0,
     marginBottom: 16,
     marginLeft: 0,
   },
   inputError: {
-    borderColor: '#EF4444',
+    borderColor: '#D32F2F', // Material red
   },
   newAddressModalContainer: {
     backgroundColor: '#FFFFFF',
@@ -556,7 +555,39 @@ export const styles = StyleSheet.create({
   formLabel: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#475569',
+    color: '#2C5530', // Forest green
     marginBottom: 8,
+  },
+  headerContainer: {
+    alignItems: 'center',
+    paddingTop: 20,
+    paddingBottom: 10,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8F3E8',
+  },
+  guideTextContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAF8',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8F3E8',
+  },
+  guideText: {
+    fontSize: 15,
+    color: '#39453c',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    lineHeight: 22,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#39453c', // Bright blue color
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  submitButtonIcon: {
+    marginRight: 8,
   },
 }); 

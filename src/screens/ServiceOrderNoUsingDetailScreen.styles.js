@@ -180,6 +180,7 @@ export const styles = StyleSheet.create({
   infoText: {
     fontSize: 16,
     color: '#333',
+    
     flex: 1,
   },
   totalCost: {
@@ -741,6 +742,7 @@ export const styles = StyleSheet.create({
     color: '#333',
     lineHeight: 22,
     marginBottom: 15,
+    
   },
   paymentSummary: {
     backgroundColor: '#F8F9FA',
@@ -1313,5 +1315,12 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  contractNoticeText: {
+    fontSize: 14,
+    color: '#FF3B30',
+    fontStyle: 'italic',
+    marginBottom: 8,
+    paddingHorizontal: 16,
   },
 }); 

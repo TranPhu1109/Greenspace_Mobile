@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../context/AuthContext';
 
@@ -8,8 +8,27 @@ const SettingsScreen = ({ navigation }) => {
   const appVersion = '1.0.0'; 
 
   const handleLogout = () => {
-    logout();
-    // No need to navigate, the RootStack will automatically show Login screen
+    Alert.alert(
+      'Đăng xuất',
+      'Bạn có chắc chắn muốn đăng xuất?',
+      [
+        {
+          text: 'Hủy',
+          style: 'cancel'
+        },
+        {
+          text: 'Đăng xuất',
+          style: 'destructive',
+          onPress: () => {
+            logout();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'MainTabs' }],
+            });
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -21,7 +40,7 @@ const SettingsScreen = ({ navigation }) => {
         >
           <Icon name="chevron-left" size={28} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={styles.headerTitle}>Cài đặt</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -29,19 +48,19 @@ const SettingsScreen = ({ navigation }) => {
         <View style={styles.section}>
           <TouchableOpacity style={styles.option}>
             <Icon name="shield-check-outline" size={24} color="#007AFF" />
-            <Text style={styles.optionText}>Privacy Policy</Text>
+            <Text style={styles.optionText}>Chính sách bảo mật</Text>
             <Icon name="chevron-right" size={24} color="#8E8E93" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.option}>
             <Icon name="file-document-outline" size={24} color="#007AFF" />
-            <Text style={styles.optionText}>Terms of Service</Text>
+            <Text style={styles.optionText}>Điều khoản dịch vụ</Text>
             <Icon name="chevron-right" size={24} color="#8E8E93" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.option}>
             <Icon name="help-circle-outline" size={24} color="#007AFF" />
-            <Text style={styles.optionText}>Help Center</Text>
+            <Text style={styles.optionText}>Trung tâm trợ giúp</Text>
             <Icon name="chevron-right" size={24} color="#8E8E93" />
           </TouchableOpacity>
 
@@ -51,7 +70,7 @@ const SettingsScreen = ({ navigation }) => {
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={styles.logoutText}>Đăng xuất</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

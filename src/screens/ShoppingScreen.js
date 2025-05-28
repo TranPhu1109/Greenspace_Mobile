@@ -6,10 +6,8 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
 import { useCart } from '../context/CartContext';
 
-// Replace 'YOUR_IP_ADDRESS' with your computer's IP address
-// Example: const API_URL = 'http://192.168.1.5:8080/api';
-const API_URL = 'http://192.168.1.2:8080/api'; // Use this for Android Emulator
-// const API_URL = 'http://localhost:8080/api'; // Use this for iOS Simulator
+
+const API_URL = 'http://192.168.1.2:8080/api'; 
 
 const ShoppingScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -130,17 +128,14 @@ const ShoppingScreen = () => {
     <>
       <View style={styles.bannerContainer}>
         <Image
-          source={require('../assets/images/furniture.jpg')}
+          source={require('../assets/images/sale.jpg')}
           style={styles.bannerImage}
           resizeMode="cover"
         />
-        <View style={styles.bannerOverlay}>
-          <Text style={styles.bannerTitle}>Summer Sale</Text>
-          <Text style={styles.bannerSubtitle}>Sale up to 50% off</Text>
-        </View>
+        
       </View>
 
-      <Text style={[styles.sectionTitle, styles.categoryTitle]}>Categories</Text>
+      <Text style={[styles.sectionTitle, styles.categoryTitle]}>Sản phẩm</Text>
       <FlatList
         data={categories}
         renderItem={renderCategoryItem}
