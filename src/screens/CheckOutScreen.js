@@ -21,8 +21,11 @@ import Modal from '../components/Modal';
 import {CommonActions} from '@react-navigation/native';
 import Address from '../components/Address';
 import axios from 'axios';
+import API_URL from '../api/api01';
 
-const API_URL = 'http://192.168.1.2:8080/api';    
+//const API_URL = 'http://10.0.2.2:8080/api';
+
+//const API_URL = 'https://greenspace-webapi-container-app.graymushroom-37ee5453.southeastasia.azurecontainerapps.io/api';
 
 const CheckOutScreen = ({navigation, route}) => {
   const {cartItems, totalPrice, clearCart, serverCartId} = useCart();
@@ -34,6 +37,7 @@ const CheckOutScreen = ({navigation, route}) => {
   const [selectedAddress, setSelectedAddress] = useState({});
   const [streetAddress, setStreetAddress] = useState('');
   const [initialAddressData, setInitialAddressData] = useState(null);
+  const [editableName, setEditableName] = useState(user?.name || '');
   const [editablePhone, setEditablePhone] = useState(user?.phone || '');
   const [shippingFee, setShippingFee] = useState(0);
   const [isLoadingShippingFee, setIsLoadingShippingFee] = useState(false);
@@ -44,38 +48,38 @@ const CheckOutScreen = ({navigation, route}) => {
       currency: 'VND',
     }).format(amount);
   };
-  
-  // --- Get selected items from route params --- 
+
+  // --- Get selected items from route params ---
   const selectedItems = route.params?.selectedItems || []; // Default to empty array if not passed
-  
-  // --- Calculate total price based on SELECTED items --- 
+
+  // --- Calculate total price based on SELECTED items ---
   const itemTotal = selectedItems.reduce((sum, item) => {
-    return sum + (item.price * item.quantity);
+    return sum + item.price * item.quantity;
   }, 0);
-  
+
   // Final total includes selected items total + shipping
   const finalTotal = itemTotal + shippingFee;
 
   useEffect(() => {
     if (user?.address) {
-      console.log('User Address String:', user.address);
-      console.log(
-        'User object details:',
-        JSON.stringify({
-          id: user.id,
-          wallet: user.wallet ? {id: user.wallet.id} : null,
-          backendToken: user.backendToken
-            ? user.backendToken.substring(0, 10) + '...'
-            : null,
-        }),
-      );
+      //console.log('User Address String:', user.address);
+      // console.log(
+      //   'User object details:',
+      //   JSON.stringify({
+      //     id: user.id,
+      //     wallet: user.wallet ? {id: user.wallet.id} : null,
+      //     backendToken: user.backendToken
+      //       ? user.backendToken.substring(0, 10) + '...'
+      //       : null,
+      //   }),
+      // );
 
       const parts = user.address.split('|').map(part => part.trim());
       if (parts.length === 4) {
         const [street, wardName, districtName, provinceName] = parts;
         setStreetAddress(street);
         const initialData = {provinceName, districtName, wardName};
-        console.log('Setting Initial Address Data:', initialData);
+        //console.log('Setting Initial Address Data:', initialData);
         setInitialAddressData(initialData);
 
         // Set initial selected address
@@ -92,6 +96,11 @@ const CheckOutScreen = ({navigation, route}) => {
     } else {
       setInitialAddressData({}); // Set empty if no address string
     }
+
+    // Initialize editable name if user name exists
+    if (user?.name) {
+      setEditableName(user.name);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -102,10 +111,10 @@ const CheckOutScreen = ({navigation, route}) => {
 
   useEffect(() => {
     // Log server cart ID on component mount
-    console.log('Current server cart ID:', serverCartId);
+    //console.log('Current server cart ID:', serverCartId);
   }, [serverCartId]);
 
-  const calculateShippingFee = async (address) => {
+  const calculateShippingFee = async address => {
     // Validate address has all required fields
     if (
       !address ||
@@ -113,7 +122,7 @@ const CheckOutScreen = ({navigation, route}) => {
       !address.districtName ||
       !address.wardName
     ) {
-      console.log('Incomplete address for shipping calculation:', address);
+      //console.log('Incomplete address for shipping calculation:', address);
       setShippingFee(0);
       return;
     }
@@ -121,7 +130,7 @@ const CheckOutScreen = ({navigation, route}) => {
     setIsLoadingShippingFee(true);
     try {
       // Log the address being sent to the API
-      console.log('Sending address to calculateShippingFee API:', JSON.stringify(address));
+      //console.log('Sending address to calculateShippingFee API:', JSON.stringify(address));
 
       console.log('Calculating shipping fee for:', {
         toProvinceName: address.provinceName,
@@ -129,21 +138,18 @@ const CheckOutScreen = ({navigation, route}) => {
         toWardName: address.wardName,
       });
 
-      const response = await fetch(
-        `${API_URL}/shipping/calculate-fee`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify({
-            toProvinceName: address.provinceName,
-            toDistrictName: address.districtName,
-            toWardName: address.wardName,
-          }),
+      const response = await fetch(`${API_URL}/shipping/calculate-fee`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
-      );
+        body: JSON.stringify({
+          toProvinceName: address.provinceName,
+          toDistrictName: address.districtName,
+          toWardName: address.wardName,
+        }),
+      });
 
       // Check if response is OK first
       if (!response.ok) {
@@ -153,12 +159,12 @@ const CheckOutScreen = ({navigation, route}) => {
       }
 
       const result = await response.json();
-      console.log('Shipping fee calculation result:', result);
+      //console.log('Shipping fee calculation result:', result);
 
       if (result.data && result.data.data) {
         const fee = parseInt(result.data.data.total) || 0;
         setShippingFee(fee);
-        console.log('Setting shipping fee to:', fee);
+        //console.log('Setting shipping fee to:', fee);
       } else {
         console.error('Unexpected response format:', result);
         Alert.alert(
@@ -180,7 +186,7 @@ const CheckOutScreen = ({navigation, route}) => {
   };
 
   const handleAddressChange = useCallback(address => {
-    console.log('Selected Address:', address);
+    //console.log('Selected Address:', address);
     setSelectedAddress(address);
     calculateShippingFee(address);
   }, []);
@@ -201,6 +207,11 @@ const CheckOutScreen = ({navigation, route}) => {
   );
 
   const handleOrder = () => {
+    // Validate that name is not empty
+    if (!editableName.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập họ và tên người nhận.');
+      return;
+    }
     // Validate that we have all required address fields
     if (
       !selectedAddress.provinceName ||
@@ -220,10 +231,7 @@ const CheckOutScreen = ({navigation, route}) => {
 
     // Validate cart items
     if (!selectedItems || selectedItems.length === 0) {
-      Alert.alert(
-        'Lỗi',
-        'Không có sản phẩm nào được chọn để đặt hàng.',
-      );
+      Alert.alert('Lỗi', 'Không có sản phẩm nào được chọn để đặt hàng.');
       return;
     }
     setIsModalVisible(true);
@@ -260,7 +268,7 @@ const CheckOutScreen = ({navigation, route}) => {
       // Step 1: Create the order
       const orderProducts = {
         userId: user.id,
-        userName: user.name,
+        userName: editableName,
         address: fullAddress,
         phone: editablePhone,
         shipPrice: parseInt(shippingFee), // Ensure shipPrice is an integer
@@ -268,7 +276,7 @@ const CheckOutScreen = ({navigation, route}) => {
         cartId: serverCartId, // Include the server cart ID
       };
 
-      console.log('Creating order with:', JSON.stringify(orderProducts));
+      //console.log('Creating order with:', JSON.stringify(orderProducts));
 
       const orderResponse = await axios.post(
         `${API_URL}/orderproducts`,
@@ -333,16 +341,12 @@ const CheckOutScreen = ({navigation, route}) => {
 
       console.log('Creating bill with:', JSON.stringify(billData));
 
-      const billResponse = await axios.post(
-        `${API_URL}/bill`,
-        billData,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${user.backendToken}`,
-          },
+      const billResponse = await axios.post(`${API_URL}/bill`, billData, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.backendToken}`,
         },
-      );
+      });
 
       console.log(
         'Bill created successfully:',
@@ -421,9 +425,7 @@ const CheckOutScreen = ({navigation, route}) => {
         <Text style={styles.orderItemName} numberOfLines={2}>
           {item.name}
         </Text>
-        <Text style={styles.orderItemPrice}>
-        {formatCurrency(item?.price)}
-        </Text>
+        <Text style={styles.orderItemPrice}>{formatCurrency(item?.price)}</Text>
       </View>
       <View style={styles.orderItemQuantityContainer}>
         <Text style={styles.orderItemQuantityLabel}>x</Text>
@@ -434,19 +436,28 @@ const CheckOutScreen = ({navigation, route}) => {
 
   return (
     <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContentContainer} removeClippedSubviews={false}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContentContainer}
+        removeClippedSubviews={false}>
         {/* Add padding at the top to avoid overlap with the back button */}
-        <View style={styles.topSpace}></View>
+        {/* <View style={styles.topSpace}></View> */}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
 
+          {/* Full Name Field (Editable) */}
           <View style={styles.infoFieldContainer}>
             <Text style={styles.label}>Tên khách hàng</Text>
-            <Text style={styles.infoValue}>{user?.name || '...'}</Text>
+            <TextInput
+              style={styles.editableInfoInput}
+              value={editableName}
+              onChangeText={setEditableName}
+              placeholder="Họ và tên"
+              placeholderTextColor="#999"
+              autoCapitalize="words"
+            />
           </View>
-
-          
 
           {/* Phone Field (Editable) */}
           <View style={styles.infoFieldContainer}>
@@ -468,11 +479,12 @@ const CheckOutScreen = ({navigation, route}) => {
                 shadowOpacity: 0.1,
                 shadowRadius: 1,
                 elevation: 1,
+                width:150
               }}
               value={editablePhone}
               onChangeText={setEditablePhone}
               keyboardType="phone-pad"
-              placeholder="Nhập số điện thoại"
+              placeholder="Số điện thoại"
               placeholderTextColor="#999"
             />
           </View>
@@ -507,13 +519,13 @@ const CheckOutScreen = ({navigation, route}) => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sản phẩm</Text>
-          {/* Map over SELECTED items */} 
+          {/* Map over SELECTED items */}
           {selectedItems.map(item => (
             <View key={item.id} style={styles.itemContainer}>
               {renderCartItem({item})}
             </View>
           ))}
-          {/* Adjust separator logic if needed based on selectedItems count */} 
+          {/* Adjust separator logic if needed based on selectedItems count */}
           {selectedItems.length > 1 &&
             selectedItems
               .slice(0, -1)
@@ -526,15 +538,15 @@ const CheckOutScreen = ({navigation, route}) => {
           <Text style={styles.sectionTitle}>Chi tiết thanh toán</Text>
           {/* Display current balance first */}
           <View style={styles.balanceDisplayRow}>
-             <Text style={styles.balanceLabel}>Số dư ví hiện tại:</Text>
-             <Text style={styles.balanceValue}>{formatCurrency(balance)}</Text>
+            <Text style={styles.balanceLabel}>Số dư ví hiện tại:</Text>
+            <Text style={styles.balanceValue}>{formatCurrency(balance)}</Text>
           </View>
 
           <View style={styles.paymentDetails}>
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Tổng tiền hàng</Text>
               <Text style={styles.paymentValue}>
-                {/* Display total calculated from SELECTED items */} 
+                {/* Display total calculated from SELECTED items */}
                 {formatCurrency(itemTotal)}
               </Text>
             </View>
@@ -557,18 +569,20 @@ const CheckOutScreen = ({navigation, route}) => {
             </View>
           </View>
 
-          {/* Conditionally render insufficient balance warning */} 
+          {/* Conditionally render insufficient balance warning */}
           {balance < finalTotal && (
             <View style={styles.warningContainer}>
               <Icon name="alert-circle-outline" size={22} color="#e74c3c" />
-              <Text style={styles.warningText}>Số dư không đủ để thanh toán.</Text>
+              <Text style={styles.warningText}>
+                Số dư không đủ để thanh toán.
+              </Text>
               <TouchableOpacity
                 style={styles.inlineTopUpButton}
                 onPress={() =>
-                  navigation.navigate('Account', { 
-                    screen: 'Profile', 
-                    params: { 
-                      screen: 'TopUp' 
+                  navigation.navigate('Account', {
+                    screen: 'Profile',
+                    params: {
+                      screen: 'TopUp',
                     },
                   })
                 }>
@@ -582,7 +596,7 @@ const CheckOutScreen = ({navigation, route}) => {
           style={[
             styles.orderButton,
             // Keep the disabled style logic based on balance
-            balance < finalTotal && styles.disabledButton
+            balance < finalTotal && styles.disabledButton,
           ]}
           onPress={handleOrder}
           // Ensure button is disabled if balance is insufficient
@@ -602,13 +616,10 @@ const CheckOutScreen = ({navigation, route}) => {
           <Text style={styles.modalTitle}>Xác nhận đơn hàng</Text>
           <Text style={styles.modalText}>
             Xác nhận thanh toán đơn hàng với số tiền{' '}
-            {/* Use finalTotal in modal confirmation */} 
+            {/* Use finalTotal in modal confirmation */}
             {formatCurrency(finalTotal)}?
           </Text>
-          <Text style={styles.modalBalance}>
-            Số dư sau thanh toán:{' '}
-            {formatCurrency(balance - finalTotal)}
-          </Text>
+          
           <View style={styles.modalButtons}>
             <TouchableOpacity
               style={[styles.modalButton, styles.modalButtonCancel]}
@@ -696,7 +707,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   orderButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4CAF50',
     margin: 20,
     padding: 15,
     borderRadius: 10,
@@ -744,9 +755,16 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     marginHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginHorizontal: 5,
   },
   modalButtonCancel: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#e0e0e0',
+    borderColor: '#ccc',
+    borderWidth: 1,
   },
   modalButtonConfirm: {
     backgroundColor: '#4CAF50',
@@ -756,6 +774,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
+    color: '#555',
   },
   modalButtonTextConfirm: {
     color: '#fff',
@@ -875,13 +894,22 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   editableInfoInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 22,
     fontSize: 16,
-    color: '#333',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    paddingVertical: 4,
-    flex: 2,
-    textAlign: 'right',
+    color: '#2c3e50',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
+    width:180
   },
   orderItemContainer: {
     flexDirection: 'row',
@@ -949,7 +977,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   topSpace: {
-    height: 50, // Adjust this value based on the height of the back button
+    height: 20, // Adjust this value based on the height of the back button
   },
   scrollContentContainer: {
     paddingBottom: 20, // Add padding to the bottom of the scroll view
@@ -987,7 +1015,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10, // Space before payment details box
-    paddingHorizontal: 5, // Slight padding to align with details box potentially
+    paddingHorizontal: 5,
   },
   balanceLabel: {
     fontSize: 15,
@@ -996,7 +1024,7 @@ const styles = StyleSheet.create({
   balanceValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#666', // Different blue for balance
+    color: '#666',
   },
 });
 

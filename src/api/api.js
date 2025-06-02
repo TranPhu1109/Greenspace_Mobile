@@ -2,7 +2,7 @@
 const API_CONFIG = {
   development: 'http://10.0.2.2:8080/api',    // Android Emulator
   staging: 'http://192.168.1.2:8080/api',     // Android Real Device
-  production: 'http://localhost:8080/api',     // iOS Emulator
+  production: 'https://greenspace-webapi-container-app.graymushroom-37ee5453.southeastasia.azurecontainerapps.io/api',     
 };
 
 // Current environment - change this to switch between environments

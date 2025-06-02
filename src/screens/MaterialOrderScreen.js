@@ -12,8 +12,11 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useAuth} from '../context/AuthContext'; // Import useAuth
 import axios from 'axios'; // Import axios
 import {useFocusEffect} from '@react-navigation/native'; // Import useFocusEffect
+import API_URL from '../api/api01';
 
-const API_URL = 'http://192.168.1.2:8080/api'; // Adjust if needed
+//const API_URL = 'http://10.0.2.2:8080/api';
+
+//const API_URL = 'https://greenspace-webapi-container-app.graymushroom-37ee5453.southeastasia.azurecontainerapps.io/api';
 
 const MaterialOrderScreen = ({navigation}) => {
   const [orders, setOrders] = useState([]);
@@ -43,7 +46,6 @@ const MaterialOrderScreen = ({navigation}) => {
           userId: user.id,
         },
       });
-      console.log('Orders fetched successfully:', response.data);
       // Assuming the API returns the array directly or nested under a 'data' key
       setOrders(response.data.data || response.data || []);
     } catch (err) {

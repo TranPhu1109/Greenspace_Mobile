@@ -43,11 +43,6 @@ const LoginScreen = ({navigation, route}) => {
     }
   }, [isAuthenticated, navigation, route.params]);
 
-
-  
-
-  
-
   const validateInputs = () => {
     let isValid = true;
     setEmailError('');
@@ -94,8 +89,12 @@ const LoginScreen = ({navigation, route}) => {
     try {
       showLoading();
       
+      console.log('Starting login process...');
       const app = getApp();
+      console.log('Firebase app initialized');
+      
       const userCredential = await auth().signInWithEmailAndPassword(email, password);
+      console.log('Firebase auth successful');
       
       const idToken = await userCredential.user.getIdToken();
       console.log('firebase Token:', idToken);
@@ -103,6 +102,7 @@ const LoginScreen = ({navigation, route}) => {
       const fcmToken = await messaging(app).getToken();
       console.log('FCM Token:', fcmToken);
 
+      console.log('Calling backend auth endpoint...');
       const response = await api.post('/auth', {
         token: idToken,
         fcmToken: fcmToken,
@@ -126,11 +126,14 @@ const LoginScreen = ({navigation, route}) => {
         wallet: await fetchWalletInfo(response.user.id, response.token)
       };
 
+      console.log('User data prepared, storing in AsyncStorage...');
       // Store user data in AsyncStorage
       await AsyncStorage.setItem('user', JSON.stringify(userData));
+      console.log('User data stored in AsyncStorage');
 
       // Update auth context
       login(userData);
+      console.log('Auth context updated');
 
       // Explicitly handle navigation here instead of relying solely on the useEffect
       if (route.params?.returnTo) {
@@ -140,6 +143,8 @@ const LoginScreen = ({navigation, route}) => {
       }
       
     } catch (error) {
+      console.error('Login error:', error);
+      
       if (error.code === 'auth/network-request-failed') {
         setAuthError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.');
       } else if (error.code === 'auth/invalid-email') {
@@ -148,6 +153,8 @@ const LoginScreen = ({navigation, route}) => {
         setAuthError('Email hoặc mật khẩu không chính xác');
       } else if (error.code === 'auth/too-many-requests') {
         setAuthError('Quá nhiều lần thử. Vui lòng thử lại sau');
+      } else if (error.message === 'Invalid response from backend') {
+        setAuthError('Lỗi xác thực từ máy chủ. Vui lòng thử lại sau.');
       } else {
         setAuthError('Đã xảy ra lỗi trong quá trình đăng nhập. Vui lòng thử lại');
       }

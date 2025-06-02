@@ -35,9 +35,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
   const {user} = useAuth();
   const {balance, refreshWallet} = useWallet();
   const [order, setOrder] = useState(null);
-
-
-
   const [recordSketches, setRecordSketches] = useState([]);
   const [recordDesigns, setRecordDesigns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +117,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
     'Installing',
     'DoneInstalling',
     'Successfully',
+    "MaterialPriceConfirmed"
     // Add other relevant statuses if needed
   ];
 
@@ -139,6 +137,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
     'Installing',
     'DoneInstalling',
     'Successfully',
+    
   ];
 
   const showSchedule = [
@@ -208,6 +207,8 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       'installing',
       'doneinstalling',
       'successfully',
+    "MaterialPriceConfirmed"
+
     ];
 
     return contractDisplayStatuses.includes(status?.toLowerCase());
@@ -1498,7 +1499,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
 
       Alert.alert(
         'Thành công',
-        'Dịch vụ đã được hủy thành công và 10% tiền cọc sẽ được hoàn trả vào ví của bạn.',
+        'Dịch vụ đã được hủy thành công và 30% tiền cọc sẽ được hoàn trả vào ví của bạn.',
         [
           {
             text: 'OK',
@@ -1529,7 +1530,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         walletId: user.wallet?.id || user.id,
         serviceOrderId: order.id,
         amount: refundAmount,
-        description: `Thanh toán phí hủy dịch vụ (10% giá thiết kế) cho đơn hàng ${order.id}`,
+        description: `Thanh toán phí hủy dịch vụ (30% giá thiết kế) cho đơn hàng ${order.id}`,
       };
 
       // Step 3: Process payment
@@ -1571,7 +1572,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
     // Calculate financial information for DepositSuccessful status
     const designPrice = order?.designPrice || 0;
     const depositAmount = designPrice * 0.5; // 50% of design price
-    const refundAmount = depositAmount * 0.1; // 10% of deposit
+    const refundAmount = depositAmount * 0.3; // 10% of deposit
     const walletBalance = user?.wallet?.amount || 0;
 
     const isDepositSuccessful =
@@ -1589,12 +1590,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         onRequestClose={() => !cancelLoading && setCancelModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModalContent}>
-            <Icon
-              name="alert-circle-outline"
-              size={60}
-              color="#FF3B30"
-              style={{marginBottom: 10}}
-            />
+           
             <Text style={styles.confirmModalTitle}>Xác nhận hủy dịch vụ</Text>
 
             {isDepositSuccessful && (
@@ -1615,7 +1611,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                 </View>
                 <View style={styles.financialInfoRow}>
                   <Text style={styles.financialInfoLabel}>
-                    Số tiền hoàn trả (10% cọc):
+                    Số tiền hoàn trả (30% cọc):
                   </Text>
                   <Text style={[styles.financialInfoValue, {color: '#34C759'}]}>
                     {formatCurrency(refundAmount)}
@@ -1693,7 +1689,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
 
             <Text style={styles.confirmModalText}>
               {isDepositSuccessful
-                ? 'Bạn có chắc chắn muốn hủy dịch vụ này không? 10% tiền cọc sẽ được hoàn trả vào ví của bạn. Hành động này không thể hoàn tác.'
+                ? 'Bạn có chắc chắn muốn hủy dịch vụ này không? 30% tiền cọc sẽ được hoàn trả vào ví của bạn. Hành động này không thể hoàn tác.'
                 : isDesignPhase
                 ? 'Bạn có chắc chắn muốn hủy dịch vụ này không? Bạn cần thanh toán 50% phí thiết kế còn lại để hủy đơn hàng. Hành động này không thể hoàn tác.'
                 : 'Bạn có chắc chắn muốn hủy dịch vụ này không? Hành động này không thể hoàn tác.'}
@@ -3937,6 +3933,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           />
           <Divider style={styles.divider} />
           <Card.Content>
+            {/* Standard Material Products */}
             {order.serviceOrderDetails.map((detail, index) => {
               const product = materialProducts[detail.productId];
               return (
@@ -3984,20 +3981,69 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
               );
             })}
 
+            {/* External Products inside Material List */}
+            {order?.externalProducts && order.externalProducts.length > 0 && (
+              <>
+                <View style={{ marginTop: 18, marginBottom: 6 }}>
+                  <Text style={{ fontWeight: '700', fontSize: 15, color: '#007AFF' }}>Sản phẩm ngoài danh mục</Text>
+                </View>
+                {order.externalProducts.map((product, index) => (
+                  <View key={`external-product-${index}`} style={styles.materialItem}>
+                    {product.imageURL ? (
+                      <TouchableOpacity
+                        onPress={() => handleImagePress(product.imageURL)}
+                        style={styles.materialImageContainer}>
+                        <Image
+                          source={{uri: product.imageURL}}
+                          style={styles.materialImage}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.materialImagePlaceholder}>
+                        <Icon name="image-off" size={24} color="#999" />
+                      </View>
+                    )}
+                    <View style={styles.materialDetails}>
+                      <Text style={styles.materialName}>{product.name}</Text>
+                      <View style={styles.materialRow}>
+                        <Text style={styles.materialLabel}>Số lượng:</Text>
+                        <Text style={styles.materialValue}>{product.quantity}</Text>
+                      </View>
+                      <View style={styles.materialRow}>
+                        <Text style={styles.materialLabel}>Đơn giá:</Text>
+                        <Text style={styles.materialValue}>{formatCurrency(product.price)}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.materialPriceContainer}>
+                      <Text style={styles.materialTotalPrice}>{formatCurrency(product.totalPrice)}</Text>
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
+
+            {/* Combined Total for Materials and External Products */}
             <View style={styles.materialTotalContainer}>
               <Text style={styles.materialTotalLabel}>Tổng cộng:</Text>
               <Text style={styles.materialTotalValue}>
                 {formatCurrency(
-                  order.serviceOrderDetails.reduce(
+                  (order.serviceOrderDetails.reduce(
                     (total, detail) => total + detail.totalPrice,
                     0,
-                  ),
+                  ) || 0) +
+                  (order.externalProducts ? order.externalProducts.reduce(
+                    (total, product) => total + (product.totalPrice || 0),
+                    0
+                  ) : 0)
                 )}
               </Text>
             </View>
           </Card.Content>
         </Card>
       )}
+
+
 {/* Part 4: Consulting Content */}
 <Card style={styles.section}>
         <Card.Title
@@ -4438,7 +4484,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
             />
             <Text style={styles.cancelServiceText}>
               {order.status?.toLowerCase() === 'depositsuccessful'
-                ? 'Hủy dịch vụ (Hoàn trả 10% cọc)'
+                ? 'Hủy dịch vụ (Hoàn trả 30% cọc)'
                 : order.status?.toLowerCase() === 'determiningmaterialprice' ||
                   order.status?.toLowerCase() ===
                     'donedeterminingmaterialprice' ||
@@ -4519,6 +4565,8 @@ const getStatusText = status => {
       return 'Khách hàng xác nhận';
     case 'successfully':
       return 'Thành công';
+    case "materialpriceconfirmed": 
+    return 'Đang trong quá trình thiết kế';
     default:
       return status || 'Không xác định';
   }
@@ -4528,7 +4576,7 @@ const getStatusColor = status => {
   switch (status?.toLowerCase()) {
     case 'pending':
       return '#FF9500';
-
+    case "materialpriceconfirmed":
     case 'consultingandsketching':
     case 'determiningdesignprice':
       return '#5856D6'; // Purple

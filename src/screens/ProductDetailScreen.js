@@ -11,7 +11,6 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const { addToCartItem, cartItems } = useCart();
   const { productId } = route.params;
   const [product, setProduct] = useState(null);
-  console.log("product", product);
   
   // Calculate cart count - number of unique products, not the total quantity
   const cartCount = cartItems.length;

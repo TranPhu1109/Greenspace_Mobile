@@ -18,8 +18,11 @@ import {useWallet} from '../context/WalletContext';
 import axios from 'axios';
 import StatusTrackingMaterial from '../components/StatusTrackingMaterial';
 import {isContentSafe} from '../utils/isContentSafe';
+import API_URL from '../api/api01';
 
-const API_URL = 'http://192.168.1.2:8080/api';
+//const API_URL = 'http://10.0.2.2:8080/api';
+
+//const API_URL = 'https://greenspace-webapi-container-app.graymushroom-37ee5453.southeastasia.azurecontainerapps.io/api';
 
 const MaterialOrderDetailScreen = ({navigation, route}) => {
   const {orderId} = route.params;
@@ -383,6 +386,8 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
           timeout: 10000,
         },
       );
+      console.log("refundResponse", refundResponse.error);
+      
       if (refundResponse.data !== 'Refund successful.') {
         throw new Error(refundResponse.data || 'Hoàn tiền không thành công.');
       }
@@ -399,6 +404,8 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
           },
         },
       );
+      console.log("updateResponse", updateResponse);
+      
       if (updateResponse.data !== 'Update Successfully!') {
         Alert.alert(
           'Cảnh báo',
@@ -415,6 +422,8 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
         );
       }
     } catch (err) {
+      console.log("err", err);
+      
       Alert.alert(
         'Lỗi hủy đơn hàng',
         err.response?.data?.message ||

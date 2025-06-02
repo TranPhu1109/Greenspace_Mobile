@@ -78,25 +78,21 @@ const ServiceOrderScreen = ({ navigation }) => {
   const getStatusInfo = (status) => {
     switch (status?.toLowerCase()) {
       case 'pending':
-        return { text: 'Chờ xử lý', color: '#FF9500', icon: 'credit-card-clock-outline' };
-      case 'paymentsuccess':
-        return { text: 'Thanh toán thành công', color: '#007AFF', icon: 'credit-card-check-outline' };
+        return { text: 'Chờ xử lý', color: '#FF9500' };
       case 'processing':
-        return { text: 'Đang xử lý', color: '#FF9500', icon: 'cogs' };
-      case 'pickedpackageanddelivery':
-        return { text: 'Đang giao hàng', color: '#5AC8FA', icon: 'truck-delivery-outline' };
-      case 'deliveryfail':
-        return { text: 'Giao hàng thất bại', color: '#FF3B30', icon: 'alert-circle-outline' };
-      case 'redelivery':
-        return { text: 'Giao hàng lại', color: '#FF9500', icon: 'truck-fast-outline' };
-      case 'deliveredsuccessfully':
-        return { text: 'Giao hàng thành công', color: '#34C759', icon: 'truck-check-outline' };
-      case 'completeorder':
-        return { text: 'Hoàn tất', color: '#30A46C', icon: 'check-decagram-outline' };
+        return { text: 'Đang xử lý', color: '#007AFF' };
+      case 'installing':
+        return { text: 'Đang lắp đặt', color: '#5AC8FA' };
+      case 'doneinstalling':
+        return { text: 'Hoàn tất lắp đặt', color: '#34C759' };
+      case 'reinstall':
+        return { text: 'Lắp đặt lại', color: '#FF9500' };
+      case 'successfully':
+        return { text: 'Hoàn tất đơn hàng', color: '#34C759' };
       case 'ordercancelled':
-        return { text: 'Đã hủy', color: '#FF3B30', icon: 'cancel' };
+        return { text: 'Đã hủy', color: '#FF3B30' };
       default:
-        return { text: status || 'Không xác định', color: '#8E8E93', icon: 'help-circle-outline' };
+        return { text: status || 'Không xác định', color: '#8E8E93' };
     }
   };
 
@@ -296,7 +292,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#fff',
-    marginLeft: 5,
+
   },
   customerInfoSection: {
       marginBottom: 15,

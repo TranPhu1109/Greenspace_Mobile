@@ -176,7 +176,7 @@ const HomeScreen = () => {
 
       <ScrollView style={styles.content} removeClippedSubviews={false}>
         <ImageBackground
-          source={require('../assets/images/greenspace_banner.png')}
+          source={require('../assets/images/greenspace_banner.jpg')}
           style={styles.bannerBackground}
           resizeMode="cover"
         >

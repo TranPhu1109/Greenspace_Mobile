@@ -2,8 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
-
-const API_URL = 'http://192.168.1.2:8080/api';
+import API_URL from '../api/api01';
 
 // Create axios instance with default config
 const api = axios.create({

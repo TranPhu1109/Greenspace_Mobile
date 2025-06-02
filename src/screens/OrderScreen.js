@@ -946,7 +946,7 @@ const OrderScreen = ({navigation, route}) => {
 
                       {/* Unit Price Display */}
                       <Text style={styles.unitPriceTextCard}>
-                        {unitPrice.toLocaleString('vi-VN')} VND / sản phẩm
+                        {unitPrice.toLocaleString('vi-VN')}đ/ sản phẩm
                       </Text>
 
                       {/* Bottom Row: Quantity and Total Price */}
@@ -975,7 +975,7 @@ const OrderScreen = ({navigation, route}) => {
 
                         {/* Total Price Tag */}
                         <Text style={styles.materialPriceTextCard}>
-                          {totalItemPrice.toLocaleString('vi-VN')} VND
+                          {totalItemPrice.toLocaleString('vi-VN')} đ
                         </Text>
                       </View>
                     </View>
@@ -996,13 +996,13 @@ const OrderScreen = ({navigation, route}) => {
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Giá thiết kế</Text>
               <Text style={styles.priceAmount}>
-                {designData.designPrice.toLocaleString('vi-VN')} VND
+                {designData.designPrice.toLocaleString('vi-VN')} đ
               </Text>
             </View>
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Giá vật liệu</Text>
               <Text style={styles.priceAmount}>
-                {calculatedMaterialPrice.toLocaleString('vi-VN')} VND
+                {calculatedMaterialPrice.toLocaleString('vi-VN')} đ
               </Text>
             </View>
 
@@ -1013,7 +1013,7 @@ const OrderScreen = ({navigation, route}) => {
                 <Text style={styles.priceLabel}>Số dư ví</Text>
               </View>
               <Text style={styles.priceAmount}>
-                {balance.toLocaleString('vi-VN')} VND
+                {balance.toLocaleString('vi-VN')} đ
               </Text>
             </View>
 
@@ -1022,7 +1022,7 @@ const OrderScreen = ({navigation, route}) => {
                 Tổng cộng
               </Text>
               <Text style={[styles.priceAmount, styles.totalAmount]}>
-                {calculatedTotalCost.toLocaleString('vi-VN')} VND
+                {calculatedTotalCost.toLocaleString('vi-VN')} đ
               </Text>
             </View>
           </View>
@@ -1214,7 +1214,7 @@ const OrderScreen = ({navigation, route}) => {
             </View>
 
             {/* Search Input */}
-            <View style={styles.replaceSearchContainer}>
+            {/* <View style={styles.replaceSearchContainer}>
               <Icon
                 name="magnify"
                 size={20}
@@ -1229,7 +1229,7 @@ const OrderScreen = ({navigation, route}) => {
                 value={replaceSearchTerm}
                 onChangeText={setReplaceSearchTerm}
               />
-            </View>
+            </View> */}
 
             {/* Product List */}
             {loadingAllProducts ? (
@@ -1260,7 +1260,7 @@ const OrderScreen = ({navigation, route}) => {
                         {item.name}
                       </Text>
                       <Text style={styles.replacementPrice}>
-                        {(item.price || 0).toLocaleString('vi-VN')} VND
+                        {(item.price || 0).toLocaleString('vi-VN')} đ
                       </Text>
                     </View>
                     <Icon name="chevron-right" size={24} color="#ccc" />
@@ -1329,7 +1329,6 @@ const styles = StyleSheet.create({
   infoContainer: {
     backgroundColor: '#F9F9F9',
     borderRadius: 8,
-    padding: 12,
   },
   priceRow: {
     flexDirection: 'row',

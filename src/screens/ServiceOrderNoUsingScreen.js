@@ -180,6 +180,8 @@ const ServiceOrderNoUsingScreen = ({ navigation }) => {
         return { text: 'Đang tư vấn & phác thảo', color: '#5856D6', icon: 'pencil-outline' };
       case 'determiningdesignprice':
         return { text: 'Đang tư vấn & phác thảo', color: '#5856D6', icon: 'calculator-variant-outline' };
+       case 'materialpriceconfirmed':
+        return { text: 'Đang trong quá trình thiết kế', color: '#007AFF', icon: 'account-switch-outline' };
       case 'depositsuccessful':
         return { text: 'Đặt cọc thành công', color: '#34C759', icon: 'check-circle-outline' };
       case 'assigntodesigner':

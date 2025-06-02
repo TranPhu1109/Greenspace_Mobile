@@ -53,7 +53,7 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
       if (initialAddress.provinceName && fetchedProvinces.length > 0 && !selectedProvinceId) {
         const initialProv = fetchedProvinces.find(p => p.provinceName === initialAddress.provinceName);
         if (initialProv) {
-          console.log('Auto-selecting province:', initialProv);
+          //console.log('Auto-selecting province:', initialProv);
           handleProvinceSelect(initialProv);
         } else {
           console.warn(`Initial province name "${initialAddress.provinceName}" not found.`);
@@ -71,7 +71,7 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
   // Handle Province Change
   const handleProvinceSelect = useCallback((province) => {
     if (!province) return;
-    console.log("Province Selected:", province);
+    //console.log("Province Selected:", province);
 
     // Update province
     setSelectedProvinceId(province.provinceId);
@@ -101,7 +101,7 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
   // Handle District Change
   const handleDistrictSelect = useCallback((district) => {
     if (!district) return;
-    console.log("District Selected:", district);
+    //console.log("District Selected:", district);
 
     // Update district
     setSelectedDistrictId(district.districtId);
@@ -128,7 +128,7 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
   // Handle Ward Change
   const handleWardSelect = useCallback((ward) => {
     if (!ward) return;
-    console.log("Ward Selected:", ward);
+    //console.log("Ward Selected:", ward);
     const currentWardId = ward.wardCode || ward.wardId;
 
     // Update ward
@@ -156,19 +156,19 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
     try {
       const response = await api.get(`/shipping/districts?provinceId=${provinceId}`);
       const fetchedDistricts = response?.data || [];
-      console.log("Fetched Districts:", fetchedDistricts)
+      //console.log("Fetched Districts:", fetchedDistricts)
       setDistricts(fetchedDistricts);
       setFilteredDistricts(fetchedDistricts);
 
       // Auto-select district based on initialAddress name if it's a first load
       if (initialAddress.districtName && fetchedDistricts.length > 0) {
-        console.log(`Comparing initial district "${initialAddress.districtName}" with fetched districts...`);
+        //console.log(`Comparing initial district "${initialAddress.districtName}" with fetched districts...`);
         const initialDist = fetchedDistricts.find(d => d.districtName === initialAddress.districtName);
         if (initialDist) {
-          console.log('Auto-selecting district:', initialDist);
+          //console.log('Auto-selecting district:', initialDist);
           handleDistrictSelect(initialDist);
         } else {
-          console.log('No exact match found for initial district name.');
+          //console.log('No exact match found for initial district name.');
         }
       }
     } catch (error) {
@@ -188,19 +188,19 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
     try {
       const response = await api.get(`/shipping/wards?districtId=${districtId}`);
       const fetchedWards = response?.data || [];
-      console.log("Fetched Wards:", fetchedWards);
+      //console.log("Fetched Wards:", fetchedWards);
       setWards(fetchedWards);
       setFilteredWards(fetchedWards);
 
       // Auto-select ward based on initialAddress name if it's a first load
       if (initialAddress.wardName && fetchedWards.length > 0) {
-        console.log(`Comparing initial ward "${initialAddress.wardName}" with fetched wards...`);
+        //console.log(`Comparing initial ward "${initialAddress.wardName}" with fetched wards...`);
         const initialWard = fetchedWards.find(w => w.wardName === initialAddress.wardName);
         if (initialWard) {
-          console.log('Auto-selecting ward:', initialWard);
+          //console.log('Auto-selecting ward:', initialWard);
           handleWardSelect(initialWard);
         } else {
-          console.log('No exact match found for initial ward name.');
+          //console.log('No exact match found for initial ward name.');
         }
       }
     } catch (error) {
@@ -239,7 +239,7 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
   // Effect to fetch districts when province changes
   useEffect(() => {
     if (selectedProvinceId) {
-      console.log('Fetching districts for provinceId:', selectedProvinceId);
+      //console.log('Fetching districts for provinceId:', selectedProvinceId);
       fetchDistricts(selectedProvinceId);
     }
   }, [selectedProvinceId, fetchDistricts]);
@@ -247,7 +247,7 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
   // Effect to fetch wards when district changes
   useEffect(() => {
     if (selectedDistrictId) {
-      console.log('Fetching wards for districtId:', selectedDistrictId);
+      //console.log('Fetching wards for districtId:', selectedDistrictId);
       fetchWards(selectedDistrictId);
     }
   }, [selectedDistrictId, fetchWards]);
