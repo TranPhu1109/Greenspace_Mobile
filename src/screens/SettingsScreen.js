@@ -1,11 +1,40 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../api/api';
 
 const SettingsScreen = ({ navigation }) => {
   const { logout } = useAuth();
   const appVersion = '1.0.0'; 
+
+  const [policies, setPolicies] = useState([]);
+  const [loadingPolicies, setLoadingPolicies] = useState(true);
+  const [errorPolicies, setErrorPolicies] = useState(null);
+
+  useEffect(() => {
+    const fetchPolicies = async () => {
+      try {
+        setLoadingPolicies(true);
+        const response = await api.get('/policy');
+        if (Array.isArray(response)) {
+          setPolicies(response);
+          setErrorPolicies(null);
+        } else {
+          setPolicies([]);
+          setErrorPolicies('Unexpected API response format.');
+          console.error('Unexpected API response for policies:', response);
+        }
+      } catch (error) {
+        setErrorPolicies('Failed to load policies.');
+        console.error('Error fetching policies:', error);
+      } finally {
+        setLoadingPolicies(false);
+      }
+    };
+
+    fetchPolicies();
+  }, []);
 
   const handleLogout = () => {
     Alert.alert(
@@ -46,17 +75,25 @@ const SettingsScreen = ({ navigation }) => {
 
       <ScrollView style={styles.container} removeClippedSubviews={false}>
         <View style={styles.section}>
-          <TouchableOpacity style={styles.option}>
-            <Icon name="shield-check-outline" size={24} color="#007AFF" />
-            <Text style={styles.optionText}>Chính sách bảo mật</Text>
-            <Icon name="chevron-right" size={24} color="#8E8E93" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.option}>
-            <Icon name="file-document-outline" size={24} color="#007AFF" />
-            <Text style={styles.optionText}>Điều khoản dịch vụ</Text>
-            <Icon name="chevron-right" size={24} color="#8E8E93" />
-          </TouchableOpacity>
+          {loadingPolicies ? (
+            <ActivityIndicator size="small" color="#007AFF" />
+          ) : errorPolicies ? (
+            <Text style={styles.errorText}>{errorPolicies}</Text>
+          ) : policies.length > 0 ? (
+            policies.map((policy) => (
+              <TouchableOpacity
+                key={policy.id}
+                style={styles.option}
+                onPress={() => navigation.navigate('PolicyDetail', { policyId: policy.id, policyName: policy.documentName })}
+              >
+                <Icon name="shield-check-outline" size={24} color="#007AFF" />
+                <Text style={styles.optionText}>{policy.documentName}</Text>
+                <Icon name="chevron-right" size={24} color="#8E8E93" />
+              </TouchableOpacity>
+            ))
+          ) : (
+            <Text style={styles.noPoliciesText}>No policies found.</Text>
+          )}
 
           <TouchableOpacity style={styles.option}>
             <Icon name="help-circle-outline" size={24} color="#007AFF" />
@@ -117,6 +154,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     marginLeft: 15,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#FF3B30',
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  noPoliciesText: {
+    fontSize: 16,
+    color: '#8E8E93',
+    textAlign: 'center',
+    marginTop: 20,
   },
   versionContainer: {
     paddingVertical: 20,

@@ -44,9 +44,9 @@ const TransactionDetailScreen = ({ navigation, route }) => {
                 <Text style={styles.transactionStatus}>Thanh toán thành công</Text>
                 <Text style={[
                     styles.transactionAmount,
-                    { color: transaction?.amount < 0 ? '#000' : 'red' }
+                    { color: transaction?.type === 'purchase' ? 'red' : '#4CAF50' }
                 ]}>
-                    -{transaction?.amount?.toLocaleString()}đ
+                    {transaction?.type === 'purchase' ? '-' : '+'}{Math.abs(transaction?.amount)?.toLocaleString()}đ
                 </Text>
             </View>
 

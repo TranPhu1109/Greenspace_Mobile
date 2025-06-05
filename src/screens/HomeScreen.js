@@ -34,7 +34,7 @@ const HomeScreen = () => {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [errorProducts, setErrorProducts] = useState(null);
 
-
+  const [bannerImageUrl, setBannerImageUrl] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -85,8 +85,22 @@ const HomeScreen = () => {
       }
     };
 
+    const fetchBannerData = async () => {
+      try {
+        const response = await api.get('/webmanage/banner');
+        if (response && Array.isArray(response) && response.length > 0) {
+          setBannerImageUrl(response[0].imageBanner);
+        } else {
+          console.warn('API response for banner is not an array, is empty, or is invalid:', response);
+        }
+      } catch (error) {
+        console.error('Error fetching banner data:', error);
+      }
+    };
+
     // Fetch data regardless of authentication status
     fetchData();
+    fetchBannerData();
   }, []);
 
   const renderDesignIdeaItem = ({ item }) => (
@@ -176,7 +190,7 @@ const HomeScreen = () => {
 
       <ScrollView style={styles.content} removeClippedSubviews={false}>
         <ImageBackground
-          source={require('../assets/images/greenspace_banner.jpg')}
+          source={bannerImageUrl ? { uri: bannerImageUrl } : require('../assets/images/greenspace_banner.jpg')}
           style={styles.bannerBackground}
           resizeMode="cover"
         >
@@ -251,7 +265,7 @@ const HomeScreen = () => {
               }}
             >
               <Icon name="arrow-forward" size={20} color="#fff" style={styles.seeMoreButtonIcon} />
-              <Text style={styles.seeMoreButtonText}>Khám Phá Thêm Thiết Kế</Text>
+              <Text style={styles.seeMoreButtonText}>Xem Thêm Ý Tưởng Thiết Kế</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -292,7 +306,7 @@ const HomeScreen = () => {
               }}
             >
               <Icon name="arrow-forward" size={20} color="#fff" style={styles.seeMoreButtonIcon} />
-              <Text style={styles.seeMoreButtonText}>Khám Phá Thêm Sản Phẩm</Text>
+              <Text style={styles.seeMoreButtonText}>Xem Thêm Sản Phẩm</Text>
             </TouchableOpacity>
           )}
         </View>

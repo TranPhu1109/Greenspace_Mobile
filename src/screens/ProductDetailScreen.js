@@ -4,8 +4,10 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useCart } from '../context/CartContext';
 import CustomModal from '../components/Modal';
 import { api } from '../api/api';
+import RenderHtml from 'react-native-render-html';
+import { useWindowDimensions } from 'react-native';
 
-const { width } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { addToCartItem, cartItems } = useCart();
@@ -72,6 +74,8 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: '', message: '', buttons: [], icon: null });
+
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
     const fetchProductDetailsAndFeedback = async () => {
@@ -278,7 +282,15 @@ const ProductDetailScreen = ({ route, navigation }) => {
           
           <View style={styles.descriptionContainer}>
             <Text style={styles.descriptionTitle}>Mô tả sản phẩm</Text>
-            <Text style={styles.description}>{product.description}</Text>
+            {product.description ? (
+              <RenderHtml
+                contentWidth={width}
+                source={{ html: product.description }}
+                tagsStyles={styles.htmlTagsStyles}
+              />
+            ) : (
+              <Text style={styles.description}>Không có mô tả sản phẩm.</Text>
+            )}
           </View>
 
           <View style={styles.specsContainer}>
@@ -740,7 +752,7 @@ const styles = StyleSheet.create({
      shadowOpacity: 0.2,
      shadowRadius: 4,
      elevation: 4,
-     maxWidth: width * 0.8,
+     maxWidth: screenWidth * 0.8,
    },
    toastText: {
      color: '#fff',
@@ -773,6 +785,18 @@ const styles = StyleSheet.create({
      fontWeight: 'bold',
      textAlign: 'center',
    },
+   htmlTagsStyles: {
+    body: {
+      margin: 0,
+      padding: 0,
+      fontSize: 15,
+      color: '#34495e',
+      lineHeight: 22,
+    },
+    p: {
+        marginBottom: 10,
+    }
+  },
 });
 
 export default ProductDetailScreen; 

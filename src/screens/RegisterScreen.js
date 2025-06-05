@@ -159,7 +159,7 @@ const RegisterScreen = () => {
       login(userData);
 
       // 9. Navigate to the main part of the app
-      Alert.alert('Thành công', 'Đăng ký và đăng nhập thành công!', [
+      Alert.alert('Thành công', 'Đăng kí thành công, hệ thống sẽ tự động login', [
         { text: 'OK', onPress: () => navigation.navigate('MainTabs') }, // Navigate to main tabs after auto-login
       ]);
 

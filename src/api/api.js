@@ -6,7 +6,7 @@ const API_CONFIG = {
 };
 
 // Current environment - change this to switch between environments
-const CURRENT_ENV = 'staging';
+const CURRENT_ENV = 'production';
 
 // Get the current API URL based on environment
 const API_URL = API_CONFIG[CURRENT_ENV];

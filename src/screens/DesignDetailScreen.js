@@ -4,60 +4,63 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../api/api';
+import RenderHtml from 'react-native-render-html';
+import { useWindowDimensions } from 'react-native';
 
 const { width } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
 // Utility function to format HTML content
-const formatDescription = (htmlContent) => {
-  if (!htmlContent) return '';
+// const formatDescription = (htmlContent) => {
+//   if (!htmlContent) return '';
   
-  // Remove HTML tags and decode HTML entities
-  let formattedText = htmlContent
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
-    .replace(/&amp;/g, '&') // Replace &amp; with &
-    .replace(/&lt;/g, '<') // Replace &lt; with <
-    .replace(/&gt;/g, '>') // Replace &gt; with >
-    .replace(/&quot;/g, '"') // Replace &quot; with "
-    .replace(/&#39;/g, "'") // Replace &#39; with '
-    .replace(/&ocirc;/g, 'ô') // Replace &ocirc; with ô
-    .replace(/&agrave;/g, 'à') // Replace &agrave; with à
-    .replace(/&egrave;/g, 'è') // Replace &egrave; with è
-    .replace(/&eacute;/g, 'é') // Replace &eacute; with é
-    .replace(/&ugrave;/g, 'ù') // Replace &ugrave; with ù
-    .replace(/&ldquo;/g, '"') // Replace &ldquo; with "
-    .replace(/&rdquo;/g, '"') // Replace &rdquo; with "
-    // Add more specific Vietnamese characters
-    .replace(/&acirc;/g, 'â') // Replace &acirc; with â
-    .replace(/&oacute;/g, 'ó') // Replace &oacute; with ó
-    .replace(/&aacute;/g, 'á') // Replace &aacute; with á
-    .replace(/&atilde;/g, 'ã') // Replace &atilde; with ã
-    .replace(/&ecirc;/g, 'ê') // Replace &ecirc; with ê
-    .replace(/&ograve;/g, 'ò') // Replace &ograve; with ò
-    .replace(/&iacute;/g, 'í') // Replace &iacute; with í
-    .replace(/&uacute;/g, 'ú') // Replace &uacute; with ú
-    .replace(/&amp;#7853;/g, 'ậ')
-    .replace(/&amp;#7863;/g, 'ặ')
-    .replace(/&amp;#7879;/g, 'ễ')
-    .replace(/&amp;#7885;/g, 'ị')
-    .replace(/&amp;#7889;/g, 'ọ')
-    .replace(/&amp;#7891;/g, 'ỏ')
-    .replace(/&amp;#7893;/g, 'õ')
-    .replace(/&amp;#7897;/g, 'ụ')
-    .replace(/&amp;#7899;/g, 'ủ')
-    .replace(/&amp;#7901;/g, 'ũ')
-    .replace(/&amp;#7905;/g, 'ự')
-    .replace(/&amp;#7907;/g, 'ử')
-    .replace(/&amp;#7909;/g, 'ữ')
+//   // Remove HTML tags and decode HTML entities
+//   let formattedText = htmlContent
+//     .replace(/<[^>]*>/g, '') // Remove HTML tags
+//     .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+//     .replace(/&amp;/g, '&') // Replace &amp; with &
+//     .replace(/&lt;/g, '<') // Replace &lt; with <
+//     .replace(/&gt;/g, '>') // Replace &gt; with >
+//     .replace(/&quot;/g, '"') // Replace &quot; with "
+//     .replace(/&#39;/g, "'") // Replace &#39; with '
+//     .replace(/&ocirc;/g, 'ô') // Replace &ocirc; with ô
+//     .replace(/&agrave;/g, 'à') // Replace &agrave; with à
+//     .replace(/&egrave;/g, 'è') // Replace &egrave; with è
+//     .replace(/&eacute;/g, 'é') // Replace &eacute; with é
+//     .replace(/&ugrave;/g, 'ù') // Replace &ugrave; with ù
+//     .replace(/&ldquo;/g, '"') // Replace &ldquo; with "
+//     .replace(/&rdquo;/g, '"') // Replace &rdquo; with "
+//     // Add more specific Vietnamese characters
+//     .replace(/&acirc;/g, 'â') // Replace &acirc; with â
+//     .replace(/&oacute;/g, 'ó') // Replace &oacute; with ó
+//     .replace(/&aacute;/g, 'á') // Replace &aacute; with á
+//     .replace(/&atilde;/g, 'ã') // Replace &atilde; with ã
+//     .replace(/&ecirc;/g, 'ê') // Replace &ecirc; with ê
+//     .replace(/&ograve;/g, 'ò') // Replace &ograve; with ò
+//     .replace(/&iacute;/g, 'í') // Replace &iacute; with í
+//     .replace(/&uacute;/g, 'ú') // Replace &uacute; with ú
+//     .replace(/&amp;#7853;/g, 'ậ')
+//     .replace(/&amp;#7863;/g, 'ặ')
+//     .replace(/&amp;#7879;/g, 'ễ')
+//     .replace(/&amp;#7885;/g, 'ị')
+//     .replace(/&amp;#7889;/g, 'ọ')
+//     .replace(/&amp;#7891;/g, 'ỏ')
+//     .replace(/&amp;#7893;/g, 'õ')
+//     .replace(/&amp;#7897;/g, 'ụ')
+//     .replace(/&amp;#7899;/g, 'ủ')
+//     .replace(/&amp;#7901;/g, 'ũ')
+//     .replace(/&amp;#7905;/g, 'ự')
+//     .replace(/&amp;#7907;/g, 'ử')
+//     .replace(/&amp;#7909;/g, 'ữ')
     
-    .replace(/\r\n/g, '\n') // Replace \r\n with \n
-    .trim();
+//     .replace(/\r\n/g, '\n') // Replace \r\n with \n
+//     .trim();
 
-  // Split into paragraphs and clean up
-  const paragraphs = formattedText.split('\n').filter(p => p.trim());
+//   // Split into paragraphs and clean up
+//   const paragraphs = formattedText.split('\n').filter(p => p.trim());
   
-  return paragraphs.join('\n\n');
-};
+//   return paragraphs.join('\n\n');
+// };
 
 const DesignDetailScreen = ({ navigation, route }) => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -71,6 +74,7 @@ const DesignDetailScreen = ({ navigation, route }) => {
   
   const { designId } = route.params;
   const { isAuthenticated, user } = useAuth();
+  const { width } = useWindowDimensions();
 
   // Use useFocusEffect to check authentication status when screen comes into focus
   useFocusEffect(
@@ -290,7 +294,15 @@ const DesignDetailScreen = ({ navigation, route }) => {
             )}
           </View>
           
-          <Text style={styles.description}>{formatDescription(designData.description)}</Text>
+          {designData.description ? (
+            <RenderHtml
+              contentWidth={width}
+              source={{ html: designData.description }}
+              tagsStyles={styles.htmlTagsStyles}
+            />
+          ) : (
+            <Text style={styles.description}>Không có mô tả thiết kế.</Text>
+          )}
           
           {/* Price Summary Cards */}
           <View style={styles.priceCardsContainer}>
@@ -548,7 +560,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF0F5',
     borderRadius: 8,
-    padding: 12,
+    padding: 9,
     marginHorizontal: 4,
     alignItems: 'center',
   },
@@ -837,6 +849,19 @@ const styles = StyleSheet.create({
   modalLoginButtonText: {
     color: 'white',
     fontWeight: '600',
+  },
+  htmlTagsStyles: { // Add styles for HTML tags if needed
+    body: {
+      margin: 0,
+      padding: 0,
+      fontSize: 14, // Match description font size
+      lineHeight: 20, // Match description line height
+      color: '#666', // Match description text color
+    },
+    p: {
+        marginBottom: 10,
+    },
+    // Add other tag styles as needed (e.g., ul, li, strong, em)
   },
 });
 

@@ -111,6 +111,14 @@ const LoginScreen = ({navigation, route}) => {
 
       console.log("response auth", response);
 
+      // Check if the user's role is allowed to log in
+      const allowedRoles = ['Customer', 'Contructor'];
+      if (!allowedRoles.includes(response.user.roleName)) {
+        setAuthError('Tài khoản của bạn không có quyền truy cập. Vui lòng liên hệ quản trị viên.');
+        hideLoading();
+        return; // Stop the login process
+      }
+
       // Create user object with all necessary data
       const userData = {
         token: response.token,
@@ -155,7 +163,9 @@ const LoginScreen = ({navigation, route}) => {
         setAuthError('Quá nhiều lần thử. Vui lòng thử lại sau');
       } else if (error.message === 'Invalid response from backend') {
         setAuthError('Lỗi xác thực từ máy chủ. Vui lòng thử lại sau.');
-      } else {
+      } else if (error.data.error === 'Error: AuthService_ Role Not found: rolename: string') {
+        setAuthError('Tài khoản không tồn tại, vui lòng đăng kí tài khoản mới');
+      }else {
         setAuthError('Đã xảy ra lỗi trong quá trình đăng nhập. Vui lòng thử lại');
       }
     } finally {

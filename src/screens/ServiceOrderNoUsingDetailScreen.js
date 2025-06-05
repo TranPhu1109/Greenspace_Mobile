@@ -27,6 +27,8 @@ import StatusTrackingMaterial from '../components/StatusTrackingMaterial';
 import {useWallet} from '../context/WalletContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { api } from '../api/api';
+import RenderHtml from 'react-native-render-html';
+import { useWindowDimensions } from 'react-native';
 
 const {width, height} = Dimensions.get('window');
 
@@ -95,6 +97,8 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
   const handleRedesignReasonChange = text => {
     setRedesignReason(text);
   };
+
+  const { width: contentWidth } = useWindowDimensions();
 
   const showSketchPhaseStatuses = [
     'DoneDeterminingDesignPrice', // 22
@@ -3099,7 +3103,15 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         />
         <Divider style={styles.divider} />
         <Card.Content>
-          <Text style={styles.description}>{order.description}</Text>
+          {order.description ? (
+            <RenderHtml
+              contentWidth={contentWidth}
+              source={{ html: order.description }}
+              tagsStyles={styles.htmlTagsStyles}
+            />
+          ) : (
+            <Text style={styles.description}>Không có mô tả.</Text>
+          )}
         </Card.Content>
       </Card>
 

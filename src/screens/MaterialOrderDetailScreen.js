@@ -37,8 +37,7 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
 
   // --- Rating State ---
   const [isRatingModalVisible, setIsRatingModalVisible] = useState(false);
-  const [selectedProductForRating, setSelectedProductForRating] =
-    useState(null);
+  const [selectedProductForRating, setSelectedProductForRating] = useState(null);
   const [currentRating, setCurrentRating] = useState(0); // 0 means no rating yet
   const [ratingDescription, setRatingDescription] = useState('');
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
@@ -386,8 +385,8 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
           timeout: 10000,
         },
       );
-      console.log("refundResponse", refundResponse.error);
-      
+      console.log('refundResponse', refundResponse.error);
+
       if (refundResponse.data !== 'Refund successful.') {
         throw new Error(refundResponse.data || 'Hoàn tiền không thành công.');
       }
@@ -404,8 +403,8 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
           },
         },
       );
-      console.log("updateResponse", updateResponse);
-      
+      console.log('updateResponse', updateResponse);
+
       if (updateResponse.data !== 'Update Successfully!') {
         Alert.alert(
           'Cảnh báo',
@@ -422,8 +421,8 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
         );
       }
     } catch (err) {
-      console.log("err", err);
-      
+      console.log('err', err);
+
       Alert.alert(
         'Lỗi hủy đơn hàng',
         err.response?.data?.message ||
@@ -484,21 +483,19 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
 
       <ScrollView style={styles.content} removeClippedSubviews={false}>
         <View style={styles.statusContainer}>
-          <View style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor(orderDetails.status) + '22' } // 22 for light background
-          ]}>
+          <View
+            style={[
+              styles.statusBadge,
+              {backgroundColor: getStatusColor(orderDetails.status) + '22'}, // 22 for light background
+            ]}>
             <Text
               style={[
                 styles.statusText,
-                { color: getStatusColor(orderDetails.status) }
-              ]}
-            >
+                {color: getStatusColor(orderDetails.status)},
+              ]}>
               {getStatusText(orderDetails.status)}
             </Text>
           </View>
-
-          
         </View>
 
         <View style={styles.trackingContainer}>
@@ -620,7 +617,7 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
                       {/* --- End Rating Button --- */}
                     </View>
                     <Text style={styles.productPrice}>
-                      {formatCurrency(product.price)} 
+                      {formatCurrency(product.price)}
                     </Text>
                   </View>
                 );
@@ -634,7 +631,8 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
             <PaymentRow
               label="Tổng tiền hàng"
               amount={formatCurrency(
-                orderDetails.totalAmount - orderDetails.shipPrice)}
+                orderDetails.totalAmount - orderDetails.shipPrice,
+              )}
             />
             <PaymentRow
               label="Phí vận chuyển"
@@ -725,26 +723,41 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
         visible={showCancelModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setShowCancelModal(false)}
-      >
-        <View style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}>
-          <View style={{
-            backgroundColor: '#fff',
-            borderRadius: 12,
-            padding: 24,
-            width: '80%',
-            alignItems: 'center'
+        onRequestClose={() => setShowCancelModal(false)}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            justifyContent: 'center',
+            alignItems: 'center',
           }}>
-            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>Xác nhận hủy đơn hàng</Text>
-            <Text style={{ fontSize: 15, color: '#666', textAlign: 'center', marginBottom: 24 }}>
-              Bạn có chắc chắn muốn hủy đơn hàng này không? Tiền sẽ được hoàn lại vào ví của bạn.
+          <View
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: 12,
+              padding: 24,
+              width: '80%',
+              alignItems: 'center',
+            }}>
+            <Text style={{fontSize: 18, fontWeight: 'bold', marginBottom: 12}}>
+              Xác nhận hủy đơn hàng
             </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+            <Text
+              style={{
+                fontSize: 15,
+                color: '#666',
+                textAlign: 'center',
+                marginBottom: 24,
+              }}>
+              Bạn có chắc chắn muốn hủy đơn hàng này không? Tiền sẽ được hoàn
+              lại vào ví của bạn.
+            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                width: '100%',
+              }}>
               <TouchableOpacity
                 style={{
                   flex: 1,
@@ -752,11 +765,10 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
                   padding: 12,
                   borderRadius: 8,
                   marginRight: 8,
-                  alignItems: 'center'
+                  alignItems: 'center',
                 }}
-                onPress={() => setShowCancelModal(false)}
-              >
-                <Text style={{ color: '#333', fontWeight: 'bold' }}>Không</Text>
+                onPress={() => setShowCancelModal(false)}>
+                <Text style={{color: '#333', fontWeight: 'bold'}}>Không</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={{
@@ -765,14 +777,15 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
                   padding: 12,
                   borderRadius: 8,
                   marginLeft: 8,
-                  alignItems: 'center'
+                  alignItems: 'center',
                 }}
                 onPress={async () => {
                   setShowCancelModal(false);
                   await actuallyCancelOrder();
-                }}
-              >
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Hủy đơn hàng</Text>
+                }}>
+                <Text style={{color: '#fff', fontWeight: 'bold'}}>
+                  Hủy đơn hàng
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1143,13 +1156,13 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#E74C3C', // Red color for cancellation
     borderRadius: 8,
-    paddingVertical: 8,         // Smaller vertical padding
-    paddingHorizontal: 24,      // Smaller horizontal padding
+    paddingVertical: 8, // Smaller vertical padding
+    paddingHorizontal: 24, // Smaller horizontal padding
     marginTop: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',        // Center the button horizontally
-    minWidth: 0,                // Remove minWidth or set to 0
+    alignSelf: 'center', // Center the button horizontally
+    minWidth: 0, // Remove minWidth or set to 0
   },
   cancelButtonDisabled: {
     backgroundColor: '#F5B7B1', // Lighter red when disabled

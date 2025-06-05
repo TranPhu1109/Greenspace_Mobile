@@ -117,4 +117,12 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // 🧹 Force exclude thư viện support cũ
+    configurations.all {
+        resolutionStrategy {
+            force 'androidx.core:core:1.13.1'
+            exclude group: 'com.android.support', module: 'support-compat'
+        }
+    }
 }

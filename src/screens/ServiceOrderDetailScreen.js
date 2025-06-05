@@ -1,129 +1,148 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, RefreshControl, Linking, Dimensions, Modal, TouchableWithoutFeedback, TextInput, Platform, DateTimePickerAndroid } from 'react-native';
+import React, {useState, useEffect, useMemo} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  Linking,
+  Dimensions,
+  Modal,
+  TouchableWithoutFeedback,
+  TextInput,
+  Platform,
+  DateTimePickerAndroid,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import StatusTracking from '../components/StatusTracking';
 import StatusTrackingNoCustom from '../components/StatusTrackingNoCustom';
-import { useAuth } from '../context/AuthContext';
-import { api } from '../api/api';
+import {useAuth} from '../context/AuthContext';
+import {api} from '../api/api';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import RenderHtml from 'react-native-render-html';
+import { useWindowDimensions } from 'react-native';
 
 // Utility function to format HTML content (Copied from DesignDetailScreen.js)
-const formatDescription = (htmlContent) => {
-  if (!htmlContent) return '';
-  
-  // Remove HTML tags and decode HTML entities
-  let formattedText = htmlContent
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
-    .replace(/&amp;/g, '&') // Replace &amp; with &
-    .replace(/&lt;/g, '<') // Replace &lt; with <
-    .replace(/&gt;/g, '>') // Replace &gt; with >
-    .replace(/&quot;/g, '"') // Replace &quot; with "
-    .replace(/&#39;/g, "'") // Replace &#39; with '
-    .replace(/&ocirc;/g, 'ô') // Replace &ocirc; with ô
-    .replace(/&agrave;/g, 'à') // Replace &agrave; with à
-    .replace(/&egrave;/g, 'è') // Replace &egrave; with è
-    .replace(/&eacute;/g, 'é') // Replace &eacute; with é
-    .replace(/&ugrave;/g, 'ù') // Replace &ugrave; with ù
-    .replace(/&ldquo;/g, '"') // Replace &ldquo; with "
-    .replace(/&rdquo;/g, '"') // Replace &rdquo; with "
-    .replace(/&acirc;/g, 'â') // Replace &acirc; with â
-    .replace(/&oacute;/g, 'ó') // Replace &oacute; with ó
-    .replace(/&aacute;/g, 'á') // Replace &aacute; with á
-    .replace(/&atilde;/g, 'ã') // Replace &atilde; with ã
-    .replace(/&ecirc;/g, 'ê') // Replace &ecirc; with ê
-    .replace(/&ograve;/g, 'ò') // Replace &ograve; with ò
-    .replace(/&iacute;/g, 'í') // Replace &iacute; with í
-    .replace(/&uacute;/g, 'ú') // Replace &uacute; with ú
-    .replace(/&amp;#7853;/g, 'ậ')
-    .replace(/&amp;#7863;/g, 'ặ')
-    .replace(/&amp;#7879;/g, 'ễ')
-    .replace(/&amp;#7885;/g, 'ị')
-    .replace(/&amp;#7889;/g, 'ọ')
-    .replace(/&amp;#7891;/g, 'ỏ')
-    .replace(/&amp;#7893;/g, 'õ')
-    .replace(/&amp;#7897;/g, 'ụ')
-    .replace(/&amp;#7899;/g, 'ủ')
-    .replace(/&amp;#7901;/g, 'ũ')
-    .replace(/&amp;#7905;/g, 'ự')
-    .replace(/&amp;#7907;/g, 'ử')
-    .replace(/&amp;#7909;/g, 'ữ')
-    
-    .replace(/\r\n/g, '\n') // Replace \r\n with \n
-    .trim();
+// const formatDescription = htmlContent => {
+//   if (!htmlContent) return '';
 
-  // Split into paragraphs and clean up
-  const paragraphs = formattedText.split('\n').filter(p => p.trim());
-  
-  return paragraphs.join('\n\n');
-};
+//   // Remove HTML tags and decode HTML entities
+//   let formattedText = htmlContent
+//     .replace(/<[^>]*>/g, '') // Remove HTML tags
+//     .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+//     .replace(/&amp;/g, '&') // Replace &amp; with &
+//     .replace(/&lt;/g, '<') // Replace &lt; with <
+//     .replace(/&gt;/g, '>') // Replace &gt; with >
+//     .replace(/&quot;/g, '"') // Replace &quot; with "
+//     .replace(/&#39;/g, "'") // Replace &#39; with '
+//     .replace(/&ocirc;/g, 'ô') // Replace &ocirc; with ô
+//     .replace(/&agrave;/g, 'à') // Replace &agrave; with à
+//     .replace(/&egrave;/g, 'è') // Replace &egrave; with è
+//     .replace(/&eacute;/g, 'é') // Replace &eacute; with é
+//     .replace(/&ugrave;/g, 'ù') // Replace &ugrave; with ù
+//     .replace(/&ldquo;/g, '"') // Replace &ldquo; with "
+//     .replace(/&rdquo;/g, '"') // Replace &rdquo; with "
+//     .replace(/&acirc;/g, 'â') // Replace &acirc; with â
+//     .replace(/&oacute;/g, 'ó') // Replace &oacute; with ó
+//     .replace(/&aacute;/g, 'á') // Replace &aacute; with á
+//     .replace(/&atilde;/g, 'ã') // Replace &atilde; with ã
+//     .replace(/&ecirc;/g, 'ê') // Replace &ecirc; with ê
+//     .replace(/&ograve;/g, 'ò') // Replace &ograve; with ò
+//     .replace(/&iacute;/g, 'í') // Replace &iacute; with í
+//     .replace(/&uacute;/g, 'ú') // Replace &uacute; with ú
+//     .replace(/&amp;#7853;/g, 'ậ')
+//     .replace(/&amp;#7863;/g, 'ặ')
+//     .replace(/&amp;#7879;/g, 'ễ')
+//     .replace(/&amp;#7885;/g, 'ị')
+//     .replace(/&amp;#7889;/g, 'ọ')
+//     .replace(/&amp;#7891;/g, 'ỏ')
+//     .replace(/&amp;#7893;/g, 'õ')
+//     .replace(/&amp;#7897;/g, 'ụ')
+//     .replace(/&amp;#7899;/g, 'ủ')
+//     .replace(/&amp;#7901;/g, 'ũ')
+//     .replace(/&amp;#7905;/g, 'ự')
+//     .replace(/&amp;#7907;/g, 'ử')
+//     .replace(/&amp;#7909;/g, 'ữ')
+
+//     .replace(/\r\n/g, '\n') // Replace \r\n with \n
+//     .trim();
+
+//   // Split into paragraphs and clean up
+//   const paragraphs = formattedText.split('\n').filter(p => p.trim());
+
+//   return paragraphs.join('\n\n');
+// };
 
 // --- Helper Functions ---
-const formatDate = (dateString) => {
+const formatDate = dateString => {
   if (!dateString) return 'N/A';
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   } catch (error) {
-    console.error("Error formatting date:", error);
+    console.error('Error formatting date:', error);
     return dateString;
   }
 };
 
-const formatAddress = (addressString) => {
+const formatAddress = addressString => {
   if (!addressString) return 'N/A';
   return addressString.split('|').join(', ');
 };
 
-const getStatusInfo = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'pending':
-        return { text: 'Chờ xử lý', color: '#FF9500' };
-      case 'processing':
-        return { text: 'Đang xử lý', color: '#007AFF' };
-      case 'installing':
-        return { text: 'Đang lắp đặt', color: '#5AC8FA' };
-      case 'doneinstalling':
-        return { text: 'Hoàn tất lắp đặt', color: '#34C759' };
-      case 'reinstall':
-        return { text: 'Lắp đặt lại', color: '#FF9500' };
-      case 'successfully':
-        return { text: 'Hoàn tất đơn hàng', color: '#34C759' };
-      case 'ordercancelled':
-        return { text: 'Đã hủy', color: '#FF3B30' };
-      default:
-        return { text: status || 'Không xác định', color: '#8E8E93' };
-    }
+const getStatusInfo = status => {
+  switch (status?.toLowerCase()) {
+    case 'pending':
+      return {text: 'Chờ xử lý', color: '#FF9500'};
+    case 'processing':
+      return {text: 'Đang xử lý', color: '#007AFF'};
+    case 'installing':
+      return {text: 'Đang lắp đặt', color: '#5AC8FA'};
+    case 'doneinstalling':
+      return {text: 'Hoàn tất lắp đặt', color: '#34C759'};
+    case 'reinstall':
+      return {text: 'Lắp đặt lại', color: '#FF9500'};
+    case 'successfully':
+      return {text: 'Hoàn tất đơn hàng', color: '#34C759'};
+    case 'ordercancelled':
+      return {text: 'Đã hủy', color: '#FF3B30'};
+    default:
+      return {text: status || 'Không xác định', color: '#8E8E93'};
+  }
 };
 // --- End Helper Functions ---
 
-const formatDateForApi = (dateString) => {
+const formatDateForApi = dateString => {
   if (!dateString) return null;
   // Assuming dateString is in dd/mm/yyyy format
   const [day, month, year] = dateString.split('/');
   return `${year}-${month}-${day}`;
 };
 
-const formatTimeForApi = (timeString) => {
+const formatTimeForApi = timeString => {
   if (!timeString) return null;
   // Assuming timeString is in hh:mm:ss format
   // No change needed if already in HH:mm:ss, but this function acts as a clear step
   return timeString;
 };
 
-const ServiceOrderDetailScreen = ({ navigation, route }) => {
-  const { user } = useAuth();
-  const { orderId } = route.params;
+const ServiceOrderDetailScreen = ({navigation, route}) => {
+  const {user} = useAuth();
+  const {orderId} = route.params;
   const [orderDetails, setOrderDetails] = useState(null);
   const [designDetails, setDesignDetails] = useState(null);
-  //console.log("orderDetails", orderDetails);  
-  
+  //console.log("orderDetails", orderDetails);
+
   const [products, setProducts] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -141,11 +160,14 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
+  const { width } = useWindowDimensions();
+
   const hasReinstallRequest = useMemo(() => {
     if (!orderDetails?.workTasks) return false;
-    return orderDetails.workTasks.some(task => 
-      task.status?.toLowerCase() === 'reinstall' || 
-      task.note?.toLowerCase().includes('lắp đặt lại')
+    return orderDetails.workTasks.some(
+      task =>
+        task.status?.toLowerCase() === 'reinstall' ||
+        task.note?.toLowerCase().includes('lắp đặt lại'),
     );
   }, [orderDetails?.workTasks]);
 
@@ -153,7 +175,7 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
     if (orderId) {
       fetchOrderDetails();
     } else {
-      setError("Order ID not provided.");
+      setError('Order ID not provided.');
       setLoading(false);
     }
   }, [orderId]);
@@ -162,18 +184,23 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
     if (orderDetails?.designIdeaId) {
       const fetchDesignDetails = async () => {
         try {
-          const response = await api.get(`/designidea/${orderDetails.designIdeaId}`);
+          const response = await api.get(
+            `/designidea/${orderDetails.designIdeaId}`,
+          );
           setDesignDetails(response.data || response);
-          console.log("Fetched design details:", response.data || response);
+          console.log('Fetched design details:', response.data || response);
         } catch (err) {
-          console.error(`Error fetching design idea ${orderDetails.designIdeaId}:`, err);
+          console.error(
+            `Error fetching design idea ${orderDetails.designIdeaId}:`,
+            err,
+          );
         }
       };
       fetchDesignDetails();
     }
   }, [orderDetails?.designIdeaId]);
 
-  const fetchProductDetails = async (productId) => {
+  const fetchProductDetails = async productId => {
     if (!productId) return null;
     try {
       const response = await api.get(`/product/${productId}`);
@@ -188,36 +215,45 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
     try {
       if (!isRefreshing) setLoading(true);
       setError(null);
-      
+
       const response = await api.get(`/serviceorder/${orderId}`);
       const orderData = response.data || response;
 
       if (!orderData) {
-        throw new Error("Order data not found in response.");
+        throw new Error('Order data not found in response.');
       }
       setOrderDetails(orderData);
-      
-      if (orderData.serviceOrderDetails && orderData.serviceOrderDetails.length > 0) {
-        const productPromises = orderData.serviceOrderDetails.map(detail => 
-          fetchProductDetails(detail.productId)
+
+      if (
+        orderData.serviceOrderDetails &&
+        orderData.serviceOrderDetails.length > 0
+      ) {
+        const productPromises = orderData.serviceOrderDetails.map(detail =>
+          fetchProductDetails(detail.productId),
         );
         const productResults = await Promise.all(productPromises);
-        
+
         const productMap = {};
         orderData.serviceOrderDetails.forEach((detail, index) => {
           if (productResults[index]) {
             productMap[detail.productId] = productResults[index];
           } else {
-            console.warn(`Product details not found for ID: ${detail.productId}`);
-            productMap[detail.productId] = { name: 'Sản phẩm không khả dụng', price: 0, quantity: detail.quantity, image: { imageUrl: '' } };
+            console.warn(
+              `Product details not found for ID: ${detail.productId}`,
+            );
+            productMap[detail.productId] = {
+              name: 'Sản phẩm không khả dụng',
+              price: 0,
+              quantity: detail.quantity,
+              image: {imageUrl: ''},
+            };
           }
         });
         setProducts(productMap);
-        console.log("Fetched product details map:", productMap);
+        console.log('Fetched product details map:', productMap);
       } else {
         setProducts({});
       }
-      
     } catch (err) {
       console.error('Error fetching order details:', err);
       setError('Bạn chưa có đơn hàng nào!');
@@ -244,12 +280,12 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
     return (orderDetails?.designPrice || 0) + calculatedMaterialPrice;
   }, [orderDetails, calculatedMaterialPrice]);
 
-  const showActionSuccess = (message) => {
-    Alert.alert('Thành công', message, [{ text: 'OK' }]);
+  const showActionSuccess = message => {
+    Alert.alert('Thành công', message, [{text: 'OK'}]);
   };
 
-  const showActionError = (message) => {
-    Alert.alert('Lỗi', message, [{ text: 'OK' }]);
+  const showActionError = message => {
+    Alert.alert('Lỗi', message, [{text: 'OK'}]);
     setActionError(message);
   };
 
@@ -266,7 +302,9 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
         if (selectedDate < minDate) {
           Alert.alert(
             'Lỗi',
-            `Ngày lắp đặt lại phải sau ngày ${minDate.toLocaleDateString('vi-VN')}`
+            `Ngày lắp đặt lại phải sau ngày ${minDate.toLocaleDateString(
+              'vi-VN',
+            )}`,
           );
           return;
         }
@@ -284,13 +322,10 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
     if (event.type === 'set' && selectedTime) {
       const hours = selectedTime.getHours();
       const minutes = selectedTime.getMinutes();
-      
+
       // Check if time is between 8 AM and 5 PM
       if (hours < 8 || hours >= 17) {
-        Alert.alert(
-          'Lỗi',
-          'Thời gian lắp đặt phải từ 8:00 đến 17:00'
-        );
+        Alert.alert('Lỗi', 'Thời gian lắp đặt phải từ 8:00 đến 17:00');
         return;
       }
 
@@ -302,7 +337,7 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
     }
   };
 
-  const showMode = (currentMode) => {
+  const showMode = currentMode => {
     if (currentMode === 'date') {
       setShowDatePicker(true);
     } else {
@@ -340,7 +375,8 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
     const errors = {};
     if (!reinstallDate) errors.date = 'Ngày lắp đặt lại không được để trống.';
     if (!reinstallTime) errors.time = 'Giờ lắp đặt lại không được để trống.';
-    if (!reinstallReason) errors.reason = 'Lý do yêu cầu lắp đặt lại không được để trống.';
+    if (!reinstallReason)
+      errors.reason = 'Lý do yêu cầu lắp đặt lại không được để trống.';
     setReinstallErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -357,7 +393,7 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
       // Find the work task ID. Assuming the first work task in the array is the relevant one.
       const workTask = orderDetails?.workTasks?.[0];
       if (!workTask?.id) {
-        throw new Error("Không tìm thấy thông tin công việc.");
+        throw new Error('Không tìm thấy thông tin công việc.');
       }
 
       // 1. Call API update workTask
@@ -372,12 +408,15 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
       };
 
       console.log('Updating work task with payload:', updateWorkTaskPayload);
-      
-      const workTaskResponse = await api.put(`/worktask/${workTaskId}`, updateWorkTaskPayload);
+
+      const workTaskResponse = await api.put(
+        `/worktask/${workTaskId}`,
+        updateWorkTaskPayload,
+      );
       // if (!workTaskResponse.data?.success) {
       //   throw new Error(workTaskResponse.data?.message || 'Cập nhật công việc thất bại.');
       // }
-      console.log("workTaskResponse", workTaskResponse);
+      console.log('workTaskResponse', workTaskResponse);
 
       // Simulate work task update delay
       // await new Promise(resolve => setTimeout(resolve, 1000));
@@ -387,18 +426,24 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
       const serviceOrderId = orderDetails.id;
       const updateOrderStatusPayload = {
         status: 29, // Assuming 29 is the status for reinstallation requested at the order level
-        deliveryCode: "",
-        reportManger: "",
-        reportAccoutant: ""
+        deliveryCode: '',
+        reportManger: '',
+        reportAccoutant: '',
       };
 
-      console.log('Updating order status with payload:', updateOrderStatusPayload);
+      console.log(
+        'Updating order status with payload:',
+        updateOrderStatusPayload,
+      );
       // Example API call:
-      const orderStatusResponse = await api.put(`/serviceorder/status/${serviceOrderId}`, updateOrderStatusPayload);
+      const orderStatusResponse = await api.put(
+        `/serviceorder/status/${serviceOrderId}`,
+        updateOrderStatusPayload,
+      );
       // if (!orderStatusResponse.data?.success) {
       //   throw new Error(orderStatusResponse.data?.message || 'Cập nhật trạng thái đơn hàng thất bại.');
       // }
-      console.log("orderStatusResponse", orderStatusResponse);
+      console.log('orderStatusResponse', orderStatusResponse);
 
       // Simulate order status update delay
       // await new Promise(resolve => setTimeout(resolve, 1000));
@@ -408,10 +453,11 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
       setIsReinstallModalVisible(false);
       // Optionally refresh order details or update status locally
       fetchOrderDetails(); // Refresh data to show updated status
-
     } catch (err) {
       console.error('Error during reinstallation request:', err);
-      showActionError(err.message || 'Không thể gửi yêu cầu lắp đặt lại. Vui lòng thử lại.');
+      showActionError(
+        err.message || 'Không thể gửi yêu cầu lắp đặt lại. Vui lòng thử lại.',
+      );
     } finally {
       setIsModalConfirmLoading(false);
     }
@@ -421,7 +467,7 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
     if (hasReinstallRequest) {
       Alert.alert(
         'Thông báo',
-        'Bạn đã có yêu cầu lắp đặt lại. Vui lòng chờ xử lý yêu cầu hiện tại.'
+        'Bạn đã có yêu cầu lắp đặt lại. Vui lòng chờ xử lý yêu cầu hiện tại.',
       );
       return;
     }
@@ -434,73 +480,88 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
   };
 
   const handleConfirmCompletion = async () => {
-     Alert.alert(
-       'Xác nhận hoàn tất đơn hàng',
-       'Sau khi xác nhận, đơn hàng sẽ được đánh dấu là hoàn tất. Bạn có chắc chắn?',
-       [
-         { text: 'Hủy', style: 'cancel' },
-         { text: 'Xác nhận', onPress: async () => {
-             setConfirmLoading(true);
-             setActionError(null);
-             try {
-               // Find the work task ID. Assuming the first work task in the array is the relevant one.
-               const workTask = orderDetails?.workTasks?.[0];
-               if (!workTask?.id) {
-                 throw new Error("Không tìm thấy thông tin công việc.");
-               }
+    Alert.alert(
+      'Xác nhận hoàn tất đơn hàng',
+      'Sau khi xác nhận, đơn hàng sẽ được đánh dấu là hoàn tất. Bạn có chắc chắn?',
+      [
+        {text: 'Hủy', style: 'cancel'},
+        {
+          text: 'Xác nhận',
+          onPress: async () => {
+            setConfirmLoading(true);
+            setActionError(null);
+            try {
+              // Find the work task ID. Assuming the first work task in the array is the relevant one.
+              const workTask = orderDetails?.workTasks?.[0];
+              if (!workTask?.id) {
+                throw new Error('Không tìm thấy thông tin công việc.');
+              }
 
-               // 1. Call API update workTask status
-               const workTaskId = workTask.id;
-               const updateWorkTaskPayload = {
-                 serviceOrderId: orderDetails.id,
-                 userId: workTask.userId, // Use the userId from the workTask
-                 // Retain existing dateAppointment and timeAppointment or set as needed by API
-                 dateAppointment: workTask.dateAppointment, // Keep existing or set to null
-                 timeAppointment: workTask.timeAppointment, // Keep existing or set to null
-                 status: 6, // Assuming 11 is the status for completed work task
-                 note: "Hoàn thành lắp đặt", // Retain existing note
-               };
+              // 1. Call API update workTask status
+              const workTaskId = workTask.id;
+              const updateWorkTaskPayload = {
+                serviceOrderId: orderDetails.id,
+                userId: workTask.userId, // Use the userId from the workTask
+                // Retain existing dateAppointment and timeAppointment or set as needed by API
+                dateAppointment: workTask.dateAppointment, // Keep existing or set to null
+                timeAppointment: workTask.timeAppointment, // Keep existing or set to null
+                status: 6, // Assuming 11 is the status for completed work task
+                note: 'Hoàn thành lắp đặt', // Retain existing note
+              };
 
-               console.log('Updating work task status with payload:', updateWorkTaskPayload);
-               const workTaskResponse = await api.put(`/worktask/${workTaskId}`, updateWorkTaskPayload);
-               console.log("workTaskResponse", workTaskResponse);
-               
+              console.log(
+                'Updating work task status with payload:',
+                updateWorkTaskPayload,
+              );
+              const workTaskResponse = await api.put(
+                `/worktask/${workTaskId}`,
+                updateWorkTaskPayload,
+              );
+              console.log('workTaskResponse', workTaskResponse);
 
-               // 2. Call API to update order status
-               const serviceOrderId = orderDetails.id;
-               const updateOrderStatusPayload = {
-                 status: 31,
-                 deliveryCode: "",
-                 reportManger: "",
-                 reportAccoutant: ""
-               };
+              // 2. Call API to update order status
+              const serviceOrderId = orderDetails.id;
+              const updateOrderStatusPayload = {
+                status: 31,
+                deliveryCode: '',
+                reportManger: '',
+                reportAccoutant: '',
+              };
 
-               console.log('Updating order status with payload:', updateOrderStatusPayload);
-               const orderStatusResponse = await api.put(`/serviceorder/status/${serviceOrderId}`, updateOrderStatusPayload);
-               console.log("orderStatusResponse", orderStatusResponse);
+              console.log(
+                'Updating order status with payload:',
+                updateOrderStatusPayload,
+              );
+              const orderStatusResponse = await api.put(
+                `/serviceorder/status/${serviceOrderId}`,
+                updateOrderStatusPayload,
+              );
+              console.log('orderStatusResponse', orderStatusResponse);
 
-               showActionSuccess('Đơn hàng đã được xác nhận hoàn tất.');
-               // Optionally refresh order details or update status locally
-               fetchOrderDetails(); // Refresh data to show updated status
-
-             } catch (err) {
-               console.error('Error confirming completion:', err);
-               showActionError(err.message || 'Không thể xác nhận hoàn tất đơn hàng. Vui lòng thử lại.');
-             } finally {
-               setConfirmLoading(false);
-             }
-           }
-         },
-       ],
-       { cancelable: true }
-     );
+              showActionSuccess('Đơn hàng đã được xác nhận hoàn tất.');
+              // Optionally refresh order details or update status locally
+              fetchOrderDetails(); // Refresh data to show updated status
+            } catch (err) {
+              console.error('Error confirming completion:', err);
+              showActionError(
+                err.message ||
+                  'Không thể xác nhận hoàn tất đơn hàng. Vui lòng thử lại.',
+              );
+            } finally {
+              setConfirmLoading(false);
+            }
+          },
+        },
+      ],
+      {cancelable: true},
+    );
   };
 
   if (loading) {
     return (
-      <View style={styles.container}> 
+      <View style={styles.container}>
         <Header navigation={navigation} title="Đang tải đơn hàng..." />
-        <View style={styles.centeredContainer}> 
+        <View style={styles.centeredContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
           <Text style={styles.loadingText}>Đang tải đơn hàng...</Text>
         </View>
@@ -512,8 +573,13 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
     return (
       <View style={styles.container}>
         <Header navigation={navigation} title="Error" />
-        <View style={styles.centeredContainer}> 
-          <Icon name="alert-circle-outline" size={60} color="#FF3B30" style={{ marginBottom: 15 }}/>
+        <View style={styles.centeredContainer}>
+          <Icon
+            name="alert-circle-outline"
+            size={60}
+            color="#FF3B30"
+            style={{marginBottom: 15}}
+          />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       </View>
@@ -524,107 +590,159 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} title={`Đơn hàng #${orderId.substring(0, 8)}`} />
+      <Header
+        navigation={navigation}
+        title={`Đơn hàng #${orderId.substring(0, 8)}`}
+      />
 
-      <ScrollView 
-        style={styles.content} 
+      <ScrollView
+        style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh} 
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             colors={['#007AFF']}
           />
-        }
-      >
+        }>
         <View style={styles.orderSummaryHeader}>
-          <View style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}>
-              <Icon name={statusInfo.icon} size={16} color="#fff" />
-              <Text style={styles.statusBadgeText}>{statusInfo.text}</Text>
+          <View
+            style={[styles.statusBadge, {backgroundColor: statusInfo.color}]}>
+            <Icon name={statusInfo.icon} size={16} color="#fff" />
+            <Text style={styles.statusBadgeText}>{statusInfo.text}</Text>
           </View>
-          <Text style={styles.orderDateText}>{formatDate(orderDetails.creationDate)}</Text>
+          <Text style={styles.orderDateText}>
+            {formatDate(orderDetails.creationDate)}
+          </Text>
         </View>
 
-          {/* Design Drawing and Installation Guide Section */}
+        {/* Design Drawing and Installation Guide Section */}
         {orderDetails.status?.toLowerCase() === 'doneinstalling' && (
           <View style={styles.completionActionsSection}>
-            <Text style={styles.completionMessage}>Vui lòng kiểm tra kết quả thi công. Nếu bạn hài lòng, hãy xác nhận hoàn tất đơn hàng. Nếu có vấn đề, bạn có thể yêu cầu lắp đặt lại.</Text>
+            <Text style={styles.completionMessage}>
+              Vui lòng kiểm tra kết quả thi công. Nếu bạn hài lòng, hãy xác nhận
+              hoàn tất đơn hàng. Nếu có vấn đề, bạn có thể yêu cầu lắp đặt lại.
+            </Text>
             <View style={styles.completionButtonsContainer}>
               <TouchableOpacity
-                style={[styles.requestReinstallButton, hasReinstallRequest && styles.buttonDisabled]}
+                style={[
+                  styles.requestReinstallButton,
+                  hasReinstallRequest && styles.buttonDisabled,
+                ]}
                 onPress={handleRequestReinstall}
-                disabled={reinstallLoading || confirmLoading || hasReinstallRequest}
-              >
+                disabled={
+                  reinstallLoading || confirmLoading || hasReinstallRequest
+                }>
                 {reinstallLoading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Icon name="refresh" size={20} color="#fff" style={styles.buttonIcon} />
+                  <Icon
+                    name="refresh"
+                    size={20}
+                    color="#fff"
+                    style={styles.buttonIcon}
+                  />
                 )}
                 <Text style={styles.requestReinstallButtonText}>
-                  {hasReinstallRequest ? 'Đã yêu cầu lắp đặt lại' : 'Yêu cầu lắp đặt lại'}
+                  {hasReinstallRequest
+                    ? 'Đã yêu cầu lắp đặt lại'
+                    : 'Yêu cầu lắp đặt lại'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.confirmCompletionButton}
                 onPress={handleConfirmCompletion}
-                disabled={reinstallLoading || confirmLoading}
-              >
+                disabled={reinstallLoading || confirmLoading}>
                 {confirmLoading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Icon name="check-circle-outline" size={20} color="#fff" style={styles.buttonIcon} />
+                  <Icon
+                    name="check-circle-outline"
+                    size={20}
+                    color="#fff"
+                    style={styles.buttonIcon}
+                  />
                 )}
-                <Text style={styles.confirmCompletionButtonText}>Xác nhận hoàn tất</Text>
+                <Text style={styles.confirmCompletionButtonText}>
+                  Xác nhận hoàn tất
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
 
-<View style={styles.section}>
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trạng thái đơn hàng</Text>
-           
-            <StatusTrackingNoCustom currentStatus={orderDetails.status} />
-          
+
+          <StatusTrackingNoCustom currentStatus={orderDetails.status} />
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
           <View style={styles.infoCard}>
-            <InfoRow icon="account-outline" label="Tên" text={orderDetails.userName || 'N/A'} />
-            <InfoRow icon="phone-outline" label="Số điện thoại" text={orderDetails.cusPhone || 'N/A'} />
-            <InfoRow icon="map-marker-outline" label="Địa chỉ" text={formatAddress(orderDetails.address)} />
+            <InfoRow
+              icon="account-outline"
+              label="Tên"
+              text={orderDetails.userName || 'N/A'}
+            />
+            <InfoRow
+              icon="phone-outline"
+              label="Số điện thoại"
+              text={orderDetails.cusPhone || 'N/A'}
+            />
+            <InfoRow
+              icon="map-marker-outline"
+              label="Địa chỉ"
+              text={formatAddress(orderDetails.address)}
+            />
           </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin thiết kế</Text>
           <View style={styles.infoCard}>
-            
-
-            <InfoRow 
-              icon={orderDetails.isCustom ? "pencil-ruler" : "lightbulb-on-outline"} 
-              label="Loại dịch vụ" 
-              text={orderDetails.isCustom ? "Thiết kế tùy chỉnh" : "Sử dụng ý tưởng thiết kế"} 
-            />          
+            <InfoRow
+              icon={
+                orderDetails.isCustom ? 'pencil-ruler' : 'lightbulb-on-outline'
+              }
+              label="Loại dịch vụ"
+              text={
+                orderDetails.isCustom
+                  ? 'Thiết kế tùy chỉnh'
+                  : 'Sử dụng ý tưởng thiết kế'
+              }
+            />
             {designDetails?.name && (
-              <InfoRow icon="palette-outline" label="Tên thiết kế" text={designDetails.name} />
+              <InfoRow
+                icon="palette-outline"
+                label="Tên thiết kế"
+                text={designDetails.name}
+              />
             )}
-            {designDetails?.description && (
-              <InfoRow icon="text-box-outline" label="Mô tả" text={formatDescription(designDetails?.description)} />
-            )}
+            <View style={styles.descriptionContainer}>
+              <Text style={styles.descriptionTitle}>Mô tả thiết kế</Text>
+              {designDetails?.description ? (
+                <RenderHtml
+                  contentWidth={width}
+                  source={{ html: designDetails.description }}
+                  tagsStyles={styles.htmlTagsStyles}
+                />
+              ) : (
+                <Text style={styles.description}>Không có mô tả thiết kế.</Text>
+              )}
+            </View>
             {/* Design Images Carousel */}
             {designDetails?.image && (
               <View style={styles.designImagesCarouselContainer}>
-                <ScrollView 
+                <ScrollView
                   horizontal
                   pagingEnabled
                   showsHorizontalScrollIndicator={false}
-                  style={styles.designImagesCarousel}
-                >
+                  style={styles.designImagesCarousel}>
                   {/* Image 1 */}
                   {designDetails.image.imageUrl ? (
                     <Image
-                      source={{ uri: designDetails.image.imageUrl }}
+                      source={{uri: designDetails.image.imageUrl}}
                       style={styles.designInfoImage}
                       defaultSource={require('../assets/images/default_image.jpg')}
                       resizeMode="cover"
@@ -635,7 +753,7 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
                   {/* Image 2 */}
                   {designDetails.image.image2 ? (
                     <Image
-                      source={{ uri: designDetails.image.image2 }}
+                      source={{uri: designDetails.image.image2}}
                       style={styles.designInfoImage}
                       defaultSource={require('../assets/images/default_image.jpg')}
                       resizeMode="cover"
@@ -646,7 +764,7 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
                   {/* Image 3 */}
                   {designDetails.image.image3 ? (
                     <Image
-                      source={{ uri: designDetails.image.image3 }}
+                      source={{uri: designDetails.image.image3}}
                       style={styles.designInfoImage}
                       defaultSource={require('../assets/images/default_image.jpg')}
                       resizeMode="cover"
@@ -662,19 +780,27 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Danh sách vật liệu</Text>
-          <View style={styles.infoCard}> 
-            {orderDetails.serviceOrderDetails && orderDetails.serviceOrderDetails.length > 0 ? (
+          <View style={styles.infoCard}>
+            {orderDetails.serviceOrderDetails &&
+            orderDetails.serviceOrderDetails.length > 0 ? (
               orderDetails.serviceOrderDetails.map((detail, index) => {
                 const product = products[detail.productId];
                 const unitPrice = detail.price || 0;
-                const totalItemPrice = detail.totalPrice || (unitPrice * detail.quantity) || 0;
-                
+                const totalItemPrice =
+                  detail.totalPrice || unitPrice * detail.quantity || 0;
+
                 return (
-                  <View key={detail.productId || index} style={[styles.materialRow, index === orderDetails.serviceOrderDetails.length - 1 && styles.lastMaterialRow]}> 
+                  <View
+                    key={detail.productId || index}
+                    style={[
+                      styles.materialRow,
+                      index === orderDetails.serviceOrderDetails.length - 1 &&
+                        styles.lastMaterialRow,
+                    ]}>
                     {product?.image?.imageUrl ? (
-                      <Image 
-                        source={{ uri: product.image.imageUrl }} 
-                        style={styles.materialImage} 
+                      <Image
+                        source={{uri: product.image.imageUrl}}
+                        style={styles.materialImage}
                         defaultSource={require('../assets/images/default_image.jpg')}
                       />
                     ) : (
@@ -684,77 +810,108 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
                     )}
                     <View style={styles.materialInfo}>
                       <Text style={styles.materialName} numberOfLines={2}>
-                        {product ? product.name : `Product ID: ${detail.productId}`}
+                        {product
+                          ? product.name
+                          : `Product ID: ${detail.productId}`}
                       </Text>
-                      <Text style={styles.materialMeta}>x{detail.quantity} | {unitPrice.toLocaleString('vi-VN')} VND</Text>
+                      <Text style={styles.materialMeta}>
+                        x{detail.quantity} | {unitPrice.toLocaleString('vi-VN')}{' '}
+                        VND
+                      </Text>
                     </View>
-                    <Text style={styles.materialTotalPrice}>{totalItemPrice.toLocaleString('vi-VN')} VND</Text>
+                    <Text style={styles.materialTotalPrice}>
+                      {totalItemPrice.toLocaleString('vi-VN')} VND
+                    </Text>
                   </View>
                 );
               })
             ) : (
-              <Text style={styles.noItemsText}>Không có vật liệu được liệt kê cho đơn hàng này.</Text>
+              <Text style={styles.noItemsText}>
+                Không có vật liệu được liệt kê cho đơn hàng này.
+              </Text>
             )}
           </View>
         </View>
 
-       
+        {orderDetails.status.toLowerCase() !== 'pending' &&
+          orderDetails.status.toLowerCase() !== 'ordercancelled' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                Danh sách bản vẽ thiết kế và hướng dẫn lắp đặt
+              </Text>
+              <View style={styles.infoCard}>
+                {/* Design Drawing (Image) */}
+                {designDetails?.designImage1URL ? (
+                  <View style={styles.designDrawingContainer}>
+                    <Text style={styles.drawingLabel}>Bản vẽ thiết kế:</Text>
+                    <Image
+                      source={{uri: designDetails.designImage1URL}}
+                      style={styles.designDrawingImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+                ) : (
+                  <Text style={styles.noItemsText}>
+                    Không có bản vẽ thiết kế nào.
+                  </Text>
+                )}
 
-        {orderDetails.status.toLowerCase() !== 'pending' && orderDetails.status.toLowerCase() !== 'ordercancelled' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Danh sách bản vẽ thiết kế và hướng dẫn lắp đặt</Text>
-            <View style={styles.infoCard}>
-              {/* Design Drawing (Image) */}
-              {designDetails?.designImage1URL ? (
-                <View style={styles.designDrawingContainer}>
-                  <Text style={styles.drawingLabel}>Bản vẽ thiết kế:</Text>
-                  <Image 
-                    source={{ uri: designDetails.designImage1URL }} 
-                    style={styles.designDrawingImage} 
-                    resizeMode="contain"
-                  />
-                </View>
-              ) : (
-                <Text style={styles.noItemsText}>Không có bản vẽ thiết kế nào.</Text>
-              )}
-              
-              {/* PDF Guide Link */}
-              {designDetails?.designImage2URL && designDetails.designImage2URL.startsWith('http') && (
-                <TouchableOpacity 
-                  style={styles.externalLinkButton}
-                  onPress={() => Linking.openURL(designDetails.designImage2URL)}
-                >
-                  <Icon name="file-pdf-box" size={20} color="#E53935" style={styles.externalLinkIcon} />
-                  <Text style={styles.externalLinkText}>Hướng dẫn lắp đặt</Text>
-                </TouchableOpacity>
-              )}
-              
-              {/* Video Guide Link */}
-              {designDetails?.designImage3URL && designDetails.designImage3URL.startsWith('http') && (
-                <TouchableOpacity 
-                  style={styles.externalLinkButton}
-                  onPress={() => Linking.openURL(designDetails.designImage3URL)}
-                >
-                  <Icon name="youtube" size={20} color="#FF0000" style={styles.externalLinkIcon} />
-                  <Text style={styles.externalLinkText}>Video hướng dẫn lắp đặt</Text>
-                </TouchableOpacity>
-              )}
-              
+                {/* PDF Guide Link */}
+                {designDetails?.designImage2URL &&
+                  designDetails.designImage2URL.startsWith('http') && (
+                    <TouchableOpacity
+                      style={styles.externalLinkButton}
+                      onPress={() =>
+                        Linking.openURL(designDetails.designImage2URL)
+                      }>
+                      <Icon
+                        name="file-pdf-box"
+                        size={20}
+                        color="#E53935"
+                        style={styles.externalLinkIcon}
+                      />
+                      <Text style={styles.externalLinkText}>
+                        Hướng dẫn lắp đặt
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                {/* Video Guide Link */}
+                {designDetails?.designImage3URL &&
+                  designDetails.designImage3URL.startsWith('http') && (
+                    <TouchableOpacity
+                      style={styles.externalLinkButton}
+                      onPress={() =>
+                        Linking.openURL(designDetails.designImage3URL)
+                      }>
+                      <Icon
+                        name="youtube"
+                        size={20}
+                        color="#FF0000"
+                        style={styles.externalLinkIcon}
+                      />
+                      <Text style={styles.externalLinkText}>
+                        Video hướng dẫn lắp đặt
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+              </View>
             </View>
-          </View>
-        )}
+          )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin thanh toán</Text>
-          <View style={styles.infoCard}> 
-            <PaymentRow 
-              label="Giá thiết kế" 
-              amount={`${(orderDetails.designPrice || 0).toLocaleString('vi-VN')} VND`} 
+          <View style={styles.infoCard}>
+            <PaymentRow
+              label="Giá thiết kế"
+              amount={`${(orderDetails.designPrice || 0).toLocaleString(
+                'vi-VN',
+              )} VND`}
             />
-            <PaymentRow 
-              label="Giá vật liệu" 
+            <PaymentRow
+              label="Giá vật liệu"
               amount={`${calculatedMaterialPrice.toLocaleString('vi-VN')} VND`}
-              isLast={true} 
+              isLast={true}
             />
             <View style={styles.totalPaymentRow}>
               <Text style={styles.totalLabel}>Tổng giá</Text>
@@ -764,11 +921,6 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
             </View>
           </View>
         </View>
-
-        
-
-       
-
       </ScrollView>
 
       {/* Reinstallation Request Modal */}
@@ -776,71 +928,107 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
         visible={isReinstallModalVisible}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setIsReinstallModalVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setIsReinstallModalVisible(false)}>
+        onRequestClose={() => setIsReinstallModalVisible(false)}>
+        <TouchableWithoutFeedback
+          onPress={() => setIsReinstallModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.reinstallModalContainer}>
                 <Text style={styles.modalTitle}>Yêu cầu lắp đặt lại</Text>
-                
+
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}><Text style={styles.requiredIndicator}>*</Text> Ngày lắp đặt lại</Text>
-                  <TouchableOpacity onPress={showDatepicker} disabled={isModalConfirmLoading}>
+                  <Text style={styles.formLabel}>
+                    <Text style={styles.requiredIndicator}>*</Text> Ngày lắp đặt
+                    lại
+                  </Text>
+                  <TouchableOpacity
+                    onPress={showDatepicker}
+                    disabled={isModalConfirmLoading}>
                     <TextInput
-                      style={[styles.formInput, reinstallErrors.date && styles.inputError]}
+                      style={[
+                        styles.formInput,
+                        reinstallErrors.date && styles.inputError,
+                      ]}
                       value={reinstallDate}
                       editable={false} // Make it non-editable as picker handles input
                       placeholder="Chọn ngày"
                     />
                   </TouchableOpacity>
-                  {reinstallErrors.date && <Text style={styles.errorTextSmall}>{reinstallErrors.date}</Text>}
+                  {reinstallErrors.date && (
+                    <Text style={styles.errorTextSmall}>
+                      {reinstallErrors.date}
+                    </Text>
+                  )}
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}><Text style={styles.requiredIndicator}>*</Text> Giờ lắp đặt lại</Text>
-                  <TouchableOpacity onPress={showTimepicker} disabled={isModalConfirmLoading}>
+                  <Text style={styles.formLabel}>
+                    <Text style={styles.requiredIndicator}>*</Text> Giờ lắp đặt
+                    lại
+                  </Text>
+                  <TouchableOpacity
+                    onPress={showTimepicker}
+                    disabled={isModalConfirmLoading}>
                     <TextInput
-                      style={[styles.formInput, reinstallErrors.time && styles.inputError]}
+                      style={[
+                        styles.formInput,
+                        reinstallErrors.time && styles.inputError,
+                      ]}
                       value={reinstallTime}
                       editable={false} // Make it non-editable as picker handles input
                       placeholder="Chọn giờ"
                     />
                   </TouchableOpacity>
-                  {reinstallErrors.time && <Text style={styles.errorTextSmall}>{reinstallErrors.time}</Text>}
+                  {reinstallErrors.time && (
+                    <Text style={styles.errorTextSmall}>
+                      {reinstallErrors.time}
+                    </Text>
+                  )}
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.formLabel}><Text style={styles.requiredIndicator}>*</Text> Lý do yêu cầu lắp đặt lại</Text>
+                  <Text style={styles.formLabel}>
+                    <Text style={styles.requiredIndicator}>*</Text> Lý do yêu
+                    cầu lắp đặt lại
+                  </Text>
                   <TextInput
-                    style={[styles.formInput, styles.multilineInput, reinstallErrors.reason && styles.inputError]}
+                    style={[
+                      styles.formInput,
+                      styles.multilineInput,
+                      reinstallErrors.reason && styles.inputError,
+                    ]}
                     placeholder="Nhập lý do yêu cầu lắp đặt lại"
                     value={reinstallReason}
                     onChangeText={setReinstallReason}
                     multiline={true}
                     numberOfLines={4}
                   />
-                   {reinstallErrors.reason && <Text style={styles.errorTextSmall}>{reinstallErrors.reason}</Text>}
+                  {reinstallErrors.reason && (
+                    <Text style={styles.errorTextSmall}>
+                      {reinstallErrors.reason}
+                    </Text>
+                  )}
                 </View>
 
                 <View style={styles.modalButtonsContainer}>
                   <TouchableOpacity
                     style={styles.modalCancelButton}
                     onPress={() => setIsReinstallModalVisible(false)}
-                    disabled={isModalConfirmLoading}
-                  >
+                    disabled={isModalConfirmLoading}>
                     <Text style={styles.modalButtonText}>Hủy</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.modalConfirmButton, isModalConfirmLoading && styles.modalButtonDisabled]}
+                    style={[
+                      styles.modalConfirmButton,
+                      isModalConfirmLoading && styles.modalButtonDisabled,
+                    ]}
                     onPress={handleModalConfirmReinstall}
-                    disabled={isModalConfirmLoading}
-                  >
-                     {isModalConfirmLoading ? (
+                    disabled={isModalConfirmLoading}>
+                    {isModalConfirmLoading ? (
                       <ActivityIndicator size="small" color="#fff" />
-                     ) : (
+                    ) : (
                       <Text style={styles.modalButtonText}>Xác nhận</Text>
-                     )}
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -877,7 +1065,9 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
           testID="timePicker"
           value={(() => {
             if (reinstallTime) {
-              const [hours, minutes, seconds] = reinstallTime.split(':').map(Number);
+              const [hours, minutes, seconds] = reinstallTime
+                .split(':')
+                .map(Number);
               const date = new Date();
               date.setHours(hours, minutes, seconds);
               return date;
@@ -902,24 +1092,27 @@ const ServiceOrderDetailScreen = ({ navigation, route }) => {
           })()}
         />
       )}
-
     </View>
   );
 };
 
-const Header = ({ navigation, title }) => (
+const Header = ({navigation, title}) => (
   <View style={styles.header}>
-    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+    <TouchableOpacity
+      onPress={() => navigation.goBack()}
+      style={styles.backButton}>
       <Icon name="chevron-left" size={28} color="#000" />
     </TouchableOpacity>
-    <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
-    <View style={{ width: 28 }} /> 
+    <Text style={styles.headerTitle} numberOfLines={1}>
+      {title}
+    </Text>
+    <View style={{width: 28}} />
   </View>
 );
 
-const InfoRow = ({ icon, label, text }) => (
+const InfoRow = ({icon, label, text}) => (
   <View style={styles.infoRow}>
-    <Icon name={icon} size={20} color="#6c757d" style={styles.infoIcon}/>
+    <Icon name={icon} size={20} color="#6c757d" style={styles.infoIcon} />
     <View style={styles.infoTextContainer}>
       <Text style={styles.infoLabel}>{label}</Text>
       <Text style={styles.infoValue}>{text}</Text>
@@ -927,7 +1120,7 @@ const InfoRow = ({ icon, label, text }) => (
   </View>
 );
 
-const PaymentRow = ({ label, amount, isLast = false }) => (
+const PaymentRow = ({label, amount, isLast = false}) => (
   <View style={[styles.paymentRow, isLast && styles.lastPaymentRow]}>
     <Text style={styles.paymentLabel}>{label}</Text>
     <Text style={styles.paymentAmount}>{amount}</Text>
@@ -982,30 +1175,29 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   orderSummaryHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: 16,
-      backgroundColor: '#fff',
-      borderBottomWidth: 1,
-      borderBottomColor: '#E5E5EA',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
   },
   statusBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 15,
   },
   statusBadgeText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: '#fff', 
-
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#fff',
   },
   orderDateText: {
-      fontSize: 13,
-      color: '#6c757d',
+    fontSize: 13,
+    color: '#6c757d',
   },
   section: {
     paddingHorizontal: 16,
@@ -1025,7 +1217,7 @@ const styles = StyleSheet.create({
     padding: 16,
     elevation: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
   },
@@ -1042,11 +1234,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoLabel: {
-      fontSize: 12,
-      color: '#6c757d',
-      marginBottom: 4,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
+    fontSize: 12,
+    color: '#6c757d',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   infoValue: {
     fontSize: 15,
@@ -1101,11 +1293,11 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   noItemsText: {
-      fontSize: 14,
-      color: '#6c757d',
-      textAlign: 'center',
-      paddingVertical: 20,
-      fontStyle: 'italic',
+    fontSize: 14,
+    color: '#6c757d',
+    textAlign: 'center',
+    paddingVertical: 20,
+    fontStyle: 'italic',
   },
   paymentRow: {
     flexDirection: 'row',
@@ -1115,8 +1307,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F2F5',
   },
   lastPaymentRow: {
-      borderBottomWidth: 0,
-      paddingBottom: 0,
+    borderBottomWidth: 0,
+    paddingBottom: 0,
   },
   paymentLabel: {
     fontSize: 14,
@@ -1199,7 +1391,6 @@ const styles = StyleSheet.create({
   },
   designImagesCarousel: {
     height: 200,
-    
   },
   designInfoImage: {
     width: Dimensions.get('window').width - 32,
@@ -1249,7 +1440,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#fff',
-
   },
   confirmCompletionButton: {
     flex: 1,
@@ -1260,7 +1450,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     marginLeft: 10,
-
   },
   confirmCompletionButtonText: {
     fontSize: 13,
@@ -1283,7 +1472,7 @@ const styles = StyleSheet.create({
     padding: 20,
     elevation: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.25,
     shadowRadius: 4,
   },
@@ -1360,6 +1549,33 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.6,
     backgroundColor: '#FF3B30',
+  },
+  descriptionContainer: {
+    marginTop: 10,
+  },
+  descriptionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
+    color: '#333',
+  },
+  description: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
+  },
+  htmlTagsStyles: { // Add styles for HTML tags if needed
+    body: {
+      margin: 0,
+      padding: 0,
+      fontSize: 14, // Match description font size
+      color: '#555', // Match description text color
+      lineHeight: 20, // Match description line height
+    },
+    p: {
+        marginBottom: 10,
+    },
+    // Add other tag styles as needed (e.g., ul, li, strong, em)
   },
 });
 
