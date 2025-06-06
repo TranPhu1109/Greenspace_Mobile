@@ -36,6 +36,7 @@ const apiCall = async (endpoint, options = {}) => {
 
     // Get the response text first
     const responseText = await response.text();
+
     
     // If response is empty, return null
     if (!responseText) {
@@ -92,10 +93,10 @@ const api = {
   },
 
   // POST request
-  post: (endpoint, data = {}, headers = {}) => {
+  post: (endpoint, data = {}, options = {}) => {
     return apiCall(endpoint, {
       method: 'POST',
-      headers,
+      ...options,
       body: JSON.stringify(data)
     });
   },

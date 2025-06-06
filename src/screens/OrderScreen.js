@@ -21,7 +21,7 @@ import {
 import SuccessModal from '../components/SuccessModal';
 import {useWallet} from '../context/WalletContext';
 import {useAuth} from '../context/AuthContext';
-import { api } from '../api/api';
+import {api} from '../api/api';
 import Address from '../components/Address';
 
 const {width} = Dimensions.get('window');
@@ -117,7 +117,6 @@ const OrderScreen = ({navigation, route}) => {
         materialPrice: newMaterialPrice,
         totalPrice: newTotalCost,
       }));
-
     } else {
       // Handle case where materials might be empty initially or after removal
       const newTotalCost = designData.designPrice || 0;
@@ -139,8 +138,8 @@ const OrderScreen = ({navigation, route}) => {
     try {
       const materialsPromises = productDetails.map(async detail => {
         const response = await api.get(`/product/${detail.productId}`, {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
         });
         // Ensure price and quantity are numbers
         const price = Number(detail.price || response.price || 0);
@@ -198,7 +197,7 @@ const OrderScreen = ({navigation, route}) => {
         : null;
 
       const response = await api.get(`/address/user/${user.id}`, {
-        'Authorization': `Bearer ${user.backendToken}`
+        Authorization: `Bearer ${user.backendToken}`,
       });
 
       if (response) {
@@ -299,8 +298,8 @@ const OrderScreen = ({navigation, route}) => {
       };
 
       const response = await api.post('/address', requestBody, {
-        'Authorization': `Bearer ${user.backendToken}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${user.backendToken}`,
+        'Content-Type': 'application/json',
       });
 
       if (response) {
@@ -541,8 +540,8 @@ const OrderScreen = ({navigation, route}) => {
 
       // 2. Create Service Order
       const orderResponse = await api.post('/serviceorder', orderRequestBody, {
-        'Authorization': `Bearer ${user.backendToken}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${user.backendToken}`,
+        'Content-Type': 'application/json',
       });
 
       if (!orderResponse) {
@@ -563,20 +562,20 @@ const OrderScreen = ({navigation, route}) => {
 
       // 4. Create Bill
       const billResponse = await api.post('/bill', billRequestBody, {
-        'Authorization': `Bearer ${user.backendToken}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${user.backendToken}`,
+        'Content-Type': 'application/json',
       });
 
       if (!billResponse) {
         throw new Error('Bill creation failed');
       }
 
-      // --- START: Update Product Stock --- 
-      const stockUpdatePromises = materials.map(async (material) => {
+      // --- START: Update Product Stock ---
+      const stockUpdatePromises = materials.map(async material => {
         try {
           // 1. Get current product details
           const productResponse = await api.get(`/product/${material.id}`, {
-            'Authorization': `Bearer ${user.backendToken}`
+            Authorization: `Bearer ${user.backendToken}`,
           });
 
           // 2. Calculate new stock
@@ -596,29 +595,32 @@ const OrderScreen = ({navigation, route}) => {
             image: {
               imageUrl: productResponse.image?.imageUrl || '',
               image2: productResponse.image?.image2 || '',
-              image3: productResponse.image?.image3 || ''
-            }
+              image3: productResponse.image?.image3 || '',
+            },
           };
 
           // 4. Update product stock
           await api.put(`/product/${material.id}`, updatePayload, {
-            'Authorization': `Bearer ${user.backendToken}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${user.backendToken}`,
+            'Content-Type': 'application/json',
           });
 
-          return { status: 'success', productId: material.id };
+          return {status: 'success', productId: material.id};
         } catch (error) {
-          
-          return { status: 'failed', productId: material.id, error: error.message };
+          return {
+            status: 'failed',
+            productId: material.id,
+            error: error.message,
+          };
         }
       });
 
       // Wait for all updates to complete
       const results = await Promise.allSettled(stockUpdatePromises);
-      
+
       // Check for any failed updates
-      // const failedUpdates = results.filter(result => 
-      //   result.status === 'rejected' || 
+      // const failedUpdates = results.filter(result =>
+      //   result.status === 'rejected' ||
       //   (result.status === 'fulfilled' && result.value.status === 'failed')
       // );
 
@@ -709,7 +711,6 @@ const OrderScreen = ({navigation, route}) => {
 
   // Placeholder for Replace Material Modal Logic
   const handleOpenReplaceModal = async materialToReplace => {
-
     setMaterialToReplace(materialToReplace);
     setReplaceSearchTerm(''); // Reset search term
 
@@ -738,16 +739,12 @@ const OrderScreen = ({navigation, route}) => {
         product.id !== materialToReplace.id,
     );
 
-   
     setReplacementOptions(options);
     setShowReplaceModal(true); // Open modal only after filtering
   };
 
   const handleSelectReplacement = replacementProduct => {
-
     if (!materialToReplace || !replacementProduct) return;
-
-   
 
     // Create the new material object, preserving quantity
     const newMaterial = {
@@ -912,7 +909,9 @@ const OrderScreen = ({navigation, route}) => {
                 const totalItemPrice = unitPrice * material.quantity;
 
                 return (
-                  <View key={material.id || index} style={styles.materialItemCard}>
+                  <View
+                    key={material.id || index}
+                    style={styles.materialItemCard}>
                     {/* Image */}
                     {material.image?.imageUrl ? (
                       <Image
@@ -928,20 +927,22 @@ const OrderScreen = ({navigation, route}) => {
                     <View style={styles.materialInfoCard}>
                       {/* Top row: Name and Replace Button */}
                       <View style={styles.materialInfoTopRow}>
-                         <Text style={styles.materialNameCard} numberOfLines={2}>
-                           {material.name || `Sản phẩm ${index + 1}`}
-                         </Text>
-                         {/* Replace Button */}
-                         <TouchableOpacity
-                           style={styles.replaceButtonCard}
-                           onPress={() => handleOpenReplaceModal(material)}>
-                            <Icon
+                        <Text style={styles.materialNameCard} numberOfLines={2}>
+                          {material.name || `Sản phẩm ${index + 1}`}
+                        </Text>
+                        {/* Replace Button */}
+                        <TouchableOpacity
+                          style={styles.replaceButtonCard}
+                          onPress={() => handleOpenReplaceModal(material)}>
+                          <Icon
                             name="swap-horizontal"
                             size={12}
-                            color='#4CAF50'
-                            />
-                           <Text style={styles.replaceButtonTextCard}>Thay thế</Text>
-                         </TouchableOpacity>
+                            color="#4CAF50"
+                          />
+                          <Text style={styles.replaceButtonTextCard}>
+                            Thay thế
+                          </Text>
+                        </TouchableOpacity>
                       </View>
 
                       {/* Unit Price Display */}
@@ -1334,7 +1335,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 8,
-
   },
   totalRow: {
     borderBottomWidth: 0,
@@ -1600,7 +1600,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.2,
     shadowRadius: 1.5,
     elevation: 2,

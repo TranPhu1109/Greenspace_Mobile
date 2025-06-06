@@ -160,6 +160,9 @@ const ServiceOrderDetailScreen = ({navigation, route}) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
+  const [isImageModalVisible, setIsImageModalVisible] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState(null);
+
   const { width } = useWindowDimensions();
 
   const hasReinstallRequest = useMemo(() => {
@@ -841,19 +844,20 @@ const ServiceOrderDetailScreen = ({navigation, route}) => {
               </Text>
               <View style={styles.infoCard}>
                 {/* Design Drawing (Image) */}
-                {designDetails?.designImage1URL ? (
-                  <View style={styles.designDrawingContainer}>
+                {designDetails?.designImage1URL && (
+                  <TouchableOpacity
+                    style={styles.designDrawingContainer}
+                    onPress={() => {
+                      setSelectedImageUrl(designDetails.designImage1URL);
+                      setIsImageModalVisible(true);
+                    }}>
                     <Text style={styles.drawingLabel}>Bản vẽ thiết kế:</Text>
                     <Image
                       source={{uri: designDetails.designImage1URL}}
                       style={styles.designDrawingImage}
                       resizeMode="contain"
                     />
-                  </View>
-                ) : (
-                  <Text style={styles.noItemsText}>
-                    Không có bản vẽ thiết kế nào.
-                  </Text>
+                  </TouchableOpacity>
                 )}
 
                 {/* PDF Guide Link */}
@@ -1033,6 +1037,24 @@ const ServiceOrderDetailScreen = ({navigation, route}) => {
                 </View>
               </View>
             </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Image Fullscreen Modal */}
+      <Modal
+        visible={isImageModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsImageModalVisible(false)}>
+        <TouchableWithoutFeedback
+          onPress={() => setIsImageModalVisible(false)}>
+          <View style={styles.imageModalOverlay}>
+            <Image
+              source={{uri: selectedImageUrl}}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
+            />
           </View>
         </TouchableWithoutFeedback>
       </Modal>
@@ -1576,6 +1598,16 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     // Add other tag styles as needed (e.g., ul, li, strong, em)
+  },
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
   },
 });
 

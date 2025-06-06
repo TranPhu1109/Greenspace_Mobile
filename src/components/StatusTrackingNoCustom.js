@@ -10,7 +10,7 @@ const statusFlow = [
   { status: 'pending', label: 'Chờ xử lý', note: 'Đơn hàng đã được tiếp nhận, chờ xử lý' },
   { status: 'processing', label: 'Đang xử lý', note: 'Đơn hàng đang được xử lý' },
   { status: 'installing', label: 'Đang lắp đặt', note: 'Đang tiến hành lắp đặt' },
-  { status: 'doneinstalling', label: 'Hoàn thành lắp đặt', note: 'Đã hoàn thành việc lắp đặt' },
+  { status: 'doneinstalling', label: 'Hoàn thành lắp đặt', note: '                     ' },
   { status: 'successfully', label: 'Đã hoàn tất đơn hàng' },
 ];
 

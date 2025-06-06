@@ -367,17 +367,17 @@ const CheckOutScreen = ({navigation, route}) => {
 
       clearCart();
 
-      setTimeout(() => {
-        setIsSuccessModalVisible(false);
+      // setTimeout(() => {
+      //   setIsSuccessModalVisible(false);
 
-        // Use a safer navigation approach
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{name: 'ShopMain'}],
-          }),
-        );
-      }, 2000);
+      //   // Use a safer navigation approach
+      //   navigation.dispatch(
+      //     CommonActions.reset({
+      //       index: 0,
+      //       routes: [{name: 'ShopMain'}],
+      //     }),
+      //   );
+      // }, 2000);
     } catch (error) {
       console.error('Order Error:', error);
 
@@ -653,11 +653,28 @@ const CheckOutScreen = ({navigation, route}) => {
           <Icon name="check-circle" size={80} color="#4CAF50" />
           <Text style={styles.successModalTitle}>Đặt hàng thành công!</Text>
           <Text style={styles.successModalText}>
-            Vui lòng đợi nhân viên xác nhận và chuẩn bị hàng cho bạn.
+            Đơn hàng của bạn đã được xác nhận
           </Text>
-          <View style={styles.loadingDots}>
-            <Text style={styles.loadingText}>Đang chuyển hướng</Text>
-            <Text style={styles.dots}>...</Text>
+          <View style={styles.successModalButtonContainer}>
+            <TouchableOpacity
+              style={[styles.successModalButton, styles.successModalButtonAgree]}
+              onPress={() => setIsSuccessModalVisible(false)}>
+              <Text style={styles.successModalButtonTextAgree}>Đồng ý</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.successModalButton, styles.successModalButtonOrder]}
+              onPress={() => {
+                setIsSuccessModalVisible(false);
+                navigation.navigate('Account', {
+                  screen: 'MaterialOrdersTab',
+                  params: {
+                    screen: 'MaterialOrders',
+                    initial: false,
+                  },
+                });
+              }}>
+              <Text style={styles.successModalButtonTextOrder}>Đơn mua</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -748,7 +765,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     paddingHorizontal: 20,
-    marginTop: 10,
+    marginTop: 20,
   },
   modalButton: {
     flex: 1,
@@ -800,7 +817,6 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 20,
   },
   loadingDots: {
     flexDirection: 'row',
@@ -1025,6 +1041,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#666',
+  },
+  successModalButtonContainer: {
+    flexDirection: 'column',
+    width: '100%',
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  successModalButton: {
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  successModalButtonAgree: {
+    backgroundColor: '#4CAF50',
+  },
+  successModalButtonOrder: {
+    backgroundColor: '#fff',
+    borderColor: '#4CAF50',
+    borderWidth: 1,
+  },
+  successModalButtonTextAgree: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  successModalButtonTextOrder: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

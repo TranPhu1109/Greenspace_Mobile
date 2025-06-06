@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkoutButtonDisabled: {
-    backgroundColor: '#f1a9a0', // Lighter red for disabled state
+    backgroundColor: '#4CAF50', // Lighter red for disabled state
     opacity: 0.7, // Add opacity for disabled state
   },
   checkoutButtonText: {

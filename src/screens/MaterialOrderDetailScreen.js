@@ -11,6 +11,7 @@ import {
   Modal,
   TextInput,
   Pressable,
+  RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useAuth} from '../context/AuthContext';
@@ -31,9 +32,12 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
   const {user} = useAuth();
   const {refreshWallet, updateBalance} = useWallet();
   const [orderDetails, setOrderDetails] = useState(null);
+  //console.log("orderDetails", orderDetails.orderDetails);
+  
   const [productDetails, setProductDetails] = useState({});
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // --- Rating State ---
   const [isRatingModalVisible, setIsRatingModalVisible] = useState(false);
@@ -340,6 +344,7 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
       const payload = {
         userId: user.id,
         productId: selectedProductForRating.productId,
+        orderId: orderId,
         rating: currentRating,
         description: ratingDescription,
       };
@@ -350,8 +355,15 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
         },
       });
 
-      Alert.alert('✅ Thành công', 'Cảm ơn bạn đã đánh giá sản phẩm!');
-      handleCloseRatingModal();
+      Alert.alert('✅ Thành công', 'Cảm ơn bạn đã đánh giá sản phẩm!', [
+        {
+          text: 'OK',
+          onPress: () => {
+            handleCloseRatingModal();
+            fetchOrderDetails(); // Refresh the page after successful feedback
+          },
+        },
+      ]);
     } catch (err) {
       console.error(
         'Error submitting rating:',
@@ -439,6 +451,11 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
     setShowCancelModal(true);
   };
 
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    fetchOrderDetails().finally(() => setRefreshing(false));
+  }, []);
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -481,7 +498,20 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
         <View style={{width: 28}} />
       </View>
 
-      <ScrollView style={styles.content} removeClippedSubviews={false}>
+      <ScrollView 
+        style={styles.content} 
+        removeClippedSubviews={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#007AFF']} // iOS
+            tintColor="#007AFF" // Android
+            title="Đang tải..." // iOS
+            titleColor="#666" // iOS
+          />
+        }
+      >
         <View style={styles.statusContainer}>
           <View
             style={[
@@ -603,16 +633,23 @@ const MaterialOrderDetailScreen = ({navigation, route}) => {
                           {productInfo.categoryName}
                         </Text>
                       )}
-                      {/* --- Rating Button --- */}
+                      {/* --- Rating Button or Rated Message --- */}
                       {orderDetails.status === '10' && (
-                        <TouchableOpacity
-                          style={styles.rateButton}
-                          onPress={() =>
-                            handleOpenRatingModal(product, productInfo)
-                          }>
-                          <Icon name="star-outline" size={16} color="#4CAF50" />
-                          <Text style={styles.rateButtonText}>Đánh giá</Text>
-                        </TouchableOpacity>
+                        product.isFeedBack ? (
+                          <View style={styles.ratedMessageContainer}>
+                            <Icon name="check-circle" size={16} color="#4CAF50" />
+                            <Text style={styles.ratedMessageText}>Đã đánh giá sản phẩm</Text>
+                          </View>
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.rateButton}
+                            onPress={() =>
+                              handleOpenRatingModal(product, productInfo)
+                            }>
+                            <Icon name="star-outline" size={16} color="#4CAF50" />
+                            <Text style={styles.rateButtonText}>Đánh giá</Text>
+                          </TouchableOpacity>
+                        )
                       )}
                       {/* --- End Rating Button --- */}
                     </View>
@@ -1171,6 +1208,22 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  ratedMessageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 15,
+    alignSelf: 'flex-start',
+  },
+  ratedMessageText: {
+    marginLeft: 4,
+    color: '#4CAF50',
+    fontSize: 13,
+    fontWeight: '500',
   },
 });
 

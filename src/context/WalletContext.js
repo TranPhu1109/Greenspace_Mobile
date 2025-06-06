@@ -130,6 +130,7 @@ export const WalletProvider = ({children}) => {
   const [error, setError] = useState(null);
   const [lastFetchTime, setLastFetchTime] = useState(0);
   const {user} = useAuth(); // Get user from AuthContext
+//console.log("user", user);
 
   const fetchWalletData = async (forceRefresh = false) => {
     try {
@@ -262,14 +263,19 @@ export const WalletProvider = ({children}) => {
       };
 
       // Send the request body as JSON, with isMobile as a query parameter
-      const response = await api.post('/wallets/vn-pay?isMobile=true', amount);
+      const response = await api.post('/wallets/vn-pay?isMobile=true', numericAmount, {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
       console.log('Phản hồi API VNPay:', response);
 
-      if (response && typeof response === 'string') {
-        return response; // Expecting the URL string directly
-      } else {
-        throw new Error('Định dạng phản hồi từ API VNPay không hợp lệ');
+      if (!response) {
+        throw new Error('Không nhận được phản hồi từ API VNPay');
       }
+
+      // The response should be the VNPay payment URL
+      return response;
     } catch (err) {
       console.error('Lỗi khi tạo giao dịch VNPay:', err);
       throw new Error(err.message || 'Không thể tạo liên kết thanh toán VNPay');

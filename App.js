@@ -2,6 +2,8 @@ import React, { useEffect, useContext } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, Linking, Alert } from 'react-native';
+import { createRef } from 'react';
+import { CommonActions } from '@react-navigation/native';
 
 // Navigation
 import RootStack from './src/navigation/RootStack';
@@ -21,6 +23,8 @@ const SCHEME = 'greenspaceapp://';
 const AppContent = () => {
   const { isLoading } = useLoading();
   const walletContext = useWallet();
+
+  const navigationRef = createRef();
 
   useEffect(() => {
     // Listener for initial URL when app opens from killed state
@@ -45,6 +49,9 @@ const AppContent = () => {
   const handleDeepLink = async (url) => {
     if (!url || !walletContext) return;
   
+    console.log('DEBUG: handleDeepLink called with URL:', url);
+    console.log('DEBUG: walletContext available:', !!walletContext);
+
     console.log('🔗 Received deep link URL:', url);
 
     // --- Manual URL Parsing --- 
@@ -86,6 +93,8 @@ const AppContent = () => {
       // Giao dịch thành công là TransactionStatus = 00 và ResponseCode = 00
       const isSuccess = txnStatus === '00' && responseCode === '00';
 
+      console.log('DEBUG: Parsed VNPay status:', { txnStatus, responseCode, isSuccess });
+
       try {
         if (await InAppBrowser.isAvailable()) {
           console.log('Closing InAppBrowser...');
@@ -104,6 +113,18 @@ const AppContent = () => {
         // (Tuỳ chọn) Điều hướng người dùng đến màn hình cụ thể
         // navigation.navigate('Wallet');
   
+        // Navigate to WalletScreen after successful top-up
+        if (isSuccess && navigationRef.current) {
+          console.log('Navigating to WalletScreen...');
+          // Use CommonActions.reset to ensure a clean navigation stack
+          navigationRef.current.dispatch(
+             CommonActions.reset({
+               index: 0,
+               routes: [{ name: 'Account', params: { screen: 'Profile', params: { screen: 'Wallet' } } }],
+             })
+           );
+        }
+  
       } catch (err) {
         console.error('❌ Xử lý VNPay thất bại:', err);
         if (await InAppBrowser.isAvailable()) {
@@ -118,7 +139,7 @@ const AppContent = () => {
   
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <RootStack />
       {isLoading && <Loading />}
     </NavigationContainer>
