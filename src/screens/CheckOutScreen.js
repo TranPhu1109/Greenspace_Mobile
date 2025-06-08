@@ -62,39 +62,33 @@ const CheckOutScreen = ({navigation, route}) => {
 
   useEffect(() => {
     if (user?.address) {
-      //console.log('User Address String:', user.address);
-      // console.log(
-      //   'User object details:',
-      //   JSON.stringify({
-      //     id: user.id,
-      //     wallet: user.wallet ? {id: user.wallet.id} : null,
-      //     backendToken: user.backendToken
-      //       ? user.backendToken.substring(0, 10) + '...'
-      //       : null,
-      //   }),
-      // );
-
       const parts = user.address.split('|').map(part => part.trim());
       if (parts.length === 4) {
         const [street, wardName, districtName, provinceName] = parts;
         setStreetAddress(street);
-        const initialData = {provinceName, districtName, wardName};
-        //console.log('Setting Initial Address Data:', initialData);
-        setInitialAddressData(initialData);
+        // Only set initial data if province is Ho Chi Minh
+        if (provinceName === 'Hồ Chí Minh') {
+          const initialData = {provinceName, districtName, wardName};
+          setInitialAddressData(initialData);
 
-        // Set initial selected address
-        const initialAddress = {
-          provinceName,
-          districtName,
-          wardName,
-        };
-        setSelectedAddress(initialAddress);
+          // Set initial selected address
+          const initialAddress = {
+            provinceName,
+            districtName,
+            wardName,
+          };
+          setSelectedAddress(initialAddress);
+        } else {
+          // If not Ho Chi Minh, set empty initial data
+          setInitialAddressData({});
+          setSelectedAddress({});
+        }
       } else {
         console.warn('User address format is incorrect:', user.address);
-        setInitialAddressData({}); // Set empty if format is wrong
+        setInitialAddressData({});
       }
     } else {
-      setInitialAddressData({}); // Set empty if no address string
+      setInitialAddressData({});
     }
 
     // Initialize editable name if user name exists
@@ -652,13 +646,11 @@ const CheckOutScreen = ({navigation, route}) => {
         <View style={styles.successModalContent}>
           <Icon name="check-circle" size={80} color="#4CAF50" />
           <Text style={styles.successModalTitle}>Đặt hàng thành công!</Text>
-          <Text style={styles.successModalText}>
-            Đơn hàng của bạn đã được xác nhận
-          </Text>
+          
           <View style={styles.successModalButtonContainer}>
             <TouchableOpacity
               style={[styles.successModalButton, styles.successModalButtonAgree]}
-              onPress={() => setIsSuccessModalVisible(false)}>
+              onPress={() => navigation.goBack()}>
               <Text style={styles.successModalButtonTextAgree}>Đồng ý</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -803,7 +795,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 30,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
   },
   successModalTitle: {
     fontSize: 24,

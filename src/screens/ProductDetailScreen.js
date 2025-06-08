@@ -278,7 +278,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
         
         <View style={styles.detailsContainer}>
           <Text style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productPrice}>{product.price.toLocaleString('vi-VN')} VNĐ</Text>
+          <Text style={styles.productPrice}>{product.price.toLocaleString('vi-VN')} VND</Text>
           
           <View style={styles.descriptionContainer}>
             <Text style={styles.descriptionTitle}>Mô tả sản phẩm</Text>
@@ -301,7 +301,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
             </View>
             <View style={styles.specItem}>
               <Text style={styles.specLabel}>Giá bán</Text>
-              <Text style={styles.specValue}>{product.price.toLocaleString('vi-VN')} VNĐ</Text>
+              <Text style={styles.specValue}>{product.price.toLocaleString('vi-VN')} VND</Text>
             </View>
             <View style={styles.specItem}>
               <Text style={styles.specLabel}>Danh mục</Text>

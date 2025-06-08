@@ -188,7 +188,7 @@ const MaterialOrderScreen = ({navigation}) => {
           <View style={styles.detailRow}>
             <Icon name="cash" size={20} color="#666" />
             <Text style={styles.detailText}>
-              {typeof totalAmount === 'string' ? `${totalAmount} VNĐ` : '0 VNĐ'}
+              {typeof totalAmount === 'string' ? `${totalAmount} VND` : '0 VND'}
             </Text>
           </View>
         </View>

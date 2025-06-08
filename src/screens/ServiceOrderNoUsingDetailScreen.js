@@ -13,6 +13,7 @@ import {
   TextInput,
   RefreshControl,
   Keyboard,
+  useWindowDimensions,
 } from 'react-native';
 import {Card, Divider} from 'react-native-paper';
 import axios from 'axios';
@@ -26,9 +27,8 @@ import {uploadImageToCloudinary} from '../hooks/UploadToCloud';
 import StatusTrackingMaterial from '../components/StatusTrackingMaterial';
 import {useWallet} from '../context/WalletContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { api } from '../api/api';
+import {api} from '../api/api';
 import RenderHtml from 'react-native-render-html';
-import { useWindowDimensions } from 'react-native';
 
 const {width, height} = Dimensions.get('window');
 
@@ -98,7 +98,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
     setRedesignReason(text);
   };
 
-  const { width: contentWidth } = useWindowDimensions();
+  const {width: contentWidth} = useWindowDimensions();
 
   const showSketchPhaseStatuses = [
     'DoneDeterminingDesignPrice', // 22
@@ -121,7 +121,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
     'Installing',
     'DoneInstalling',
     'Successfully',
-    "MaterialPriceConfirmed"
+    'MaterialPriceConfirmed',
     // Add other relevant statuses if needed
   ];
 
@@ -141,7 +141,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
     'Installing',
     'DoneInstalling',
     'Successfully',
-    
   ];
 
   const showSchedule = [
@@ -161,18 +160,22 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
   ];
 
   const statusDontShowdepositField = [
-    "Pending",
-      "ConsultingAndSketching",
-      'DeterminingDesignPrice',
-       "WaitDeposit",
-       "DoneDeterminingDesignPrice",   
-       "ReConsultingAndSketching",  
-       "StopService"
-  ]
+    'Pending',
+    'ConsultingAndSketching',
+    'DeterminingDesignPrice',
+    'WaitDeposit',
+    'DoneDeterminingDesignPrice',
+    'ReConsultingAndSketching',
+    'StopService',
+  ];
 
   const statusShowTotalPayment = [
-    "PaymentSuccess", "Processing", "Installing", "DoneInstalling", "Successfully"
-  ]
+    'PaymentSuccess',
+    'Processing',
+    'Installing',
+    'DoneInstalling',
+    'Successfully',
+  ];
 
   // Handle pull-to-refresh
   const onRefresh = useCallback(() => {
@@ -211,8 +214,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       'installing',
       'doneinstalling',
       'successfully',
-    "MaterialPriceConfirmed"
-
+      'MaterialPriceConfirmed',
     ];
 
     return contractDisplayStatuses.includes(status?.toLowerCase());
@@ -224,10 +226,10 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       setError(null);
 
       const response = await api.get(`/serviceorder/${orderId}`);
-      const orderData = response
+      const orderData = response;
 
       if (!orderData) {
-        throw new Error("Order data not found in response.");
+        throw new Error('Order data not found in response.');
       }
 
       setOrder(orderData);
@@ -266,8 +268,8 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
   const fetchRecordSketches = async orderId => {
     try {
       const response = await api.get(`/recordsketch/${orderId}/orderservice`);
-      
-      const sketches = response
+
+      const sketches = response;
       setRecordSketches(sketches);
 
       // Calculate maximum phase from sketches
@@ -286,9 +288,9 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
   const fetchRecordDesigns = async orderId => {
     try {
       const response = await api.get(`/recorddesign/${orderId}/orderservice`);
-      const designs = response
+      const designs = response;
       setRecordDesigns(designs);
-      
+
       if (designs.length > 0) {
         const maxDesignPhase = Math.max(...designs.map(design => design.phase));
         setMaxPhaseDesign(prev => Math.max(prev, maxDesignPhase));
@@ -360,13 +362,15 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
 
       try {
         const response = await api.get(contractFetchUrl);
-        console.log("response contract", response);
-        
+        console.log('response contract', response);
+
         existingContract = response && response.length > 0 ? response[0] : null;
       } catch (fetchErr) {
-        //console.error("Failed to fetch contract:", fetchErr); 
-        console.log("Không có hợp đồng sẵn có, đang thực hiện tạo mới", fetchErr);
-        
+        //console.error("Failed to fetch contract:", fetchErr);
+        console.log(
+          'Không có hợp đồng sẵn có, đang thực hiện tạo mới',
+          fetchErr,
+        );
       }
 
       if (existingContract) {
@@ -395,7 +399,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
             setContract(fetchResponse[0]);
           }
         } catch (createErr) {
-          console.error("Failed to create or fetch new contract:", createErr);
+          console.error('Failed to create or fetch new contract:', createErr);
           setContractError('Không thể tải hợp đồng. Vui lòng thử lại sau.');
         }
       }
@@ -731,37 +735,38 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
             </View>
 
             {/* Financial Information Section */}
-            <View
-              style={styles.financialInfoModalContainer}>
-              <View
-                style={styles.financialInfoModalRow}>
+            <View style={styles.financialInfoModalContainer}>
+              <View style={styles.financialInfoModalRow}>
                 <Text style={styles.financialInfoModalLabel}>
                   Tổng chi phí thiết kế:
                 </Text>
-                <Text
-                  style={styles.financialInfoModalValue}>
+                <Text style={styles.financialInfoModalValue}>
                   {formatCurrency(totalDesignCost)}
                 </Text>
               </View>
-              <View
-                style={styles.financialInfoModalRow}>
+              <View style={styles.financialInfoModalRow}>
                 <Text style={styles.financialInfoModalLabel}>
                   Tiền cọc (50%):
                 </Text>
                 <Text
-                  style={[styles.financialInfoModalValue, { color: '#007AFF' }]}>
+                  style={[styles.financialInfoModalValue, {color: '#007AFF'}]}>
                   {formatCurrency(depositAmount)}
                 </Text>
               </View>
               <View
-                style={[styles.financialInfoModalRow, styles.financialInfoModalDivider]}>
+                style={[
+                  styles.financialInfoModalRow,
+                  styles.financialInfoModalDivider,
+                ]}>
                 <Text style={styles.financialInfoModalLabel}>
                   Số dư ví hiện tại:
                 </Text>
                 <Text
                   style={[
                     styles.financialInfoModalValue,
-                    hasEnoughBalance ? styles.sufficientBalance : styles.insufficientBalance,
+                    hasEnoughBalance
+                      ? styles.sufficientBalance
+                      : styles.insufficientBalance,
                   ]}>
                   {formatCurrency(walletBalance)}
                 </Text>
@@ -1204,8 +1209,8 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         Alert.alert(
           'Lỗi',
           'Vui lòng nhập lý do yêu cầu thiết kế lại.',
-          [{ text: 'OK' }],
-          { cancelable: false }
+          [{text: 'OK'}],
+          {cancelable: false},
         );
         return;
       }
@@ -1275,8 +1280,8 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       Alert.alert(
         'Lỗi',
         'Vui lòng nhập lý do yêu cầu thiết kế lại.',
-        [{ text: 'OK' }],
-        { cancelable: false }
+        [{text: 'OK'}],
+        {cancelable: false},
       );
       return;
     }
@@ -1291,8 +1296,8 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
       Alert.alert(
         'Lỗi',
         'Vui lòng nhập lý do yêu cầu thiết kế lại.',
-        [{ text: 'OK' }],
-        { cancelable: false }
+        [{text: 'OK'}],
+        {cancelable: false},
       );
       return;
     }
@@ -1336,14 +1341,14 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
             onPress: () => fetchOrderDetails(),
           },
         ],
-        { cancelable: false }
+        {cancelable: false},
       );
     } catch (err) {
       Alert.alert(
         'Lỗi',
         'Không thể gửi yêu cầu thiết kế lại. Vui lòng thử lại sau.',
-        [{ text: 'OK' }],
-        { cancelable: false }
+        [{text: 'OK'}],
+        {cancelable: false},
       );
     } finally {
       setRedesignLoading(false);
@@ -1416,14 +1421,14 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
             onPress: () => fetchOrderDetails(),
           },
         ],
-        { cancelable: false }
+        {cancelable: false},
       );
     } catch (err) {
       Alert.alert(
         'Lỗi',
         'Không thể gửi yêu cầu phác thảo lại. Vui lòng thử lại sau.',
-        [{ text: 'OK' }],
-        { cancelable: false }
+        [{text: 'OK'}],
+        {cancelable: false},
       );
     } finally {
       setRedraftLoading(false);
@@ -1594,7 +1599,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         onRequestClose={() => !cancelLoading && setCancelModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModalContent}>
-           
             <Text style={styles.confirmModalTitle}>Xác nhận hủy dịch vụ</Text>
 
             {isDepositSuccessful && (
@@ -1763,62 +1767,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
     });
   };
 
-  // Add this function at the beginning of the component
-  const decodeHtmlEntities = (text) => {
-    if (!text) return '';
-    // First decode HTML entities
-    const decodedText = text
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&aacute;/g, 'á')
-      .replace(/&agrave;/g, 'à')
-      .replace(/&atilde;/g, 'ã')
-      .replace(/&acirc;/g, 'â')
-      .replace(/&eacute;/g, 'é')
-      .replace(/&egrave;/g, 'è')
-      .replace(/&ecirc;/g, 'ê')
-      .replace(/&iacute;/g, 'í')
-      .replace(/&igrave;/g, 'ì')
-      .replace(/&oacute;/g, 'ó')
-      .replace(/&ograve;/g, 'ò')
-      .replace(/&otilde;/g, 'õ')
-      .replace(/&ocirc;/g, 'ô')
-      .replace(/&uacute;/g, 'ú')
-      .replace(/&ugrave;/g, 'ù')
-      .replace(/&ucirc;/g, 'û')
-      .replace(/&yacute;/g, 'ý')
-      .replace(/&ygrave;/g, 'ỳ')
-      .replace(/&ycirc;/g, 'ŷ')
-      .replace(/&yuml;/g, 'ÿ')
-      .replace(/&Aacute;/g, 'Á')
-      .replace(/&Agrave;/g, 'À')
-      .replace(/&Atilde;/g, 'Ã')
-      .replace(/&Acirc;/g, 'Â')
-      .replace(/&Eacute;/g, 'É')
-      .replace(/&Egrave;/g, 'È')
-      .replace(/&Ecirc;/g, 'Ê')
-      .replace(/&Iacute;/g, 'Í')
-      .replace(/&Igrave;/g, 'Ì')
-      .replace(/&Oacute;/g, 'Ó')
-      .replace(/&Ograve;/g, 'Ò')
-      .replace(/&Otilde;/g, 'Õ')
-      .replace(/&Ocirc;/g, 'Ô')
-      .replace(/&Uacute;/g, 'Ú')
-      .replace(/&Ugrave;/g, 'Ù')
-      .replace(/&Ucirc;/g, 'Û')
-      .replace(/&Yacute;/g, 'Ý')
-      .replace(/&Ygrave;/g, 'Ỳ')
-      .replace(/&Ycirc;/g, 'Ŷ')
-      .replace(/&Yuml;/g, 'Ÿ');
-    
-    // Then remove HTML tags
-    return decodedText.replace(/<[^>]*>/g, '');
-  };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -1949,8 +1897,8 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         </Card>
       )}
 
-            {/* Installation Actions Section */}
-            {order.status?.toLowerCase() === 'doneinstalling' && (
+      {/* Installation Actions Section */}
+      {order.status?.toLowerCase() === 'doneinstalling' && (
         <View style={[styles.section, {marginBottom: 16}]}>
           <View style={{padding: 16}}>
             <View
@@ -2064,9 +2012,13 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         </View>
       )}
 
-
       {/* Schedule Delivery Section */}
-      {['paymentsuccess', 'installing', 'doneinstalling', 'successfully'].includes(order.status?.toLowerCase()) && (
+      {[
+        'paymentsuccess',
+        'installing',
+        'doneinstalling',
+        'successfully',
+      ].includes(order.status?.toLowerCase()) && (
         <View style={[styles.section]}>
           {/* If construction date and time are already set AND not in edit mode, show the confirmed schedule */}
           {order.contructionDate &&
@@ -2120,7 +2072,11 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                       style={{marginRight: 4}}
                     />
                     <Text
-                      style={{color: '#2196F3', fontWeight: '500', fontSize: 14}}>
+                      style={{
+                        color: '#2196F3',
+                        fontWeight: '500',
+                        fontSize: 14,
+                      }}>
                       Điều chỉnh lịch
                     </Text>
                   </TouchableOpacity>
@@ -2223,8 +2179,8 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                     textAlign: 'center',
                     marginTop: 4,
                   }}>
-                  Bạn vẫn có thể điều chỉnh lịch giao hàng bằng cách nhấn vào nút
-                  "Điều chỉnh lịch"
+                  Bạn vẫn có thể điều chỉnh lịch giao hàng bằng cách nhấn vào
+                  nút "Điều chỉnh lịch"
                 </Text>
               )}
             </View>
@@ -2373,7 +2329,10 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                 >
                   <Text
                     style={{flex: 1, color: deliveryTime ? '#222' : '#888'}}>
-                    {deliveryTime ? formatTimeForDisplay(deliveryTime) : 'Chọn giờ'} {/* Display formatted time */}
+                    {deliveryTime
+                      ? formatTimeForDisplay(deliveryTime)
+                      : 'Chọn giờ'}{' '}
+                    {/* Display formatted time */}
                   </Text>
                   <Icon name="clock-outline" size={20} color="#888" />
                 </TouchableOpacity>
@@ -2381,30 +2340,43 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                 {/* DateTimePicker for Time */}
                 {showTimePicker && (
                   <DateTimePicker
-                    value={deliveryTime ? new Date(`2000-01-01T${deliveryTime}:00`) : new Date()} // Use current time or a default date with selected time
+                    value={
+                      deliveryTime
+                        ? new Date(`2000-01-01T${deliveryTime}:00`)
+                        : new Date()
+                    } // Use current time or a default date with selected time
                     mode="time"
                     display="default"
                     onChange={(event, selectedDate) => {
                       setShowTimePicker(false);
-                      if (event.type === 'set') { // User confirmed selection
+                      if (event.type === 'set') {
+                        // User confirmed selection
                         const selectedHour = selectedDate.getHours();
                         const selectedMinute = selectedDate.getMinutes();
                         // Check if time is between 8 AM and 6 PM (18:00)
-                        if (selectedHour >= 8 && (selectedHour < 18 || (selectedHour === 18 && selectedMinute === 0))) {
+                        if (
+                          selectedHour >= 8 &&
+                          (selectedHour < 18 ||
+                            (selectedHour === 18 && selectedMinute === 0))
+                        ) {
                           // Format time to HH:mm string
-                          const formattedTime = `${String(selectedHour).padStart(2, '0')}:${String(selectedMinute).padStart(2, '0')}`;
+                          const formattedTime = `${String(
+                            selectedHour,
+                          ).padStart(2, '0')}:${String(selectedMinute).padStart(
+                            2,
+                            '0',
+                          )}`;
                           setDeliveryTime(formattedTime);
                         } else {
                           Alert.alert(
                             'Thời gian không hợp lệ',
-                            'Vui lòng chọn thời gian từ 8:00 đến 18:00.'
+                            'Vui lòng chọn thời gian từ 8:00 đến 18:00.',
                           );
                         }
                       }
                     }}
                   />
                 )}
-
               </View>
               {/* Confirm Button */}
               <TouchableOpacity
@@ -2450,7 +2422,10 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                     };
 
                     // Make API call
-                    await api.put(`/serviceorder/contructor/${order.id}`, payload);
+                    await api.put(
+                      `/serviceorder/contructor/${order.id}`,
+                      payload,
+                    );
 
                     // Clear edit mode if we were in it
                     if (isEditingDelivery) {
@@ -2507,7 +2482,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           )}
         </View>
       )}
-
 
       {/* Contract Section - only show for appropriate status values */}
       {shouldDisplayContract(order.status) && (
@@ -2941,8 +2915,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         </Card>
       )}
 
-      
-
       {/* Part 2: Design Information */}
       <Card style={styles.section}>
         <Card.Title
@@ -2993,11 +2965,9 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                 Chi phí thiết kế chi tiết:
               </Text>
               <Text style={styles.pricingValue}>
-                {order.status !== 'DeterminingDesignPrice' ?
-                formatCurrency(order.designPrice)
-                :
-                formatCurrency(0)
-              }
+                {order.status !== 'DeterminingDesignPrice'
+                  ? formatCurrency(order.designPrice)
+                  : formatCurrency(0)}
               </Text>
             </View>
 
@@ -3023,12 +2993,11 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
               />
               <Text style={styles.totalPricingLabel}>Tổng chi phí:</Text>
               <Text style={styles.totalPricingValue}>
-                {order.status !== 'DeterminingDesignPrice' ?
-                  formatCurrency(
-                    (order.designPrice || 0) + (order.materialPrice || 0),
-                  )
-                  : formatCurrency(0)
-                }
+                {order.status !== 'DeterminingDesignPrice'
+                  ? formatCurrency(
+                      (order.designPrice || 0) + (order.materialPrice || 0),
+                    )
+                  : formatCurrency(0)}
               </Text>
             </View>
           </View>
@@ -3041,19 +3010,16 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           title="Thông tin thanh toán"
           titleStyle={styles.sectionTitle}
           left={props => (
-            <Icon
-              {...props}
-              name="cash-multiple"
-              size={24}
-              color="#007AFF"
-            />
+            <Icon {...props} name="cash-multiple" size={24} color="#007AFF" />
           )}
         />
         <Divider style={styles.divider} />
         <Card.Content>
           <View style={styles.pricingContainer}>
             {/* Deposit Paid Section */}
-            {!statusDontShowdepositField.map(s => s.toLowerCase()).includes(order.status?.toLowerCase()) && (
+            {!statusDontShowdepositField
+              .map(s => s.toLowerCase())
+              .includes(order.status?.toLowerCase()) && (
               <View style={styles.pricingRow}>
                 <Icon
                   name="currency-usd"
@@ -3062,14 +3028,16 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                   style={styles.pricingIcon}
                 />
                 <Text style={styles.pricingLabel}>Đã đặt cọc (50%):</Text>
-                <Text style={[styles.pricingValue]} >
+                <Text style={[styles.pricingValue]}>
                   {formatCurrency((order.designPrice || 0) * 0.5)}
                 </Text>
               </View>
             )}
 
             {/* Payment Status Section */}
-            {statusShowTotalPayment.map(s => s.toLowerCase()).includes(order.status?.toLowerCase()) && (
+            {statusShowTotalPayment
+              .map(s => s.toLowerCase())
+              .includes(order.status?.toLowerCase()) && (
               <View style={styles.pricingRow}>
                 <Icon
                   name="check-circle"
@@ -3078,8 +3046,10 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                   style={styles.pricingIcon}
                 />
                 <Text style={styles.pricingLabel}>Đã thanh toán:</Text>
-                <Text style={[styles.pricingValue, { color: '#34C759' }]}>
-                  {formatCurrency((order.designPrice || 0) + (order.materialPrice || 0))}
+                <Text style={[styles.pricingValue, {color: '#34C759'}]}>
+                  {formatCurrency(
+                    (order.designPrice || 0) + (order.materialPrice || 0),
+                  )}
                 </Text>
               </View>
             )}
@@ -3106,7 +3076,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           {order.description ? (
             <RenderHtml
               contentWidth={contentWidth}
-              source={{ html: order.description }}
+              source={{html: order.description}}
               tagsStyles={styles.htmlTagsStyles}
             />
           ) : (
@@ -3211,10 +3181,6 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
           </ScrollView>
         </Card.Content>
       </Card>
-
-      
-
-
 
       {/* First Sketch Images */}
       {recordSketches.some(sketch => sketch.phase === 1) &&
@@ -3996,11 +3962,16 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
             {/* External Products inside Material List */}
             {order?.externalProducts && order.externalProducts.length > 0 && (
               <>
-                <View style={{ marginTop: 18, marginBottom: 6 }}>
-                  <Text style={{ fontWeight: '700', fontSize: 15, color: '#007AFF' }}>Sản phẩm ngoài danh mục</Text>
+                <View style={{marginTop: 18, marginBottom: 6}}>
+                  <Text
+                    style={{fontWeight: '700', fontSize: 15, color: '#007AFF'}}>
+                    Sản phẩm ngoài danh mục
+                  </Text>
                 </View>
                 {order.externalProducts.map((product, index) => (
-                  <View key={`external-product-${index}`} style={styles.materialItem}>
+                  <View
+                    key={`external-product-${index}`}
+                    style={styles.materialItem}>
                     {product.imageURL ? (
                       <TouchableOpacity
                         onPress={() => handleImagePress(product.imageURL)}
@@ -4020,15 +3991,21 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                       <Text style={styles.materialName}>{product.name}</Text>
                       <View style={styles.materialRow}>
                         <Text style={styles.materialLabel}>Số lượng:</Text>
-                        <Text style={styles.materialValue}>{product.quantity}</Text>
+                        <Text style={styles.materialValue}>
+                          {product.quantity}
+                        </Text>
                       </View>
                       <View style={styles.materialRow}>
                         <Text style={styles.materialLabel}>Đơn giá:</Text>
-                        <Text style={styles.materialValue}>{formatCurrency(product.price)}</Text>
+                        <Text style={styles.materialValue}>
+                          {formatCurrency(product.price)}
+                        </Text>
                       </View>
                     </View>
                     <View style={styles.materialPriceContainer}>
-                      <Text style={styles.materialTotalPrice}>{formatCurrency(product.totalPrice)}</Text>
+                      <Text style={styles.materialTotalPrice}>
+                        {formatCurrency(product.totalPrice)}
+                      </Text>
                     </View>
                   </View>
                 ))}
@@ -4044,10 +4021,12 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                     (total, detail) => total + detail.totalPrice,
                     0,
                   ) || 0) +
-                  (order.externalProducts ? order.externalProducts.reduce(
-                    (total, product) => total + (product.totalPrice || 0),
-                    0
-                  ) : 0)
+                    (order.externalProducts
+                      ? order.externalProducts.reduce(
+                          (total, product) => total + (product.totalPrice || 0),
+                          0,
+                        )
+                      : 0),
                 )}
               </Text>
             </View>
@@ -4055,9 +4034,8 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         </Card>
       )}
 
-
-{/* Part 4: Consulting Content */}
-<Card style={styles.section}>
+      {/* Part 4: Consulting Content */}
+      <Card style={styles.section}>
         <Card.Title
           title="Nội dung tư vấn"
           titleStyle={styles.sectionTitle}
@@ -4079,9 +4057,11 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                 trong thời gian sớm nhất.
               </Text>
             ) : (
-              <Text style={styles.noteText}>
-                {decodeHtmlEntities(order.skecthReport)}
-              </Text>
+              <RenderHtml
+                contentWidth={contentWidth}
+                source={{html: order.skecthReport}}
+                tagsStyles={styles.htmlTagsStyles}
+              />
             )}
           </View>
         </Card.Content>
@@ -4199,7 +4179,7 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
         onClose={() => setContractModalVisible(false)}
       />
 
-      {/* Installation Completion Confirmation Modal */}  
+      {/* Installation Completion Confirmation Modal */}
       <Modal
         visible={installConfirmModalVisible}
         transparent={true}
@@ -4272,34 +4252,43 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                     if (order.workTasks && order.workTasks.length > 0) {
                       // Sort by creationDate in descending order (newest first)
                       const sortedTasks = [...order.workTasks].sort(
-                        (a, b) => new Date(b.creationDate) - new Date(a.creationDate),
+                        (a, b) =>
+                          new Date(b.creationDate) - new Date(a.creationDate),
                       );
                       latestTask = sortedTasks[0]; // Take the first one (most recent)
                     }
 
                     // 2. Update order status to Successfully (31)
                     const updateOrderUrl = `/serviceorder/status/${orderId}`;
-                    await api.put(updateOrderUrl, {
-                      status: 31, // Successfully
-                      reportManger: '',
-                      reportAccoutant: '',
-                    }, {
-                      Authorization: `Bearer ${user.backendToken}`
-                    });
+                    await api.put(
+                      updateOrderUrl,
+                      {
+                        status: 31, // Successfully
+                        reportManger: '',
+                        reportAccoutant: '',
+                      },
+                      {
+                        Authorization: `Bearer ${user.backendToken}`,
+                      },
+                    );
 
                     // 3. Update the latest work task to Completed (6)
                     if (latestTask) {
                       const updateTaskUrl = `/worktask/${latestTask.id}`;
-                      await api.put(updateTaskUrl, {
-                        serviceOrderId: order.id,
-                        userId: user.id,
-                        dateAppointment: order.contructionDate,
-                        timeAppointment: order.contructionTime,
-                        status: 6, // Completed
-                        note: 'The customer has confirmed the completion of the installation and is satisfied with the product',
-                      }, {
-                        Authorization: `Bearer ${user.backendToken}`
-                      });
+                      await api.put(
+                        updateTaskUrl,
+                        {
+                          serviceOrderId: order.id,
+                          userId: user.id,
+                          dateAppointment: order.contructionDate,
+                          timeAppointment: order.contructionTime,
+                          status: 6, // Completed
+                          note: 'The customer has confirmed the completion of the installation and is satisfied with the product',
+                        },
+                        {
+                          Authorization: `Bearer ${user.backendToken}`,
+                        },
+                      );
                     }
 
                     // Close modal and show success message
@@ -4315,7 +4304,10 @@ const ServiceOrderNoUsingDetailScreen = ({route, navigation}) => {
                       ],
                     );
                   } catch (error) {
-                    console.error('Error confirming installation completion:', error);
+                    console.error(
+                      'Error confirming installation completion:',
+                      error,
+                    );
                     Alert.alert(
                       'Lỗi',
                       'Không thể xác nhận hoàn thành đơn hàng. Vui lòng thử lại sau.',
@@ -4577,8 +4569,8 @@ const getStatusText = status => {
       return 'Khách hàng xác nhận';
     case 'successfully':
       return 'Thành công';
-    case "materialpriceconfirmed": 
-    return 'Đang trong quá trình thiết kế';
+    case 'materialpriceconfirmed':
+      return 'Đang trong quá trình thiết kế';
     default:
       return status || 'Không xác định';
   }
@@ -4588,7 +4580,7 @@ const getStatusColor = status => {
   switch (status?.toLowerCase()) {
     case 'pending':
       return '#FF9500';
-    case "materialpriceconfirmed":
+    case 'materialpriceconfirmed':
     case 'consultingandsketching':
     case 'determiningdesignprice':
       return '#5856D6'; // Purple

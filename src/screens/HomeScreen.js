@@ -135,7 +135,7 @@ const HomeScreen = () => {
         {item.totalPrice != null ? (
            <Text style={styles.designIdeaPrice}>
              {item.totalPrice.toLocaleString('vi-VN')}
-             <Text style={styles.currencyText}> VNĐ</Text>
+             <Text style={styles.currencyText}> VND</Text>
            </Text>
         ) : null}
       </View>
@@ -170,7 +170,7 @@ const HomeScreen = () => {
         {item.price != null ? (
            <Text style={styles.productPrice}>
              {item.price.toLocaleString('vi-VN')}
-             <Text style={styles.currencyText}> VNĐ</Text>
+             <Text style={styles.currencyText}> VND</Text>
            </Text>
         ) : null}
       </View>
@@ -198,9 +198,17 @@ const HomeScreen = () => {
           <View style={styles.bannerContent}>
             <Text style={styles.bannerPill}>KHÔNG GIAN MƠ ƯỚC</Text>
             <Text style={styles.bannerTitle}>Không Gian Xanh Cho Cuộc Sống Hiện Đại</Text>
-            <Text style={styles.bannerSubtitle}>Chúng tôi mang đến giải pháp thiết kế và thi công không gian xanh chuyên nghiệp, giúp bạn tạo nên môi trường sống trong lành và thẩm mỹ.</Text>
+            <Text style={styles.bannerSubtitle}>
+              Chúng tôi mang đến giải pháp thiết kế và thi công không gian xanh chuyên nghiệp, giúp bạn tạo nên môi trường sống trong lành và thẩm mỹ.
+    
+
+
+            </Text>
+            <Text style={styles.bannerSubtitle}>
+                Bạn đã có ý tưởng thiết kế của riêng mình? Hãy để chúng tôi giúp bạn hiện thực hóa chúng. Liên hệ tư vấn ngay
+            </Text>
             <View style={styles.bannerButtons}>
-              <TouchableOpacity 
+              {/* <TouchableOpacity 
                 style={[styles.button, styles.exploreButton]}
                 onPress={() => {
                   if (isAuthenticated) {
@@ -212,15 +220,13 @@ const HomeScreen = () => {
               >
                 <Text style={styles.buttonText}>Khám Phá Ngay</Text>
                 <Icon name="arrow-forward" size={16} color="#fff" style={{ marginLeft: 5 }} />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
               <TouchableOpacity 
-                style={[styles.button, styles.contactButton]}
+                style={[styles.button, styles.exploreButton]}
                 onPress={() => {
-                  if (isAuthenticated) {
-                    // Navigate to contact screen
-                  } else {
-                    navigation.navigate('Login', { returnTo: true });
-                  }
+                  navigation.navigate('Design', {
+                    screen: 'NewDesign'
+                  });
                 }}
               >
                 <Text style={styles.buttonText}>Liên Hệ Tư Vấn</Text>
@@ -257,11 +263,9 @@ const HomeScreen = () => {
             <TouchableOpacity
               style={styles.seeMoreButton}
               onPress={() => {
-                if (isAuthenticated) {
-                  navigation.navigate('DesignIdeaLibrary');
-                } else {
-                  navigation.navigate('Login', { returnTo: true });
-                }
+                navigation.navigate('Design', {
+                  screen: 'DesignIdeaLibraryTab'
+                });
               }}
             >
               <Icon name="arrow-forward" size={20} color="#fff" style={styles.seeMoreButtonIcon} />
@@ -298,11 +302,9 @@ const HomeScreen = () => {
             <TouchableOpacity
               style={styles.seeMoreButton}
               onPress={() => {
-                if (isAuthenticated) {
-                  navigation.navigate('Shop');
-                } else {
-                  navigation.navigate('Login', { returnTo: true });
-                }
+                navigation.navigate('Shop', {
+                  screen: 'ShopMain'
+                });
               }}
             >
               <Icon name="arrow-forward" size={20} color="#fff" style={styles.seeMoreButtonIcon} />

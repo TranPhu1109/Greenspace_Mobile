@@ -14,6 +14,8 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../context/AuthContext';
 import Address from '../components/Address';
@@ -23,7 +25,7 @@ import { styles } from './NewDesignScreen.styles';
 import { api } from '../api/api';
 
 const NewDesignScreen = ({ navigation }) => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [length, setLength] = useState('');
   const [width, setWidth] = useState('');
   const [images, setImages] = useState([]);
@@ -57,11 +59,20 @@ const NewDesignScreen = ({ navigation }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  useEffect(() => {
-    if (!user) {
-      setShowLoginModal(true);
-    }
-  }, [user]);
+  // useEffect(() => {
+  //   if (!user) {
+  //     setShowLoginModal(true);
+  //   }
+  // }, [user]);
+
+  // Check authentication status when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      // Always reset the modal visibility based on authentication status
+      // when the screen comes into focus
+      setShowLoginModal(!isAuthenticated);
+    }, [isAuthenticated])
+  );
 
   const choosePhoto = () => {
     const remainingSlots = 3 - images.length;
@@ -368,11 +379,13 @@ const NewDesignScreen = ({ navigation }) => {
         <View style={styles.addressHeader}>
           <Text style={styles.addressName}>{item.name}</Text>
           <Text style={styles.addressPhone}>{item.phone}</Text>
+          <View>
           {item.isDefault && (
             <View style={styles.defaultBadge}>
               <Text style={styles.defaultBadgeText}>Mặc định</Text>
             </View>
           )}
+          </View>
         </View>
         <Text style={styles.addressText}>
           {formatAddress(item.userAddress)}
@@ -485,12 +498,12 @@ const NewDesignScreen = ({ navigation }) => {
       animationType="fade"
       onRequestClose={handleDismiss}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
-          <Icon name="account-lock-outline" size={60} color="#0EA5E9" style={styles.modalIcon} />
+      <View style={styles.modalOverlay1}>
+        <View style={styles.modalContainer1}>
+          <Icon name="account-lock-outline" size={60} color="#4CAF50" style={styles.modalIcon} />
           <Text style={styles.modalTitle}>Vui lòng đăng nhập</Text>
           <Text style={styles.modalMessage}>
-            Để thực hiện yêu cầu, vui lòng đăng nhập. Xin cảm ơn
+            Bạn cần đăng nhập để xem thông tin tài khoản
           </Text>
           <View style={styles.modalButtonRow}>
             <TouchableOpacity 

@@ -9,13 +9,13 @@ import {
   Alert,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import { api } from '../api/api'; // Assuming 'api' is your configured axios instance
+import {api} from '../api/api'; // Assuming 'api' is your configured axios instance
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; // Might be useful for error icons
 import logo from '../assets/logo/logo.png';
 import auth from '@react-native-firebase/auth';
 import messaging from '@react-native-firebase/messaging';
-import {getApp}  from '@react-native-firebase/app';
-import { useAuth } from '../context/AuthContext';
+import {getApp} from '@react-native-firebase/app';
+import {useAuth} from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const RegisterScreen = () => {
@@ -26,7 +26,7 @@ const RegisterScreen = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
 
   const navigation = useNavigation();
-  const { login } = useAuth(); // Get login function from AuthContext
+  const {login} = useAuth(); // Get login function from AuthContext
 
   // State for error messages
   const [fullNameError, setFullNameError] = useState('');
@@ -41,8 +41,8 @@ const RegisterScreen = () => {
     try {
       const response = await api.get(`/wallets/user${userId}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
       return response; // Assuming response.data contains the wallet info
     } catch (error) {
@@ -78,16 +78,18 @@ const RegisterScreen = () => {
     if (!phoneNumber.trim()) {
       setPhoneNumberError('Vui lòng nhập số điện thoại.');
       isValid = false;
-    } else if (!/^\d{10,11}$/.test(phoneNumber)) { // Basic phone number format check
-        setPhoneNumberError('Số điện thoại không hợp lệ (10 hoặc 11 chữ số).');
-        isValid = false;
+    } else if (!/^\d{10,11}$/.test(phoneNumber)) {
+      // Basic phone number format check
+      setPhoneNumberError('Số điện thoại không hợp lệ (10 hoặc 11 chữ số).');
+      isValid = false;
     }
     if (!password.trim()) {
       setPasswordError('Vui lòng nhập mật khẩu.');
       isValid = false;
-    } else if (password.length < 6) { // Example: minimum password length
-        setPasswordError('Mật khẩu phải có ít nhất 6 ký tự.');
-        isValid = false;
+    } else if (password.length < 6) {
+      // Example: minimum password length
+      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự.');
+      isValid = false;
     }
     if (!confirmPassword.trim()) {
       setConfirmPasswordError('Vui lòng xác nhận mật khẩu.');
@@ -108,15 +110,18 @@ const RegisterScreen = () => {
         email: email,
         password: password,
         phone: phoneNumber,
-        address: "", // Default empty address
-        avatarUrl: "", // Default empty avatarUrl
+        address: '', // Default empty address
+        avatarUrl: '', // Default empty avatarUrl
       });
 
       console.log('Registration successful:', registrationResponse);
 
       // 2. Sign in with Firebase using the registered credentials
       const app = getApp();
-      const userCredential = await auth().signInWithEmailAndPassword(email, password);
+      const userCredential = await auth().signInWithEmailAndPassword(
+        email,
+        password,
+      );
 
       // 3. Get Firebase ID token and FCM token
       const idToken = await userCredential.user.getIdToken();
@@ -129,13 +134,16 @@ const RegisterScreen = () => {
       const authResponse = await api.post('/auth', {
         token: idToken,
         fcmToken: fcmToken,
-        role: 'string' // Assuming role is required by your /auth endpoint
+        role: 'string', // Assuming role is required by your /auth endpoint
       });
 
-      console.log("Backend Auth Response:", authResponse);
+      console.log('Backend Auth Response:', authResponse);
 
       // 5. Fetch Wallet Info
-      const walletData = await fetchWalletInfo(authResponse.user.id, authResponse.token);
+      const walletData = await fetchWalletInfo(
+        authResponse.user.id,
+        authResponse.token,
+      );
 
       // 6. Prepare user data for AuthContext
       const userData = {
@@ -159,47 +167,68 @@ const RegisterScreen = () => {
       login(userData);
 
       // 9. Navigate to the main part of the app
-      Alert.alert('Thành công', 'Đăng kí thành công, hệ thống sẽ tự động login', [
-        { text: 'OK', onPress: () => navigation.navigate('MainTabs') }, // Navigate to main tabs after auto-login
-      ]);
-
+      Alert.alert(
+        'Thành công',
+        'Đăng kí thành công, hệ thống sẽ tự động login',
+        [
+          {text: 'OK', onPress: () => navigation.navigate('MainTabs')}, // Navigate to main tabs after auto-login
+        ],
+      );
     } catch (error) {
-      console.error('Registration/Auto-Login Error:', error.response || error.message);
+      console.error(
+        'Registration/Auto-Login Error:',
+        error.response || error.message,
+      );
       // Handle specific API errors (e.g., duplicate email/phone) from /users/register or /auth
       if (error.response && error.response) {
         const errorData = error.response;
 
-        if(errorData.error === "Error: RegisterUserCommand_email is duplicate!"){
-          setEmailError("Email này đã tồn tại, vui lòng sử dụng email khác")
+        if (
+          errorData.error === 'Error: RegisterUserCommand_email is duplicate!'
+        ) {
+          setEmailError('Email này đã tồn tại, vui lòng sử dụng email khác');
         }
-        if(errorData.error === "Error: RegisterUserCommand_phone is duplicate!"){
-          setPhoneNumberError("Số điện thoại đã được sử dụng, vui lòng sử dụng số điện thoại khác")
+        if (
+          errorData.error === 'Error: RegisterUserCommand_phone is duplicate!'
+        ) {
+          setPhoneNumberError(
+            'Số điện thoại đã được sử dụng, vui lòng sử dụng số điện thoại khác',
+          );
         }
-         // Add handling for errors from the /auth endpoint if needed
-         // e.g., if /auth returns errors about tokens
+        // Add handling for errors from the /auth endpoint if needed
+        // e.g., if /auth returns errors about tokens
         if (errorData.message) {
-           setGeneralError(errorData.message); // Display a general error message from API if available
+          setGeneralError(errorData.message); // Display a general error message from API if available
         }
-
-      } else if (error.code) { // Handle Firebase auth errors during auto-login
-         if (error.code === 'auth/network-request-failed') {
-           setGeneralError('Không thể kết nối để đăng nhập. Vui lòng kiểm tra kết nối mạng.');
-         } else if (error.code === 'auth/invalid-credential') { // Should not happen with just registered user
-            setGeneralError('Thông tin đăng nhập không hợp lệ sau đăng ký.');
-         } else {
-            setGeneralError(`Lỗi Firebase (${error.code}). Vui lòng thử lại.`);
-         }
-      }
-      else {
-        setGeneralError('Đăng ký hoặc đăng nhập tự động thất bại. Vui lòng thử lại sau.');
+      } else if (error.code) {
+        // Handle Firebase auth errors during auto-login
+        if (error.code === 'auth/network-request-failed') {
+          setGeneralError(
+            'Không thể kết nối để đăng nhập. Vui lòng kiểm tra kết nối mạng.',
+          );
+        } else if (error.code === 'auth/invalid-credential') {
+          // Should not happen with just registered user
+          setGeneralError('Thông tin đăng nhập không hợp lệ sau đăng ký.');
+        } else {
+          setGeneralError(`Lỗi Firebase (${error.code}). Vui lòng thử lại.`);
+        }
+      } else {
+        setGeneralError(
+          'Đăng ký hoặc đăng nhập tự động thất bại. Vui lòng thử lại sau.',
+        );
       }
     }
   };
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}>
+        <Icon name="chevron-left" size={40} color="#000" />
+      </TouchableOpacity>
       {/* Logo */}
-      <Image 
+      <Image
         source={require('../assets/logo/logo.png')} // Adjust path as needed
         style={styles.logo}
         resizeMode="contain"
@@ -214,7 +243,9 @@ const RegisterScreen = () => {
         onChangeText={setFullName}
         autoCapitalize="words"
       />
-      {fullNameError ? <Text style={styles.errorText}>{fullNameError}</Text> : null}
+      {fullNameError ? (
+        <Text style={styles.errorText}>{fullNameError}</Text>
+      ) : null}
 
       <TextInput
         style={[styles.input, emailError && styles.inputError]}
@@ -235,7 +266,9 @@ const RegisterScreen = () => {
         onChangeText={setPhoneNumber}
         keyboardType="phone-pad"
       />
-      {phoneNumberError ? <Text style={styles.errorText}>{phoneNumberError}</Text> : null}
+      {phoneNumberError ? (
+        <Text style={styles.errorText}>{phoneNumberError}</Text>
+      ) : null}
 
       <TextInput
         style={[styles.input, passwordError && styles.inputError]}
@@ -245,7 +278,9 @@ const RegisterScreen = () => {
         onChangeText={password => setPassword(password)}
         secureTextEntry
       />
-      {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+      {passwordError ? (
+        <Text style={styles.errorText}>{passwordError}</Text>
+      ) : null}
 
       <TextInput
         style={[styles.input, confirmPasswordError && styles.inputError]}
@@ -255,10 +290,14 @@ const RegisterScreen = () => {
         onChangeText={setConfirmPassword}
         secureTextEntry
       />
-      {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
+      {confirmPasswordError ? (
+        <Text style={styles.errorText}>{confirmPasswordError}</Text>
+      ) : null}
 
       {/* General Error Message */}
-      {generalError ? <Text style={styles.errorText}>{generalError}</Text> : null}
+      {generalError ? (
+        <Text style={styles.errorText}>{generalError}</Text>
+      ) : null}
 
       <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
         <Text style={styles.registerButtonText}>Đăng kí</Text>
@@ -267,9 +306,7 @@ const RegisterScreen = () => {
       <View>
         <Text style={styles.signUpText}>
           Bạn đã có tài khoản?
-          <Text
-            style={styles.signUpLink}
-            onPress={() => navigation.goBack()}>
+          <Text style={styles.signUpLink} onPress={() => navigation.goBack()}>
             {' '}
             Đăng nhập ngay
           </Text>
@@ -287,6 +324,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 60, // Add padding at the top for the logo
   },
+  backButton: {
+    position: 'absolute',
+    top: 20,
+    left: 10,
+    padding: 10,
+  },
   logo: {
     width: '80%', // Adjust size as needed
     height: 100, // Adjust size as needed
@@ -294,11 +337,11 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#2E5A27',
     marginBottom: 30,
     textAlign: 'center',
-    color: '#333',
   },
   input: {
     backgroundColor: '#F5F5F5',

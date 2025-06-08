@@ -92,7 +92,7 @@ const TopUpScreen = ({ navigation }) => {
 
       {/* Amount Input */}
       <View style={styles.amountContainer}>
-        <Text style={styles.label}>Số tiền nạp (VNĐ)</Text>
+        <Text style={styles.label}>Số tiền nạp (VND)</Text>
         <TextInput
           style={styles.input}
           value={amount}

@@ -215,7 +215,6 @@ export const styles = StyleSheet.create({
   modalContainer: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 0,
     width: '90%',
     maxHeight: '80%',
     shadowColor: '#2C5530',
@@ -589,5 +588,23 @@ export const styles = StyleSheet.create({
   },
   submitButtonIcon: {
     marginRight: 8,
+  },
+  modalOverlay1: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer1: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 }); 

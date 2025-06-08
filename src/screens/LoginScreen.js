@@ -190,13 +190,15 @@ const LoginScreen = ({navigation, route}) => {
         style={styles.backButton}
         onPress={() => navigation.goBack()}
       >
-        <Icon name="chevron-left" size={28} color="#000" />
+        <Icon name="chevron-left" size={40} color="#000" />
       </TouchableOpacity>
 
       <Image source={logo} style={styles.logo} resizeMode="contain" />
 
       
       <Text style={styles.welcomeText}>Chào mừng bạn quay trở lại với GreenSpace</Text>
+
+      <Text style={styles.loginTitle}>Đăng nhập</Text>
       <View style={styles.inputContainer}>
         <TextInput
           style={[styles.input, emailError ? styles.inputError : null]}
@@ -261,7 +263,7 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     top: 20,
-    left: 20,
+    left: 10,
     padding: 10,
   },
   title: {
@@ -329,6 +331,13 @@ const styles = StyleSheet.create({
     width: 200,
     height: 100,
     alignSelf: 'center',
+  },
+  loginTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#2E5A27',
+    marginBottom: 30,
+    textAlign: 'center',
   },
 });
 

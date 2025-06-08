@@ -15,93 +15,31 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { api } from '../api/api';
 
 const Address = ({ onAddressChange, initialAddress = {} }) => {
-  const [provinces, setProvinces] = useState([]);
+  const [provinces] = useState([{ provinceId: 202, provinceName: 'Hồ Chí Minh' }]);
   const [districts, setDistricts] = useState([]);
   const [wards, setWards] = useState([]);
 
-  const [selectedProvinceId, setSelectedProvinceId] = useState(null);
+  const [selectedProvinceId] = useState(202); // HCM City ID
   const [selectedDistrictId, setSelectedDistrictId] = useState(null);
   const [selectedWardId, setSelectedWardId] = useState(null);
 
-  const [selectedProvinceName, setSelectedProvinceName] = useState(initialAddress.provinceName || '');
+  const [selectedProvinceName] = useState('Hồ Chí Minh');
   const [selectedDistrictName, setSelectedDistrictName] = useState(initialAddress.districtName || '');
   const [selectedWardName, setSelectedWardName] = useState(initialAddress.wardName || '');
 
-  const [loadingProvinces, setLoadingProvinces] = useState(false);
   const [loadingDistricts, setLoadingDistricts] = useState(false);
   const [loadingWards, setLoadingWards] = useState(false);
 
-  const [isProvinceModalVisible, setIsProvinceModalVisible] = useState(false);
   const [isDistrictModalVisible, setIsDistrictModalVisible] = useState(false);
   const [isWardModalVisible, setIsWardModalVisible] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredProvinces, setFilteredProvinces] = useState([]);
   const [filteredDistricts, setFilteredDistricts] = useState([]);
   const [filteredWards, setFilteredWards] = useState([]);
-
-  // Fetch Provinces
-  const fetchProvinces = useCallback(async () => {
-    setLoadingProvinces(true);
-    try {
-      const response = await api.get('/shipping/provinces');
-      const fetchedProvinces = response?.data || [];
-      setProvinces(fetchedProvinces);
-      setFilteredProvinces(fetchedProvinces);
-
-      // Auto-select province based on initialAddress name
-      if (initialAddress.provinceName && fetchedProvinces.length > 0 && !selectedProvinceId) {
-        const initialProv = fetchedProvinces.find(p => p.provinceName === initialAddress.provinceName);
-        if (initialProv) {
-          //console.log('Auto-selecting province:', initialProv);
-          handleProvinceSelect(initialProv);
-        } else {
-          console.warn(`Initial province name "${initialAddress.provinceName}" not found.`);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching provinces:', error);
-      Alert.alert('Lỗi', 'Không thể tải danh sách tỉnh/thành.');
-      setProvinces([]);
-    } finally {
-      setLoadingProvinces(false);
-    }
-  }, [initialAddress.provinceName, selectedProvinceId]);
-
-  // Handle Province Change
-  const handleProvinceSelect = useCallback((province) => {
-    if (!province) return;
-    //console.log("Province Selected:", province);
-
-    // Update province
-    setSelectedProvinceId(province.provinceId);
-    setSelectedProvinceName(province.provinceName);
-    
-    // Clear district and ward
-    setSelectedDistrictId('');
-    setSelectedDistrictName('');
-    setSelectedWardId('');
-    setSelectedWardName('');
-    setDistricts([]);
-    setWards([]);
-    setFilteredDistricts([]);
-    setFilteredWards([]);
-    
-    // Immediately update the parent with partial data
-    onAddressChange({
-      provinceId: province.provinceId,
-      provinceName: province.provinceName,
-      districtId: '', districtName: '',
-      wardId: '', wardName: ''
-    });
-
-    setIsProvinceModalVisible(false);
-  }, [onAddressChange]);
 
   // Handle District Change
   const handleDistrictSelect = useCallback((district) => {
     if (!district) return;
-    //console.log("District Selected:", district);
 
     // Update district
     setSelectedDistrictId(district.districtId);
@@ -115,11 +53,11 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
     
     // Immediately update the parent with partial data
     onAddressChange({
-        provinceId: selectedProvinceId,
-        provinceName: selectedProvinceName,
-        districtId: district.districtId,
-        districtName: district.districtName,
-        wardId: '', wardName: ''
+      provinceId: selectedProvinceId,
+      provinceName: selectedProvinceName,
+      districtId: district.districtId,
+      districtName: district.districtName,
+      wardId: '', wardName: ''
     });
 
     setIsDistrictModalVisible(false);
@@ -128,7 +66,6 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
   // Handle Ward Change
   const handleWardSelect = useCallback((ward) => {
     if (!ward) return;
-    //console.log("Ward Selected:", ward);
     const currentWardId = ward.wardCode || ward.wardId;
 
     // Update ward
@@ -148,27 +85,21 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
     setIsWardModalVisible(false);
   }, [selectedProvinceId, selectedProvinceName, selectedDistrictId, selectedDistrictName, onAddressChange]);
 
-  // Fetch Districts when Province changes
-  const fetchDistricts = useCallback(async (provinceId) => {
-    if (!provinceId) return;
+  // Fetch Districts for HCM City
+  const fetchDistricts = useCallback(async () => {
     setLoadingDistricts(true);
     
     try {
-      const response = await api.get(`/shipping/districts?provinceId=${provinceId}`);
+      const response = await api.get(`/shipping/districts?provinceId=202`);
       const fetchedDistricts = response?.data || [];
-      //console.log("Fetched Districts:", fetchedDistricts)
       setDistricts(fetchedDistricts);
       setFilteredDistricts(fetchedDistricts);
 
       // Auto-select district based on initialAddress name if it's a first load
       if (initialAddress.districtName && fetchedDistricts.length > 0) {
-        //console.log(`Comparing initial district "${initialAddress.districtName}" with fetched districts...`);
         const initialDist = fetchedDistricts.find(d => d.districtName === initialAddress.districtName);
         if (initialDist) {
-          //console.log('Auto-selecting district:', initialDist);
           handleDistrictSelect(initialDist);
-        } else {
-          //console.log('No exact match found for initial district name.');
         }
       }
     } catch (error) {
@@ -188,19 +119,14 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
     try {
       const response = await api.get(`/shipping/wards?districtId=${districtId}`);
       const fetchedWards = response?.data || [];
-      //console.log("Fetched Wards:", fetchedWards);
       setWards(fetchedWards);
       setFilteredWards(fetchedWards);
 
       // Auto-select ward based on initialAddress name if it's a first load
       if (initialAddress.wardName && fetchedWards.length > 0) {
-        //console.log(`Comparing initial ward "${initialAddress.wardName}" with fetched wards...`);
         const initialWard = fetchedWards.find(w => w.wardName === initialAddress.wardName);
         if (initialWard) {
-          //console.log('Auto-selecting ward:', initialWard);
           handleWardSelect(initialWard);
-        } else {
-          //console.log('No exact match found for initial ward name.');
         }
       }
     } catch (error) {
@@ -214,12 +140,6 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
 
   // Search/Filter Logic
   useEffect(() => {
-    setFilteredProvinces(
-      provinces.filter(p => p.provinceName.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [searchTerm, provinces]);
-
-  useEffect(() => {
     setFilteredDistricts(
       districts.filter(d => d.districtName.toLowerCase().includes(searchTerm.toLowerCase()))
     );
@@ -231,23 +151,14 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
     );
   }, [searchTerm, wards]);
 
-  // Initial fetch for provinces
+  // Initial fetch for districts
   useEffect(() => {
-    fetchProvinces();
-  }, [fetchProvinces]);
-
-  // Effect to fetch districts when province changes
-  useEffect(() => {
-    if (selectedProvinceId) {
-      //console.log('Fetching districts for provinceId:', selectedProvinceId);
-      fetchDistricts(selectedProvinceId);
-    }
-  }, [selectedProvinceId, fetchDistricts]);
+    fetchDistricts();
+  }, [fetchDistricts]);
 
   // Effect to fetch wards when district changes
   useEffect(() => {
     if (selectedDistrictId) {
-      //console.log('Fetching wards for districtId:', selectedDistrictId);
       fetchWards(selectedDistrictId);
     }
   }, [selectedDistrictId, fetchWards]);
@@ -311,21 +222,16 @@ const Address = ({ onAddressChange, initialAddress = {} }) => {
 
   return (
     <View style={styles.container}>
-      {/* Province Selector */}
-      {renderSelectorButton("Tỉnh/Thành phố", selectedProvinceName, () => { setSearchTerm(''); setIsProvinceModalVisible(true); }, loadingProvinces)}
-      {renderSelectionModal({
-        visible: isProvinceModalVisible,
-        title: "Chọn Tỉnh/Thành phố",
-        data: filteredProvinces,
-        onSelect: handleProvinceSelect,
-        onClose: () => setIsProvinceModalVisible(false),
-        loading: loadingProvinces,
-        keyExtractor: (item) => item.provinceId.toString(),
-        renderLabel: (item) => item.provinceName,
-      })}
+      {/* Province Display (Non-selectable) */}
+      <View style={[styles.selectorButton, styles.disabledButton]}>
+        <View>
+          <Text style={styles.selectorLabel}>Tỉnh/Thành phố</Text>
+          <Text style={styles.selectorValue}>Hồ Chí Minh</Text>
+        </View>
+      </View>
 
       {/* District Selector */}
-      {renderSelectorButton("Quận/Huyện", selectedDistrictName, () => { setSearchTerm(''); setIsDistrictModalVisible(true); }, !selectedProvinceId || loadingDistricts)}
+      {renderSelectorButton("Quận/Huyện", selectedDistrictName, () => { setSearchTerm(''); setIsDistrictModalVisible(true); }, loadingDistricts)}
       {renderSelectionModal({
         visible: isDistrictModalVisible,
         title: "Chọn Quận/Huyện",

@@ -181,7 +181,7 @@ const CartScreen = ({ navigation, route }) => {
           <View style={styles.cartItemDetails}>
             <Text style={styles.cartItemName} numberOfLines={2}>{item.name}</Text>
             <Text style={styles.cartItemPrice}>
-              {item.price.toLocaleString('vi-VN')} VNĐ
+              {item.price.toLocaleString('vi-VN')} VND
             </Text>
             <View style={styles.quantityContainer}>
               <TouchableOpacity 
@@ -280,7 +280,7 @@ const CartScreen = ({ navigation, route }) => {
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Tạm tính:</Text>
               <Text style={styles.totalAmount}>
-                {totalPrice.toLocaleString('vi-VN')} VNĐ
+                {totalPrice.toLocaleString('vi-VN')} VND
               </Text>
             </View>
             <TouchableOpacity 
